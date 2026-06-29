@@ -43,12 +43,17 @@ export default function Login() {
     
     setIsLoading(true);
     try {
-      await guestLoginMutation.mutateAsync({
+      const result = await guestLoginMutation.mutateAsync({
         name: name.trim(),
         age: parseInt(age) || 25,
         gender: gender as 'male' | 'female' | 'other',
         avatar: selectedAvatar,
       });
+      
+      if (result.token) {
+        sessionStorage.setItem('manus-cookie', `manus-session=${result.token}`);
+      }
+      
       // Force immediate navigation
       window.location.href = '/chat';
     } catch (err) {
