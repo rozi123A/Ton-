@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Play } from "lucide-react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 /**
  * Hero Section Component
@@ -9,6 +10,7 @@ import { useLocation } from "wouter";
  */
 export default function Hero() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated background gradient */}
@@ -48,9 +50,9 @@ export default function Hero() {
           <Button
             size="lg"
             className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-            onClick={() => setLocation('/login')}
+            onClick={() => setLocation(isAuthenticated ? '/chat' : '/login')}
           >
-            ابدأ الدردشة مجاناً
+            {isAuthenticated ? 'ابدأ الدردشة الآن' : 'ابدأ الدردشة مجاناً'}
           </Button>
           <Button
             size="lg"
