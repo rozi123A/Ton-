@@ -4,6 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: pnpm install --no-frozen-lockfile && pnpm run build
+    preDeployCommand: npx drizzle-kit push --force
     startCommand: NODE_ENV=production node dist/index.js
     envVars:
       - key: DATABASE_URL

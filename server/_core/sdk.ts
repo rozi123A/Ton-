@@ -287,7 +287,43 @@ class SDKServer {
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
+    // Guest users (guest_*) are not on the OAuth server — handle them directly
+    if (!user && sessionUserId.startsWith("guest_")) {
+      const now = new Date();
+      // Try to upsert guest into DB (best-effort — DB may not have tables yet)
+      try {
+        await db.upsertUser({
+          openId: sessionUserId,
+          name: (session as any).name || "زائر",
+          loginMethod: "guest",
+          lastSignedIn: signedInAt,
+        });
+        user = await db.getUserByOpenId(sessionUserId);
+      } catch {
+        // DB not ready — return a virtual guest user from JWT payload
+      }
+      if (!user) {
+        return {
+          id: -1,
+          openId: sessionUserId,
+          name: (session as any).name || "زائر",
+          email: null,
+          age: null,
+          gender: null,
+          avatar: null,
+          bio: null,
+          isOnline: true,
+          lastSeen: now,
+          loginMethod: "guest",
+          role: "user",
+          createdAt: now,
+          updatedAt: now,
+          lastSignedIn: now,
+        } as AuthenticatedUser;
+      }
+    }
+
+    // If user not in DB (non-guest), sync from OAuth server automatically
     if (!user) {
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionToken ?? "");

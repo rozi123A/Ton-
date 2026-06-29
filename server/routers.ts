@@ -28,24 +28,31 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const guestOpenId = `guest_${nanoid()}`;
+        const avatarUrl = input.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`;
 
-        await upsertUser({
-          openId: guestOpenId,
-          name: input.name,
-          loginMethod: 'guest',
-          lastSignedIn: new Date(),
-        });
+        // Try saving to DB (best-effort — gracefully skips if tables don't exist yet)
+        try {
+          await upsertUser({
+            openId: guestOpenId,
+            name: input.name,
+            loginMethod: 'guest',
+            lastSignedIn: new Date(),
+          });
 
-        const user = await getUserByOpenId(guestOpenId);
-        if (!user) throw new Error("فشل انشاء المستخدم");
+          const user = await getUserByOpenId(guestOpenId);
+          if (user) {
+            await saveUserProfile(user.id, {
+              name: input.name,
+              age: input.age,
+              gender: input.gender,
+              avatar: avatarUrl,
+            });
+          }
+        } catch (dbErr) {
+          console.warn('[GuestLogin] DB unavailable, continuing with JWT-only session:', dbErr);
+        }
 
-        await saveUserProfile(user.id, {
-          name: input.name,
-          age: input.age,
-          gender: input.gender,
-          avatar: input.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`,
-        });
-
+        // Always create JWT session (works even when DB is not ready)
         const sessionToken = await sdk.createSessionToken(guestOpenId, {
           name: input.name,
           expiresInMs: ONE_YEAR_MS,
