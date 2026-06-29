@@ -51,12 +51,21 @@ export default function Login() {
     if (!gender) { setError('يرجى اختيار الجنس'); return; }
     setIsLoading(true);
     try {
-      await guestLoginMutation.mutateAsync({
+      const result = await guestLoginMutation.mutateAsync({
         name: name.trim(),
         age: parseInt(age),
         gender: gender as 'male' | 'female' | 'other',
         avatar: finalAvatar,
       });
+      // Store token in localStorage so it survives browser restarts and
+      // works even when cookies are blocked (mobile / private browsing).
+      if (result?.token) {
+        try {
+          localStorage.setItem('guest_token', result.token);
+          // Also mirror into sessionStorage in the format the SDK expects
+          localStorage.setItem('manus-cookie', `app_session_id=${result.token}`);
+        } catch { /* storage unavailable */ }
+      }
       setTimeout(() => setLocation('/chat'), 300);
     } catch (err) {
       console.error(err);

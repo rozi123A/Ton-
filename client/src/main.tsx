@@ -43,23 +43,23 @@ const trpcClient = trpc.createClient({
       url: (import.meta.env.VITE_API_URL || "") + "/api/trpc",
       transformer: superjson,
       headers() {
-        // Preview auto-login fallback: when the browser blocks iframe cookies
-        // (Safari ITP / private browsing / WebView), the runtime mirrors the
-        // session into sessionStorage so we can forward it as a Bearer token.
-        // The regular OAuth cookie flow keeps working and takes priority server-side.
+        // 1. Guest token stored in localStorage (most reliable across restarts)
+        try {
+          const guestToken = localStorage.getItem("guest_token");
+          if (guestToken) return { Authorization: `Bearer ${guestToken}` };
+        } catch { /* storage unavailable */ }
+
+        // 2. Preview auto-login fallback (Replit iframe / Safari ITP / WebView)
         try {
           const raw = sessionStorage.getItem("manus-cookie");
           if (raw) {
             const prefix = `${COOKIE_NAME}=`;
             const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
             const token = pair?.trim().slice(prefix.length);
-            if (token) {
-              return { Authorization: `Bearer ${token}` };
-            }
+            if (token) return { Authorization: `Bearer ${token}` };
           }
-        } catch {
-          // sessionStorage unavailable
-        }
+        } catch { /* sessionStorage unavailable */ }
+
         return {};
       },
       fetch(input, init) {

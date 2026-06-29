@@ -61,7 +61,9 @@ export const appRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-        return { success: true };
+        // Return token so client can store it in localStorage as a fallback
+        // for mobile browsers that block third-party/SameSite cookies.
+        return { success: true, token: sessionToken };
       }),
 
     saveProfile: protectedProcedure
