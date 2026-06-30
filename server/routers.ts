@@ -2,13 +2,18 @@ import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
-import { saveUserProfile, getUsersByGender, getMessages, saveMessage, upsertUser, getUserByOpenId, getRecentUsers } from "./db";
+import {
+  saveUserProfile, getUsersByGender, getMessages, saveMessage,
+  upsertUser, getUserByOpenId, getRecentUsers,
+  getUserCredits, deductCredits, addCredits, saveGift,
+} from "./db";
 import { sdk } from "./_core/sdk";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
 export const appRouter = router({
   system: systemRouter,
+
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -30,39 +35,19 @@ export const appRouter = router({
         const guestOpenId = `guest_${nanoid()}`;
         const avatarUrl = input.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`;
 
-        // Try saving to DB (best-effort — gracefully skips if tables don't exist yet)
         try {
-          await upsertUser({
-            openId: guestOpenId,
-            name: input.name,
-            loginMethod: 'guest',
-            lastSignedIn: new Date(),
-          });
-
+          await upsertUser({ openId: guestOpenId, name: input.name, loginMethod: 'guest', lastSignedIn: new Date() });
           const user = await getUserByOpenId(guestOpenId);
           if (user) {
-            await saveUserProfile(user.id, {
-              name: input.name,
-              age: input.age,
-              gender: input.gender,
-              avatar: avatarUrl,
-            });
+            await saveUserProfile(user.id, { name: input.name, age: input.age, gender: input.gender, avatar: avatarUrl });
           }
         } catch (dbErr) {
           console.warn('[GuestLogin] DB unavailable, continuing with JWT-only session:', dbErr);
         }
 
-        // Always create JWT session (works even when DB is not ready)
-        const sessionToken = await sdk.createSessionToken(guestOpenId, {
-          name: input.name,
-          expiresInMs: ONE_YEAR_MS,
-        });
-
+        const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-
-        // Return token so client can store it in localStorage as a fallback
-        // for mobile browsers that block third-party/SameSite cookies.
         return { success: true, token: sessionToken };
       }),
 
@@ -81,23 +66,16 @@ export const appRouter = router({
 
     getByGender: publicProcedure
       .input(z.enum(['male', 'female', 'other']))
-      .query(async ({ input }) => {
-        return await getUsersByGender(input);
-      }),
+      .query(async ({ input }) => getUsersByGender(input)),
 
     getRecent: publicProcedure
       .input(z.number().min(1).max(50).optional())
-      .query(async ({ input }) => {
-        return await getRecentUsers(input ?? 20);
-      }),
+      .query(async ({ input }) => getRecentUsers(input ?? 20)),
   }),
 
   messages: router({
     save: protectedProcedure
-      .input(z.object({
-        receiverId: z.number(),
-        content: z.string(),
-      }))
+      .input(z.object({ receiverId: z.number(), content: z.string() }))
       .mutation(async ({ ctx, input }) => {
         await saveMessage(ctx.user.id, input.receiverId, input.content);
         return { success: true };
@@ -105,8 +83,39 @@ export const appRouter = router({
 
     getMessages: protectedProcedure
       .input(z.number())
-      .query(async ({ ctx, input }) => {
-        return await getMessages(ctx.user.id, input);
+      .query(async ({ ctx, input }) => getMessages(ctx.user.id, input)),
+  }),
+
+  gifts: router({
+    /** Return the authenticated user's credit balance */
+    getBalance: protectedProcedure.query(async ({ ctx }) => {
+      const credits = await getUserCredits(ctx.user.id);
+      return { credits };
+    }),
+
+    /** Deduct credits and record the gift (relay to peer via signal is done client-side) */
+    spend: protectedProcedure
+      .input(z.object({
+        giftType: z.string(),
+        cost: z.number().min(1).max(500),
+        receiverName: z.string().optional(), // informational only
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const ok = await deductCredits(ctx.user.id, input.cost);
+        if (!ok) throw new Error('رصيدك غير كافٍ لإرسال هذه الهدية');
+        const newBalance = await getUserCredits(ctx.user.id);
+        // Best-effort gift log (receiverId unknown without pairing info — use 0)
+        await saveGift(ctx.user.id, 0, input.giftType, input.cost).catch(() => {});
+        return { success: true, newBalance };
+      }),
+
+    /** Simulate purchasing credits (Stripe coming soon) */
+    buyCredits: protectedProcedure
+      .input(z.number().min(1).max(10000))
+      .mutation(async ({ ctx, input }) => {
+        await addCredits(ctx.user.id, input);
+        const newBalance = await getUserCredits(ctx.user.id);
+        return { success: true, newBalance };
       }),
   }),
 });

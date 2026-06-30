@@ -15,6 +15,7 @@ export const users = pgTable("users", {
   gender: genderEnum("gender"),
   avatar: text("avatar"),
   bio: text("bio"),
+  credits: integer("credits").default(100).notNull(),
   isOnline: boolean("isOnline").default(false).notNull(),
   lastSeen: timestamp("lastSeen").defaultNow().notNull(),
   loginMethod: varchar("loginMethod", { length: 64 }),
@@ -62,3 +63,15 @@ export const blocks = pgTable("blocks", {
 
 export type Block = typeof blocks.$inferSelect;
 export type InsertBlock = typeof blocks.$inferInsert;
+
+export const gifts = pgTable("gifts", {
+  id: serial("id").primaryKey(),
+  senderId: integer("senderId").notNull(),
+  receiverId: integer("receiverId").notNull(),
+  giftType: varchar("giftType", { length: 50 }).notNull(),
+  cost: integer("cost").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Gift = typeof gifts.$inferSelect;
+export type InsertGift = typeof gifts.$inferInsert;

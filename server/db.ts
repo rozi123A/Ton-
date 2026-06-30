@@ -1,7 +1,7 @@
-import { desc, eq, isNotNull, or } from 'drizzle-orm';
+import { desc, eq, isNotNull, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { InsertUser, users, InsertMessage, messages } from '../drizzle/schema';
+import { InsertUser, users, InsertMessage, messages, gifts } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
 /** Strip query params unsupported by postgres.js (e.g. channel_binding from Neon) */
@@ -73,6 +73,7 @@ export async function ensureSchema(): Promise<void> {
        gender        gender,
        avatar        TEXT,
        bio           TEXT,
+       credits       INTEGER NOT NULL DEFAULT 100,
        "isOnline"    BOOLEAN NOT NULL DEFAULT false,
        "lastSeen"    TIMESTAMP NOT NULL DEFAULT now(),
        "loginMethod" VARCHAR(64),
@@ -105,6 +106,14 @@ export async function ensureSchema(): Promise<void> {
        reason          TEXT,
        "createdAt"     TIMESTAMP NOT NULL DEFAULT now()
      )`,
+    `CREATE TABLE IF NOT EXISTS gifts (
+       id          SERIAL PRIMARY KEY,
+       "senderId"  INTEGER NOT NULL,
+       "receiverId" INTEGER NOT NULL,
+       "giftType"  VARCHAR(50) NOT NULL,
+       cost        INTEGER NOT NULL DEFAULT 0,
+       "createdAt" TIMESTAMP NOT NULL DEFAULT now()
+     )`,
   ];
 
   for (const stmt of tables) {
@@ -114,6 +123,11 @@ export async function ensureSchema(): Promise<void> {
       console.error('[Database] Failed to create table:', err);
     }
   }
+
+  // Add credits column to existing tables that predate this migration
+  try {
+    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 100`);
+  } catch { /* ignore */ }
 
   console.log('[Database] Schema ready');
 }
@@ -292,5 +306,51 @@ export async function getMessages(userId1: number, userId2: number) {
   } catch (error) {
     console.error('[Database] Failed to get messages:', error);
     return [];
+  }
+}
+
+// ── Gifts / Credits ──────────────────────────────────────────────────────────
+
+export async function getUserCredits(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 100;
+  try {
+    const result = await db.select({ credits: users.credits }).from(users).where(eq(users.id, userId)).limit(1);
+    return result[0]?.credits ?? 100;
+  } catch {
+    return 100;
+  }
+}
+
+export async function deductCredits(userId: number, amount: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const current = await getUserCredits(userId);
+    if (current < amount) return false;
+    await db.update(users).set({ credits: current - amount }).where(eq(users.id, userId));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function addCredits(userId: number, amount: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(users).set({ credits: sql`${users.credits} + ${amount}` }).where(eq(users.id, userId));
+  } catch (err) {
+    console.error('[Database] addCredits failed:', err);
+  }
+}
+
+export async function saveGift(senderId: number, receiverId: number, giftType: string, cost: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(gifts).values({ senderId, receiverId, giftType, cost });
+  } catch (err) {
+    console.error('[Database] saveGift failed:', err);
   }
 }

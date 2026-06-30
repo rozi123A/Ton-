@@ -23,6 +23,11 @@ interface PeerInfo {
 const peers = new Map<string, PeerInfo>();
 const waitingQueue: string[] = [];
 
+// ── Feature 8: last-partner tracking for reconnect notifications ─────────────
+interface LastPartner { partnerName: string; partnerAvatar: string; ts: number; }
+const lastPeers = new Map<string, LastPartner>(); // key = user name
+const NOTIF_TTL = 5 * 60 * 1000; // 5 minutes
+
 function sseEvent(res: Response, data: object) {
   if (!res.writableEnded) {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -49,9 +54,12 @@ function removePeer(peerId: string) {
   if (peer.partnerId) {
     const partner = peers.get(peer.partnerId);
     if (partner) {
+      // Store last-partner info so we can notify on reconnect (Feature 8)
+      lastPeers.set(peer.name,    { partnerName: partner.name, partnerAvatar: partner.avatar, ts: Date.now() });
+      lastPeers.set(partner.name, { partnerName: peer.name,    partnerAvatar: peer.avatar,    ts: Date.now() });
+
       partner.partnerId = null;
       sseEvent(partner.res, { type: "peer-left" });
-      // put partner back in queue
       if (!waitingQueue.includes(peer.partnerId)) {
         waitingQueue.push(peer.partnerId);
         sseEvent(partner.res, { type: "waiting" });
@@ -86,6 +94,21 @@ function registerSignalingRoutes(app: express.Express) {
     waitingQueue.push(peerId);
     sseEvent(res, { type: "waiting" });
     matchPeers();
+
+    // ── Feature 8: notify if last partner is currently searching ─────────────
+    const last = lastPeers.get(name);
+    if (last && Date.now() - last.ts < NOTIF_TTL) {
+      const partnerWaiting = [...peers.values()].find(
+        p => p.name === last.partnerName && p.partnerId === null && p.res !== res
+      );
+      if (partnerWaiting) {
+        setTimeout(() => sseEvent(res, {
+          type: "notification",
+          partnerName:   last.partnerName,
+          partnerAvatar: last.partnerAvatar,
+        }), 600);
+      }
+    }
 
     req.on("close", () => removePeer(peerId));
   });
@@ -129,6 +152,9 @@ function registerSignalingRoutes(app: express.Express) {
 
     if (type === "text-message") {
       sseEvent(partner.res, { type: "text-message", text, senderName: peer.name });
+    } else if (type === "gift") {
+      // ── Feature 10: relay gift with sender name ──
+      sseEvent(partner.res, { type: "gift", data: { ...(data as object), senderName: peer.name } });
     } else {
       sseEvent(partner.res, { type, data });
     }
