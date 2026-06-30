@@ -46,12 +46,20 @@ export async function ensureSchema(): Promise<void> {
     return;
   }
 
-  // Create enums one at a time (each in its own statement to isolate failures)
-  for (const stmt of [
-    `DO $BEGIN CREATE TYPE gender AS ENUM ('male','female','other'); EXCEPTION WHEN duplicate_object THEN NULL; END$`,
-    `DO $BEGIN CREATE TYPE role   AS ENUM ('user','admin');          EXCEPTION WHEN duplicate_object THEN NULL; END$`,
-  ]) {
-    try { await _rawClient.unsafe(stmt); } catch { /* already exists */ }
+  // Create enums — no dollar-quoting needed: catch the "already exists" error in JS
+  const enums: Array<[string, string]> = [
+    ['gender', `'male', 'female', 'other'`],
+    ['role',   `'user', 'admin'`],
+  ];
+  for (const [typeName, values] of enums) {
+    try {
+      await _rawClient.unsafe(`CREATE TYPE ${typeName} AS ENUM (${values})`);
+    } catch (e: any) {
+      const msg: string = e?.message ?? '';
+      if (!msg.includes('already exists')) {
+        console.warn(`[Database] Could not create enum "${typeName}":`, msg);
+      }
+    }
   }
 
   // Create tables (IF NOT EXISTS is safe to run repeatedly)
