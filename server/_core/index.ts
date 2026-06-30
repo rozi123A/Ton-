@@ -173,6 +173,31 @@ async function startServer() {
 
   app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 
+  // ── Keep-alive ping ────────────────────────────────────────────────────────
+  // Render free tier sleeps after 15 min of inactivity. We expose a /ping
+  // route and schedule a self-request every 14 minutes so the process never
+  // idles long enough to be suspended.
+  app.get("/ping", (_req, res) => res.json({ ok: true, ts: Date.now() }));
+
+  if (process.env.NODE_ENV !== "development") {
+    const selfUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "");
+    if (selfUrl) {
+      const INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
+      setInterval(async () => {
+        try {
+          await fetch(`${selfUrl}/ping`);
+          console.log("[keep-alive] pinged", selfUrl);
+        } catch (err) {
+          console.warn("[keep-alive] ping failed:", err);
+        }
+      }, INTERVAL_MS);
+      console.log(`[keep-alive] scheduled every 14 min → ${selfUrl}/ping`);
+    } else {
+      console.warn("[keep-alive] RENDER_EXTERNAL_URL not set — self-ping disabled");
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
+
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
