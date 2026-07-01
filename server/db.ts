@@ -129,6 +129,7 @@ export async function ensureSchema(): Promise<void> {
   try {
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 100`);
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "isPremium" BOOLEAN NOT NULL DEFAULT false`);
+    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileViews" INTEGER NOT NULL DEFAULT 0`);
   } catch { /* ignore */ }
 
   console.log('[Database] Schema ready');
@@ -268,6 +269,7 @@ export async function getRecentUsers(limit = 20) {
         gender: users.gender,
         avatar: users.avatar,
         lastSignedIn: users.lastSignedIn,
+        profileViews: users.profileViews,
       })
       .from(users)
       .where(isNotNull(users.name))
@@ -276,6 +278,22 @@ export async function getRecentUsers(limit = 20) {
   } catch (error) {
     console.error('[Database] Failed to get recent users:', error);
     return [];
+  }
+}
+
+export async function incrementProfileViews(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) { return 0; }
+  try {
+    const result = await db
+      .update(users)
+      .set({ profileViews: sql`"profileViews" + 1` })
+      .where(eq(users.id, userId))
+      .returning({ profileViews: users.profileViews });
+    return result[0]?.profileViews ?? 0;
+  } catch (error) {
+    console.error('[Database] Failed to increment profileViews:', error);
+    return 0;
   }
 }
 

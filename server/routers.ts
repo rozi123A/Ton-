@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import {
   saveUserProfile, getUsersByGender, getMessages, saveMessage,
-  upsertUser, getUserByOpenId, getRecentUsers,
+  upsertUser, getUserByOpenId, getRecentUsers, incrementProfileViews,
   getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
 } from "./db";
 import { sdk } from "./_core/sdk";
@@ -71,6 +71,13 @@ export const appRouter = router({
     getRecent: publicProcedure
       .input(z.number().min(1).max(50).optional())
       .query(async ({ input }) => getRecentUsers(input ?? 20)),
+
+    recordView: publicProcedure
+      .input(z.number())
+      .mutation(async ({ input }) => {
+        const views = await incrementProfileViews(input);
+        return { views };
+      }),
   }),
 
   messages: router({
