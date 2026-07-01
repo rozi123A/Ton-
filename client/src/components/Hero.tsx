@@ -1,4 +1,4 @@
-import { Play, LogOut, UserPlus, MessageCircle } from "lucide-react";
+import { Play, LogOut, UserPlus, MessageCircle, Video } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
