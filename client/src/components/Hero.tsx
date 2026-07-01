@@ -17,12 +17,12 @@ export default function Hero() {
             "linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)",
         }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-pink-800/20 to-cyan-700/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(124,58,237,0.15),transparent_50%)]" />
       </div>
 
       {/* Floating blobs */}
-      <div className="absolute top-20 left-10 w-40 h-40 bg-purple-400 rounded-full opacity-20 blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-56 h-56 bg-pink-400 rounded-full opacity-20 blur-3xl animate-pulse" style={{ animationDelay: "2s" }} />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-purple-600/30 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-pink-600/30 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: "2s" }} />
       <div className="absolute top-1/2 right-1/4 w-32 h-32 bg-cyan-400 rounded-full opacity-20 blur-3xl animate-pulse" style={{ animationDelay: "4s" }} />
 
       {/* Main content */}
@@ -30,8 +30,8 @@ export default function Hero() {
 
         {/* Brand */}
         <div className="mb-6 flex justify-center">
-          <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
-            C
+          <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-3xl font-bold text-white shadow-2xl animate-float">
+            <Video className="w-8 h-8 text-white" />
           </div>
         </div>
 
@@ -59,9 +59,9 @@ export default function Hero() {
             >
               {/* Outer glowing ring */}
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-cyan-400 blur-md opacity-60 group-hover:opacity-100 transition-opacity duration-300 scale-110" />
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-cyan-400 blur-xl opacity-40 group-hover:opacity-80 transition-opacity duration-500 scale-125 animate-pulse" />
                 {/* Avatar circle */}
-                <div className="relative w-36 h-36 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-white">
+                <div className="relative w-40 h-40 rounded-full border-4 border-white/80 shadow-2xl overflow-hidden bg-white/10 backdrop-blur-sm group-hover:scale-105 transition-transform duration-500">
                   <img
                     src={
                       user.avatar ||

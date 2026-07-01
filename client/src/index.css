@@ -44,11 +44,11 @@
 
 :root {
   /* Vibrant gradient colors for video chat platform */
-  --primary: #7c3aed; /* Vibrant purple */
+  --primary: #8b5cf6; /* Softer vibrant purple */
   --primary-foreground: #ffffff;
-  --secondary: #ec4899; /* Hot pink */
+  --secondary: #f43f5e; /* Rose pink */
   --secondary-foreground: #ffffff;
-  --accent: #06b6d4; /* Cyan */
+  --accent: #2dd4bf; /* Teal/Cyan */
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;

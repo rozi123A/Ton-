@@ -15,11 +15,9 @@ export default function Footer() {
           {/* Brand Column */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <img
-                src="/manus-storage/logo-icon_bfd3654c.png"
-                alt="ConnectLive"
-                className="w-10 h-10"
-              />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <Video className="w-6 h-6 text-white" />
+              </div>
               <span className="font-display text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
                 ConnectLive
               </span>

@@ -14,11 +14,13 @@ export default function Header() {
   const handleLogout   = async () => { await logout(); setLocation("/"); };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-sm transition-all duration-300">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setLocation('/')}>
-          <img src="/manus-storage/logo-icon_bfd3654c.png" alt="ConnectLive" className="w-10 h-10" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-200">
+            <Video className="w-6 h-6 text-white" />
+          </div>
           <span className="font-display text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">
             ConnectLive
           </span>

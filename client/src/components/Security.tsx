@@ -54,7 +54,7 @@ export default function Security() {
           {securityPoints.map((point, index) => (
             <div
               key={index}
-              className="group relative bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 border border-gray-100 hover:border-purple-200"
+              className="group relative bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgba(124,58,237,0.1)] transition-all duration-500 hover:-translate-y-2 border border-gray-100/50 overflow-hidden text-center"
             >
               {/* Background gradient on hover */}
               <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
@@ -63,7 +63,7 @@ export default function Security() {
               <div className="relative z-10">
                 {/* Icon */}
                 <div
-                  className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-500 text-white mb-6 shadow-lg group-hover:shadow-xl transition-all duration-300"
+                  className="inline-flex items-center justify-center w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-purple-600 to-pink-500 text-white mb-6 shadow-lg group-hover:shadow-xl group-hover:rotate-6 transition-all duration-500"
                 >
                   {point.icon}
                 </div>

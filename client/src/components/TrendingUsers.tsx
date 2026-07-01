@@ -40,7 +40,7 @@ function UserCard({ user }: { user: typeof MOCK_USERS[0] }) {
   return (
     <div
       ref={cardRef}
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+      className="group relative bg-white rounded-[2.5rem] overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_60px_rgba(124,58,237,0.12)] transition-all duration-500 hover:-translate-y-3 cursor-pointer border border-gray-100/50"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-pink-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <div className="relative p-6 flex flex-col items-center text-center">
@@ -48,7 +48,7 @@ function UserCard({ user }: { user: typeof MOCK_USERS[0] }) {
           <img
             src={user.avatar}
             alt={user.name}
-            className="w-20 h-20 rounded-full border-4 border-purple-200 shadow-lg object-cover bg-white"
+            className="w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover bg-white group-hover:scale-110 transition-transform duration-500"
             onError={(e) => {
               (e.target as HTMLImageElement).src =
                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name)}`;
@@ -78,7 +78,7 @@ function UserCard({ user }: { user: typeof MOCK_USERS[0] }) {
 
         <button
           onClick={() => window.location.href = '/chat'}
-          className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-2 px-4 rounded-lg hover:from-purple-700 hover:to-pink-600 transition-all duration-300 transform hover:scale-105"
+          className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-4 rounded-2xl hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-purple-200 group-hover:shadow-purple-300"
         >
           ابدا الدردشة
         </button>
