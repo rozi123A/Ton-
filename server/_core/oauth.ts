@@ -28,13 +28,27 @@ export function registerOAuthRoutes(app: Express) {
         return;
       }
 
+      // Detect country from IP
+      let detectedCountry: string | null = null;
+      try {
+        const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
+        if (ip && ip !== '127.0.0.1' && ip !== '::1') {
+          const geoRes = await fetch(`https://ipapi.co/${ip}/country/`, { signal: AbortSignal.timeout(3000) });
+          if (geoRes.ok) {
+            const code = (await geoRes.text()).trim();
+            if (code.length === 2) detectedCountry = code;
+          }
+        }
+      } catch { /* geo detection is best-effort */ }
+
       await db.upsertUser({
         openId: userInfo.openId,
         name: userInfo.name || null,
         email: userInfo.email ?? null,
         loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
         lastSignedIn: new Date(),
-      });
+        ...(detectedCountry ? { country: detectedCountry } : {}),
+      } as any);
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
         name: userInfo.name || "",
