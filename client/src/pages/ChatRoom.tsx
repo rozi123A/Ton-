@@ -134,7 +134,8 @@ export default function ChatRoom() {
   const destroyedRef   = useRef(false);
 
   // ── tRPC ───────────────────────────────────────────────────────────────────
-  const balanceQuery = trpc.gifts.getBalance.useQuery(undefined, { staleTime: 30_000 });
+  const balanceQuery    = trpc.gifts.getBalance.useQuery(undefined, { staleTime: 30_000 });
+  const { data: countryStats } = trpc.users.countryStats.useQuery(undefined, { staleTime: 60_000 });
   const spendGift    = trpc.gifts.spend.useMutation({
     onSuccess: (data) => setCredits(data.newBalance),
     onError:   (err)  => alert(err.message),
@@ -472,11 +473,15 @@ export default function ChatRoom() {
                       : 'bg-white/5 border-yellow-500/30 text-white/40 cursor-pointer'
                   }`}
                 >
-                  {COUNTRIES.map(c => (
-                    <option key={c.code} value={c.code} className="bg-gray-900 text-white">
-                      {c.name}
-                    </option>
-                  ))}
+                  {COUNTRIES.map(c => {
+                    const stat = countryStats?.find(s => s.country === c.code);
+                    const label = stat ? `${c.name} (${stat.count})` : c.name;
+                    return (
+                      <option key={c.code} value={c.code} className="bg-gray-900 text-white">
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
                 {!(user as any)?.isPremium && (
                   <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30 cursor-pointer gap-2">
