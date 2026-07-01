@@ -47,17 +47,17 @@ export default function GiftPanel({ credits, onSend, onClose, disabled }: GiftPa
               key={gift.id}
               onClick={() => canAfford && onSend(gift)}
               disabled={!canAfford}
-              className={`flex flex-col items-center py-3 px-2 rounded-xl border transition-all duration-150 ${
+              className={`group flex flex-col items-center py-3 px-2 rounded-2xl border-2 transition-all duration-200 ${
                 canAfford
-                  ? 'border-white/20 hover:border-purple-400 hover:bg-purple-500/20 active:scale-95 cursor-pointer'
-                  : 'border-white/5 opacity-40 cursor-not-allowed'
+                  ? 'border-white/15 hover:border-purple-400/70 hover:bg-gradient-to-b hover:from-purple-500/20 hover:to-pink-500/10 active:scale-95 cursor-pointer shadow-sm hover:shadow-md'
+                  : 'border-white/5 opacity-35 cursor-not-allowed'
               }`}
             >
-              <span className="text-2xl mb-1 leading-none">{gift.emoji}</span>
-              <span className="text-white text-xs font-medium">{gift.name}</span>
-              <div className="flex items-center gap-0.5 mt-1">
-                <Star className="w-2.5 h-2.5 text-yellow-400" />
-                <span className="text-yellow-300 text-xs">{gift.cost}</span>
+              <span className="text-2xl mb-1.5 leading-none drop-shadow-lg group-hover:scale-110 transition-transform duration-200">{gift.emoji}</span>
+              <span className="text-white text-xs font-bold">{gift.name}</span>
+              <div className="flex items-center gap-0.5 mt-1 bg-yellow-500/20 px-2 py-0.5 rounded-full">
+                <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
+                <span className="text-yellow-300 text-[10px] font-bold">{gift.cost}</span>
               </div>
             </button>
           );
@@ -68,9 +68,9 @@ export default function GiftPanel({ credits, onSend, onClose, disabled }: GiftPa
       {credits < 10 && (
         <button
           onClick={() => setLocation('/profile')}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 text-xs hover:bg-yellow-500/20 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border-2 border-yellow-500/30 text-yellow-300 text-xs font-bold hover:from-yellow-500/20 hover:to-amber-500/20 hover:border-yellow-400/50 transition-all duration-200"
         >
-          <ShoppingBag className="w-3.5 h-3.5" />
+          <ShoppingBag className="w-3.5 h-3.5 flex-shrink-0" />
           نقاطك غير كافية — شراء المزيد
         </button>
       )}

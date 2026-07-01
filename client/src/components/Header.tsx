@@ -102,51 +102,57 @@ export default function Header() {
           <a href="#faq"      className="block text-gray-700 hover:text-purple-600 font-medium py-2">الأسئلة الشائعة</a>
           <a href="#security" className="block text-gray-700 hover:text-purple-600 font-medium py-2">الأمان</a>
 
-          <div className="flex flex-col gap-2 pt-4 border-t border-gray-100">
+          <div className="flex flex-col gap-2.5 pt-4 border-t border-gray-100">
             {isAuthenticated && user ? (
               <>
-                <div className="flex items-center gap-3 py-2">
+                <div className="flex items-center gap-3 py-2 bg-purple-50 rounded-2xl px-3">
                   <img
                     src={(user as any).avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent((user as any).name || "user")}`}
                     alt={(user as any).name || "المستخدم"}
-                    className="w-10 h-10 rounded-full border-2 border-purple-400 object-cover"
+                    className="w-11 h-11 rounded-full border-2 border-purple-400 object-cover flex-shrink-0"
                   />
-                  <div>
-                    <p className="font-semibold text-gray-800 flex items-center gap-1">
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-800 flex items-center gap-1 truncate">
                       {(user as any).name || "المستخدم"}
                       {(user as any).isPremium && (
-                        <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                        <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500 flex-shrink-0" />
                       )}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {(user as any).isPremium ? "عضو VIP" : "مسجّل الدخول"}
+                    <p className="text-xs text-purple-500 font-medium">
+                      {(user as any).isPremium ? "⭐ عضو VIP" : "مسجّل الدخول"}
                     </p>
                   </div>
                 </div>
                 <button onClick={() => { setIsMenuOpen(false); handleProfile(); }}
-                  className="border border-purple-300 text-purple-600 font-semibold py-2.5 px-6 rounded-full flex items-center justify-center gap-2"
+                  className="border-2 border-purple-300 text-purple-600 font-bold py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors"
                 >
-                  <UserCircle className="w-4 h-4" /> الملف الشخصي
+                  <UserCircle className="w-4 h-4 flex-shrink-0" /> الملف الشخصي
                 </button>
                 <button onClick={() => { setIsMenuOpen(false); handleStartChat(); }}
-                  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-3 px-6 rounded-full text-center"
+                  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-6 rounded-2xl text-center flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
                 >
+                  <Video className="w-4 h-4 flex-shrink-0" />
                   ابدأ الدردشة الآن
                 </button>
                 <button onClick={() => { setIsMenuOpen(false); handleLogout(); }}
-                  className="text-red-500 font-medium py-2 text-center"
+                  className="text-red-500 font-semibold py-2 text-center flex items-center justify-center gap-2 hover:text-red-700 transition-colors"
                 >
+                  <LogOut className="w-4 h-4 flex-shrink-0" />
                   تسجيل الخروج
                 </button>
               </>
             ) : (
               <>
-                <button onClick={() => { setIsMenuOpen(false); handleLogin(); }} className="text-purple-600 font-semibold py-2">
+                <button onClick={() => { setIsMenuOpen(false); handleLogin(); }}
+                  className="text-purple-600 font-bold py-2.5 text-center border-2 border-purple-200 rounded-2xl hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  <UserCircle className="w-4 h-4" />
                   تسجيل الدخول
                 </button>
                 <button onClick={() => { setIsMenuOpen(false); handleLogin(); }}
-                  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-2 px-6 rounded-full"
+                  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
                 >
+                  <Video className="w-4 h-4" />
                   ابدأ الآن
                 </button>
               </>

@@ -137,9 +137,15 @@ export default function Store() {
               <Button 
                 onClick={handleUpgrade}
                 disabled={upgradeMutation.isLoading || (user as any)?.isPremium}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold py-6 text-lg rounded-xl shadow-lg transition-all"
+                className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:from-purple-700 hover:via-fuchsia-700 hover:to-pink-600 text-white font-black py-6 text-lg rounded-2xl shadow-xl shadow-purple-300/50 transition-all border-b-4 border-purple-800 active:border-b-0 active:translate-y-0.5 gap-2.5"
               >
-                {(user as any)?.isPremium ? "أنت مشترك بالفعل" : upgradeMutation.isLoading ? "جاري التفعيل..." : "اشترك الآن"}
+                {(user as any)?.isPremium ? (
+                  <><Star className="w-5 h-5 fill-white" /> أنت مشترك بالفعل</>
+                ) : upgradeMutation.isLoading ? (
+                  <><Sparkles className="w-5 h-5 animate-spin" /> جاري التفعيل...</>
+                ) : (
+                  <><Sparkles className="w-5 h-5" /> اشترك الآن — Premium</>
+                )}
               </Button>
             </CardFooter>
           </Card>

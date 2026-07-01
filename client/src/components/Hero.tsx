@@ -97,19 +97,19 @@ export default function Hero() {
             </button>
 
             {/* Secondary actions */}
-            <div className="flex flex-col sm:flex-row gap-3 mt-3">
+            <div className="flex flex-col sm:flex-row gap-3 mt-3 flex-wrap justify-center">
               <button
                 onClick={() => logout()}
-                className="flex items-center justify-center gap-2 text-white/70 hover:text-white text-sm border border-white/30 hover:border-white/60 rounded-full px-6 py-2.5 backdrop-blur-sm transition-all"
+                className="flex items-center justify-center gap-2 text-white/80 hover:text-white text-sm border-2 border-white/30 hover:border-white/70 hover:bg-white/10 rounded-full px-7 py-2.5 backdrop-blur-sm transition-all duration-200 font-medium"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-4 h-4 flex-shrink-0" />
                 تسجيل الخروج
               </button>
               <button
                 onClick={async () => { await logout(); setLocation("/login"); }}
-                className="flex items-center justify-center gap-2 text-white/70 hover:text-white text-sm border border-white/30 hover:border-white/60 rounded-full px-6 py-2.5 backdrop-blur-sm transition-all"
+                className="flex items-center justify-center gap-2 text-white/80 hover:text-white text-sm border-2 border-white/30 hover:border-white/70 hover:bg-white/10 rounded-full px-7 py-2.5 backdrop-blur-sm transition-all duration-200 font-medium"
               >
-                <UserPlus className="w-4 h-4" />
+                <UserPlus className="w-4 h-4 flex-shrink-0" />
                 إضافة حساب آخر
               </button>
             </div>
@@ -125,20 +125,21 @@ export default function Hero() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white text-lg px-10 py-6 rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="bg-gradient-to-r from-pink-500 via-rose-500 to-red-500 hover:from-pink-600 hover:via-rose-600 hover:to-red-600 text-white text-lg px-10 py-6 rounded-full shadow-2xl shadow-pink-900/50 transform hover:scale-105 active:scale-95 transition-all duration-300 border-b-4 border-red-700 font-bold gap-2.5"
                 onClick={() => setLocation("/login")}
               >
+                <MessageCircle className="w-5 h-5" />
                 ابدأ الدردشة مجاناً
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="border-2 border-white/60 text-white hover:bg-white/10 text-lg px-8 py-6 rounded-full backdrop-blur-sm"
+                className="border-2 border-white/60 text-white hover:bg-white/15 text-lg px-8 py-6 rounded-full backdrop-blur-sm transition-all duration-300 gap-2.5 font-semibold"
                 onClick={() =>
                   document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })
                 }
               >
-                <Play className="w-5 h-5 mr-2" />
+                <Play className="w-5 h-5 fill-white" />
                 شاهد كيفية العمل
               </Button>
             </div>

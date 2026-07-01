@@ -4,7 +4,8 @@ import { useLocation } from 'wouter';
 import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
-  Smartphone, Lock, Gift, Bell, Star, UserCircle, Search, ShoppingBag, Zap,
+  SwitchCamera, Lock, Gift, Bell, Star, Search, ShoppingBag, Zap,
+  Users, UserRound, Heart, ChevronLeft,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
@@ -405,20 +406,21 @@ export default function ChatRoom() {
               <label className="block text-white font-semibold mb-3 text-sm">الجنس المطلوب</label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { val: 'any',    label: 'الكل 👥' },
-                  { val: 'male',   label: 'ذكر 👨' },
-                  { val: 'female', label: 'أنثى 👩' },
-                ].map(opt => (
+                  { val: 'any',    label: 'الكل',  Icon: Users },
+                  { val: 'male',   label: 'ذكر',   Icon: UserRound },
+                  { val: 'female', label: 'أنثى',  Icon: Heart },
+                ].map(({ val, label, Icon }) => (
                   <button
-                    key={opt.val}
-                    onClick={() => setFilterGender(opt.val as any)}
-                    className={`py-3 rounded-2xl font-bold text-sm transition-all border-2 ${
-                      filterGender === opt.val
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 border-transparent text-white shadow-lg scale-105'
-                        : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:text-white'
+                    key={val}
+                    onClick={() => setFilterGender(val as any)}
+                    className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 border-2 ${
+                      filterGender === val
+                        ? 'bg-gradient-to-br from-purple-500 to-pink-500 border-transparent text-white shadow-xl scale-105'
+                        : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:border-white/40 hover:text-white'
                     }`}
                   >
-                    {opt.label}
+                    <Icon className="w-5 h-5" />
+                    {label}
                   </button>
                 ))}
               </div>
@@ -470,16 +472,17 @@ export default function ChatRoom() {
                 }
                 startSession(filterGender, filterCountry);
               }}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-bold py-4 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 text-lg"
+              className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:from-purple-700 hover:via-fuchsia-700 hover:to-pink-600 text-white font-bold py-4 rounded-2xl shadow-2xl shadow-purple-900/50 transform hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 text-lg tracking-wide"
             >
-              <Search className="w-5 h-5" />
+              <Video className="w-5 h-5" />
               ابدأ البحث الآن
             </button>
 
             <button
               onClick={() => setLocation('/')}
-              className="w-full text-white/50 hover:text-white text-sm transition-colors py-2"
+              className="w-full flex items-center justify-center gap-2 text-white/50 hover:text-white/90 text-sm transition-colors py-2"
             >
+              <ChevronLeft className="w-4 h-4" />
               العودة للرئيسية
             </button>
           </div>
@@ -533,41 +536,42 @@ export default function ChatRoom() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="grid grid-cols-3 items-center mb-3 gap-1">
+        {/* Left: Profile */}
         <button onClick={() => setLocation('/profile')}
-          className="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-          <div className="relative">
-            <img src={myAvatar} alt={myName} className="w-8 h-8 rounded-full border border-white/30 object-cover bg-white" />
+          className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors min-w-0">
+          <div className="relative flex-shrink-0">
+            <img src={myAvatar} alt={myName} className="w-8 h-8 rounded-full border-2 border-white/30 object-cover bg-white shadow-lg" />
             {(user as any)?.isPremium && (
-              <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-0.5 border border-gray-900">
+              <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-0.5 border-2 border-gray-900 shadow">
                 <Star className="w-2 h-2 text-gray-900 fill-gray-900" />
               </div>
             )}
           </div>
-          <div className="flex flex-col items-start">
-            <span className="text-sm font-bold flex items-center gap-1">
+          <div className="flex flex-col items-start min-w-0">
+            <span className="text-xs font-bold truncate max-w-[60px] flex items-center gap-0.5">
               {myName}
-              {(user as any)?.isPremium && <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
+              {(user as any)?.isPremium && <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
             </span>
-            <span className="text-[10px] opacity-60">الملف الشخصي</span>
+            <span className="text-[9px] opacity-50">ملفي</span>
           </div>
         </button>
 
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-white">غرفة الدردشة</h1>
-          <p className={`text-xs mt-0.5 ${status === 'matched' ? 'text-green-400' : 'text-yellow-300 animate-pulse'}`}>
-            {status === 'matched' ? `متصل بـ ${peerName} — ${statusLabel}` : statusLabel}
+        {/* Center: Title */}
+        <div className="text-center min-w-0">
+          <h1 className="text-base font-bold text-white leading-tight">غرفة الدردشة</h1>
+          <p className={`text-[10px] mt-0.5 font-semibold ${status === 'matched' ? 'text-green-400' : 'text-yellow-300 animate-pulse'}`}>
+            {status === 'matched' ? `${peerName} · ${statusLabel}` : statusLabel}
           </p>
-          {/* Active filters badge */}
           {(filterGender !== 'any' || filterCountry !== 'any') && (
-            <div className="flex items-center justify-center gap-1 mt-1 flex-wrap">
+            <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
               {filterGender !== 'any' && (
-                <span className="bg-purple-600/60 text-white text-xs px-2 py-0.5 rounded-full">
+                <span className="bg-purple-600/70 text-white text-[9px] px-1.5 py-0.5 rounded-full">
                   {filterGender === 'male' ? 'ذكر' : 'أنثى'}
                 </span>
               )}
               {filterCountry !== 'any' && (
-                <span className="bg-pink-600/60 text-white text-xs px-2 py-0.5 rounded-full">
+                <span className="bg-pink-600/70 text-white text-[9px] px-1.5 py-0.5 rounded-full">
                   {COUNTRIES.find(c => c.code === filterCountry)?.name.split(' ')[0] || filterCountry}
                 </span>
               )}
@@ -575,13 +579,15 @@ export default function ChatRoom() {
           )}
         </div>
 
-        <div className="flex flex-col items-end">
-          <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full border border-white/10">
-            <Zap className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-            <span className="text-yellow-300 text-sm font-bold">{credits}</span>
+        {/* Right: Credits */}
+        <div className="flex flex-col items-end gap-0.5">
+          <div className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 px-2.5 py-1 rounded-full shadow-sm">
+            <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+            <span className="text-yellow-300 text-xs font-black">{credits}</span>
           </div>
-          <button onClick={() => setLocation('/store')} className="text-[10px] text-purple-400 font-bold mt-1 hover:text-purple-300">
-            شحن النقاط
+          <button onClick={() => setLocation('/store')} className="text-[9px] text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5">
+            <ShoppingBag className="w-2.5 h-2.5" />
+            شحن
           </button>
         </div>
       </div>
@@ -746,7 +752,7 @@ export default function ChatRoom() {
             className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${(user as any)?.isPremium ? 'text-yellow-300' : 'text-white/30'}`}
           >
             <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md relative ${(user as any)?.isPremium ? 'bg-gradient-to-br from-yellow-400 to-amber-500' : 'bg-white/5'}`}>
-              <Smartphone className={`w-5 h-5 ${(user as any)?.isPremium ? 'text-gray-900' : 'text-white/30'}`} />
+              <SwitchCamera className={`w-5 h-5 ${(user as any)?.isPremium ? 'text-gray-900' : 'text-white/30'}`} />
               {!(user as any)?.isPremium && (
                 <Lock className="w-2.5 h-2.5 text-white/50 absolute top-1 right-1" />
               )}
@@ -754,7 +760,7 @@ export default function ChatRoom() {
             <span className="text-[11px] font-semibold leading-tight text-center">
               {(user as any)?.isPremium
                 ? (facingMode === 'user' ? 'خلفية' : 'أمامية')
-                : 'تبديل 🔒'}
+                : <span className="flex items-center gap-0.5">تبديل <Lock className="w-2.5 h-2.5 inline" /></span>}
             </span>
           </button>
 
@@ -801,19 +807,19 @@ export default function ChatRoom() {
           <button
             onClick={handleNext}
             disabled={status === 'connecting' || status === 'waiting'}
-            className="col-span-2 h-13 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900 font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 active:scale-95 transition-all text-sm py-3"
+            className="col-span-2 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-gray-900 font-black flex items-center justify-center gap-2.5 shadow-lg shadow-amber-900/40 disabled:opacity-40 active:scale-95 transition-all text-sm py-3.5 border-b-4 border-amber-600 active:border-b-0 active:translate-y-0.5"
           >
             <SkipForward className="w-5 h-5" />
-            البحث عن شخص جديد
+            التالي — شخص جديد
           </button>
 
           {/* End Call */}
           <button
             onClick={handleEnd}
-            className="h-13 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white font-bold flex flex-col items-center justify-center gap-1 shadow-lg active:scale-95 transition-all py-3"
+            className="rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white font-black flex flex-col items-center justify-center gap-1 shadow-lg shadow-red-900/50 active:scale-95 transition-all py-3.5 border-b-4 border-red-700 active:border-b-0 active:translate-y-0.5"
           >
             <PhoneOff className="w-5 h-5" />
-            <span className="text-[10px] font-bold">إنهاء</span>
+            <span className="text-[10px] font-black tracking-wide">إنهاء</span>
           </button>
         </div>
       </div>
