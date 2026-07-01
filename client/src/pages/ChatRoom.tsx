@@ -680,108 +680,142 @@ export default function ChatRoom() {
         )}
       </div>
 
-      {/* Controls */}
-      <div className="mt-3 bg-black/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-white/10 shadow-2xl">
-        <div className="grid grid-cols-5 gap-4 mb-6">
-          {/* Row 1: Primary Controls */}
-          <div className="flex flex-col items-center gap-1.5">
-            <button onClick={toggleMic}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isMicOn ? 'bg-white/10 text-white' : 'bg-red-500 text-white'}`}>
-              {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-            </button>
-            <span className="text-white/60 text-[10px] font-bold">ميكروفون</span>
-          </div>
+      {/* ── Controls Bar ─────────────────────────────────────────────────────── */}
+      <div className="mt-3 bg-gray-900/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
 
-          <div className="flex flex-col items-center gap-1.5">
-            <button onClick={toggleVideo}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isVideoOn ? 'bg-white/10 text-white' : 'bg-red-500 text-white'}`}>
-              {isVideoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-            </button>
-            <span className="text-white/60 text-[10px] font-bold">كاميرا</span>
-          </div>
+        {/* Row 1 — 4 primary toggles */}
+        <div className="grid grid-cols-4 divide-x divide-x-reverse divide-white/5">
+          {/* Mic */}
+          <button
+            onClick={toggleMic}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${isMicOn ? 'text-white' : 'text-red-400 bg-red-500/10'}`}
+          >
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${isMicOn ? 'bg-white/10' : 'bg-red-500'}`}>
+              {isMicOn ? <Mic className="w-5 h-5 text-white" /> : <MicOff className="w-5 h-5 text-white" />}
+            </div>
+            <span className="text-[11px] font-semibold">{isMicOn ? 'ميكروفون' : 'مكتوم'}</span>
+          </button>
 
-          <div className="flex flex-col items-center gap-1.5">
-            <button onClick={toggleCamera}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg relative active:scale-90 ${
-                (user as any)?.isPremium 
-                  ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-gray-900 border-b-4 border-yellow-700 hover:brightness-110' 
-                  : 'bg-white/5 text-white/30 cursor-not-allowed'
-              }`}>
-              <Smartphone className={`w-6 h-6 ${(user as any)?.isPremium ? 'animate-pulse' : ''}`} />
-              {!(user as any)?.isPremium && <Lock className="w-2.5 h-2.5 absolute top-1.5 right-1.5" />}
-            </button>
-            <span className={`text-[10px] font-bold ${(user as any)?.isPremium ? 'text-yellow-400' : 'text-white/40'}`}>
-              {facingMode === 'user' ? 'كاميرا خلفية' : 'كاميرا أمامية'}
-            </span>
-          </div>
+          {/* Camera */}
+          <button
+            onClick={toggleVideo}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${isVideoOn ? 'text-white' : 'text-red-400 bg-red-500/10'}`}
+          >
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${isVideoOn ? 'bg-white/10' : 'bg-red-500'}`}>
+              {isVideoOn ? <Video className="w-5 h-5 text-white" /> : <VideoOff className="w-5 h-5 text-white" />}
+            </div>
+            <span className="text-[11px] font-semibold">{isVideoOn ? 'كاميرا' : 'مطفأة'}</span>
+          </button>
 
-          <div className="flex flex-col items-center gap-1.5">
-            <button onClick={() => setIsSpeakerOn(v => !v)}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isSpeakerOn ? 'bg-white/10 text-white' : 'bg-red-500 text-white'}`}>
-              {isSpeakerOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-            </button>
-            <span className="text-white/60 text-[10px] font-bold">صوت</span>
-          </div>
+          {/* Speaker */}
+          <button
+            onClick={() => setIsSpeakerOn(v => !v)}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${isSpeakerOn ? 'text-white' : 'text-red-400 bg-red-500/10'}`}
+          >
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${isSpeakerOn ? 'bg-white/10' : 'bg-red-500'}`}>
+              {isSpeakerOn ? <Volume2 className="w-5 h-5 text-white" /> : <VolumeX className="w-5 h-5 text-white" />}
+            </div>
+            <span className="text-[11px] font-semibold">{isSpeakerOn ? 'صوت' : 'صامت'}</span>
+          </button>
 
-          <div className="flex flex-col items-center gap-1.5">
-            <button onClick={() => { setShowChat(v => !v); setUnread(0); }}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg relative ${showChat ? 'bg-cyan-500 text-white' : 'bg-white/10 text-white'}`}>
-              <MessageSquare className="w-5 h-5" />
+          {/* Chat */}
+          <button
+            onClick={() => { setShowChat(v => !v); setUnread(0); }}
+            className={`relative flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${showChat ? 'text-cyan-400 bg-cyan-500/10' : 'text-white'}`}
+          >
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md relative ${showChat ? 'bg-cyan-500' : 'bg-white/10'}`}>
+              <MessageSquare className="w-5 h-5 text-white" />
               {unread > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold border-2 border-gray-900">{unread}</span>
+                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5">
+                  {unread}
+                </span>
               )}
-            </button>
-            <span className="text-white/60 text-[10px] font-bold">دردشة</span>
-          </div>
-
-          {/* Row 2: Secondary & Action Controls */}
-          <div className="flex flex-col items-center gap-1.5">
-            <button onClick={() => {
-                sessionStorage.setItem('chat_auto_start', 'true');
-                setLocation('/store?from=chat');
-              }}
-              className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:brightness-110 active:scale-90">
-              <ShoppingBag className="w-5 h-5" />
-            </button>
-            <span className="text-white/60 text-[10px] font-bold">المتجر</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-1.5">
-            <button
-              onClick={() => status === 'matched' ? setShowGifts(v => !v) : undefined}
-              disabled={status !== 'matched'}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${
-                status === 'matched'
-                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white'
-                  : 'bg-white/5 text-white/20 cursor-not-allowed'
-              }`}>
-              <Gift className="w-5 h-5" />
-            </button>
-            <span className="text-white/60 text-[10px] font-bold">هدية</span>
-          </div>
-
-          <div className="col-span-2 flex flex-col items-center gap-1.5">
-            <button onClick={handleNext} disabled={status === 'connecting' || status === 'waiting'}
-              className="w-full h-12 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 transition-all active:scale-95">
-              <SkipForward className="w-5 h-5" />
-              <span>التالي</span>
-            </button>
-            <span className="text-white/60 text-[10px] font-bold">البحث عن شخص جديد</span>
-          </div>
-
-          <div className="flex flex-col items-center gap-1.5">
-            <button className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/5 text-white/40 hover:bg-rose-500/20 hover:text-rose-500 transition-all">
-              <Flag className="w-5 h-5" />
-            </button>
-            <span className="text-white/60 text-[10px] font-bold">إبلاغ</span>
-          </div>
+            </div>
+            <span className="text-[11px] font-semibold">دردشة</span>
+          </button>
         </div>
 
-        <button onClick={handleEnd}
-          className="w-full bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 transition-all border border-rose-500/20">
-          <PhoneOff className="w-5 h-5" />
-          <span>انهاء الاتصال</span>
-        </button>
+        {/* Divider */}
+        <div className="h-px bg-white/5 mx-4" />
+
+        {/* Row 2 — 4 secondary actions */}
+        <div className="grid grid-cols-4 divide-x divide-x-reverse divide-white/5">
+          {/* Camera Switch — Premium */}
+          <button
+            onClick={toggleCamera}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${(user as any)?.isPremium ? 'text-yellow-300' : 'text-white/30'}`}
+          >
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md relative ${(user as any)?.isPremium ? 'bg-gradient-to-br from-yellow-400 to-amber-500' : 'bg-white/5'}`}>
+              <Smartphone className={`w-5 h-5 ${(user as any)?.isPremium ? 'text-gray-900' : 'text-white/30'}`} />
+              {!(user as any)?.isPremium && (
+                <Lock className="w-2.5 h-2.5 text-white/50 absolute top-1 right-1" />
+              )}
+            </div>
+            <span className="text-[11px] font-semibold leading-tight text-center">
+              {(user as any)?.isPremium
+                ? (facingMode === 'user' ? 'خلفية' : 'أمامية')
+                : 'تبديل 🔒'}
+            </span>
+          </button>
+
+          {/* Gift */}
+          <button
+            onClick={() => status === 'matched' ? setShowGifts(v => !v) : undefined}
+            disabled={status !== 'matched'}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-orange-300' : 'text-white/20'}`}
+          >
+            <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shadow-md ${status === 'matched' ? 'bg-gradient-to-br from-orange-400 to-pink-500' : 'bg-white/5'}`}>
+              <Gift className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-[11px] font-semibold">هدية</span>
+          </button>
+
+          {/* Store */}
+          <button
+            onClick={() => { sessionStorage.setItem('chat_auto_start', 'true'); setLocation('/store?from=chat'); }}
+            className="flex flex-col items-center gap-1.5 py-4 px-2 text-purple-300 transition-all active:scale-95"
+          >
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-600 shadow-md">
+              <ShoppingBag className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-[11px] font-semibold">المتجر</span>
+          </button>
+
+          {/* Report */}
+          <button
+            className="flex flex-col items-center gap-1.5 py-4 px-2 text-white/30 hover:text-rose-400 transition-all active:scale-95"
+          >
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white/5 hover:bg-rose-500/20 transition-colors shadow-md">
+              <Flag className="w-5 h-5" />
+            </div>
+            <span className="text-[11px] font-semibold">إبلاغ</span>
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-white/5 mx-4" />
+
+        {/* Next + End Call row */}
+        <div className="grid grid-cols-3 gap-3 p-4">
+          {/* Next — spans 2 cols */}
+          <button
+            onClick={handleNext}
+            disabled={status === 'connecting' || status === 'waiting'}
+            className="col-span-2 h-13 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-900 font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 active:scale-95 transition-all text-sm py-3"
+          >
+            <SkipForward className="w-5 h-5" />
+            البحث عن شخص جديد
+          </button>
+
+          {/* End Call */}
+          <button
+            onClick={handleEnd}
+            className="h-13 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white font-bold flex flex-col items-center justify-center gap-1 shadow-lg active:scale-95 transition-all py-3"
+          >
+            <PhoneOff className="w-5 h-5" />
+            <span className="text-[10px] font-bold">إنهاء</span>
+          </button>
+        </div>
       </div>
 
       {showGifts && (
