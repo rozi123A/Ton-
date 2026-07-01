@@ -247,7 +247,8 @@ export default function ChatRoom() {
     if (fg !== 'any' || fc !== 'any') {
       if (!(user as any)?.isPremium) {
         toast.error("فلتر الجنس والدولة ميزة Premium فقط.");
-        setLocation('/store');
+        sessionStorage.setItem('chat_auto_start', 'true');
+        setLocation('/store?from=chat');
         return;
       }
     }
@@ -309,7 +310,8 @@ export default function ChatRoom() {
   const toggleCamera = async () => {
     if (!(user as any)?.isPremium) {
       toast.error("هذه الميزة متاحة فقط لمشتركي Premium.");
-      setLocation('/store');
+      sessionStorage.setItem('chat_auto_start', 'true');
+      setLocation('/store?from=chat');
       return;
     }
     if (!localStreamRef.current) return;
