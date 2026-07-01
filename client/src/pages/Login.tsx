@@ -18,6 +18,7 @@ function generateAvatarUrl(seed: string) {
 export default function Login() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading } = useAuth();
+  const utils = trpc.useUtils();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
@@ -66,6 +67,8 @@ export default function Login() {
           localStorage.setItem('manus-cookie', `app_session_id=${result.token}`);
         } catch { /* storage unavailable */ }
       }
+      // Invalidate auth cache so the Header immediately reflects the logged-in state
+      await utils.auth.me.invalidate();
       setTimeout(() => setLocation('/chat'), 300);
     } catch (err) {
       console.error(err);
