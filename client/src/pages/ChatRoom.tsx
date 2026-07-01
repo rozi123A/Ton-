@@ -799,24 +799,34 @@ export default function ChatRoom() {
 
           {/* Translation */}
           <button
-            onClick={() => status === 'matched' ? setShowTranslation(v => !v) : undefined}
-            disabled={status !== 'matched'}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-blue-300' : 'text-white/30'}`}
+            onClick={() => {
+              if (status !== 'matched') {
+                toast.info("ميزة الترجمة تفتح أثناء المكالمة النشطة.");
+                return;
+              }
+              setShowTranslation(v => !v);
+            }}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-blue-300' : 'text-blue-400/50'}`}
           >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-blue-500 to-cyan-600 shadow-blue-900/50' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
-              <Globe className="w-5 h-5 text-white" />
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-blue-500 to-cyan-600 shadow-blue-900/50' : 'bg-gradient-to-br from-blue-900/40 to-cyan-900/40 border border-blue-500/20'}`}>
+              <Globe className={`w-5 h-5 ${status === 'matched' ? 'text-white' : 'text-blue-400/60'}`} />
             </div>
             <span className="text-[11px] font-bold">ترجمة</span>
           </button>
 
           {/* Face Filters */}
           <button
-            onClick={() => status === 'matched' ? setShowFaceFilters(v => !v) : undefined}
-            disabled={status !== 'matched'}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-purple-300' : 'text-white/30'}`}
+            onClick={() => {
+              if (status !== 'matched') {
+                toast.info("فلاتر الوجه تفتح أثناء المكالمة النشطة.");
+                return;
+              }
+              setShowFaceFilters(v => !v);
+            }}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-purple-300' : 'text-purple-400/50'}`}
           >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-900/50' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
-              <Wand2 className="w-5 h-5 text-white" />
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-900/50' : 'bg-gradient-to-br from-purple-900/40 to-indigo-900/40 border border-purple-500/20'}`}>
+              <Wand2 className={`w-5 h-5 ${status === 'matched' ? 'text-white' : 'text-purple-400/60'}`} />
             </div>
             <span className="text-[11px] font-bold">فلاتر</span>
           </button>
@@ -896,11 +906,11 @@ export default function ChatRoom() {
         <GiftPanel credits={credits} onSend={sendGift} onClose={() => setShowGifts(false)} disabled={spendGift.isPending} />
       )}
 
-      {showTranslation && status === 'matched' && (
+      {showTranslation && (
         <TranslationPanel text="مرحبا بك" fromLang="ar" toLang="en" onClose={() => setShowTranslation(false)} />
       )}
 
-      {showFaceFilters && status === 'matched' && (
+      {showFaceFilters && (
         <FaceFiltersPanel onClose={() => setShowFaceFilters(false)} isPremium={(user as any)?.isPremium} onSelectFilter={setSelectedFilter} />
       )}
 
