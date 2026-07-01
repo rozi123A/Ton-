@@ -4,11 +4,12 @@ import { useLocation } from 'wouter';
 import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
-  Smartphone, Lock, Gift, Bell, Star, UserCircle, Search,
+  Smartphone, Lock, Gift, Bell, Star, UserCircle, Search, ShoppingBag,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import GiftPanel, { GIFTS, type GiftItem } from '@/components/GiftPanel';
+import { toast } from 'sonner';
 
 // ── ICE config with TURN servers for 4G/5G mobile networks ───────────────────
 const ICE_CONFIG: RTCConfiguration = {
@@ -287,33 +288,55 @@ export default function ChatRoom() {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const toggleCamera = async () => {
     if (!(user as any)?.isPremium) {
-      alert("هذه الميزة متاحة فقط لمشتركي Premium. يرجى زيارة المتجر للاشتراك.");
+      toast.error("هذه الميزة متاحة فقط لمشتركي Premium.");
       setLocation('/store');
       return;
     }
     if (!localStreamRef.current) return;
+    
     const newMode = facingMode === 'user' ? 'environment' : 'user';
     try {
+      // Create new stream with specified facing mode
       const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: newMode },
+        video: { 
+          facingMode: { exact: newMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
         audio: true
+      }).catch(async () => {
+        // Fallback if exact mode fails (some browsers/devices)
+        return await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: newMode },
+          audio: true
+        });
       });
       
-      // Replace tracks in PC
+      // Replace video track in existing PeerConnection
       if (pcRef.current) {
         const videoTrack = newStream.getVideoTracks()[0];
-        const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
-        if (sender) sender.replaceTrack(videoTrack);
+        const senders = pcRef.current.getSenders();
+        const videoSender = senders.find(s => s.track?.kind === 'video');
+        if (videoSender) {
+          await videoSender.replaceTrack(videoTrack);
+        }
       }
 
-      // Stop old tracks
+      // Stop only old video tracks to keep audio seamless if possible, 
+      // but here we replace the whole stream for simplicity
       localStreamRef.current.getTracks().forEach(t => t.stop());
       
       localStreamRef.current = newStream;
-      if (localVideoRef.current) localVideoRef.current.srcObject = newStream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = newStream;
+      }
+      
       setFacingMode(newMode);
+      setIsVideoOn(true);
+      toast.success(newMode === 'user' ? "تم التبديل للكاميرا الأمامية" : "تم التبديل للكاميرا الخلفية");
     } catch (e) {
-      console.error("Failed to switch camera", e);
+      console.error("Failed to switch camera:", e);
+      toast.error("عذراً، لا يمكن تبديل الكاميرا على هذا الجهاز");
     }
   };
   const toggleMic   = () => { localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !isMicOn; }); setIsMicOn(v => !v); };
@@ -491,9 +514,21 @@ export default function ChatRoom() {
       <div className="flex items-center justify-between mb-3">
         <button onClick={() => setLocation('/profile')}
           className="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-          <img src={myAvatar} alt={myName} className="w-8 h-8 rounded-full border border-white/30 object-cover bg-white" />
-          <span className="text-sm font-medium hidden sm:block">{myName}</span>
-          <UserCircle className="w-4 h-4 opacity-60" />
+          <div className="relative">
+            <img src={myAvatar} alt={myName} className="w-8 h-8 rounded-full border border-white/30 object-cover bg-white" />
+            {(user as any)?.isPremium && (
+              <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-0.5 border border-gray-900">
+                <Star className="w-2 h-2 text-gray-900 fill-gray-900" />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-start">
+            <span className="text-sm font-bold flex items-center gap-1">
+              {myName}
+              {(user as any)?.isPremium && <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
+            </span>
+            <span className="text-[10px] opacity-60">الملف الشخصي</span>
+          </div>
         </button>
 
         <div className="text-center">
@@ -518,9 +553,14 @@ export default function ChatRoom() {
           )}
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <Star className="w-3.5 h-3.5 text-yellow-400" />
-          <span className="text-yellow-300 text-sm font-bold">{credits}</span>
+        <div className="flex flex-col items-end">
+          <div className="flex items-center gap-1.5 bg-white/10 px-2 py-1 rounded-full border border-white/10">
+            <Zap className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+            <span className="text-yellow-300 text-sm font-bold">{credits}</span>
+          </div>
+          <button onClick={() => setLocation('/store')} className="text-[10px] text-purple-400 font-bold mt-1 hover:text-purple-300">
+            شحن النقاط
+          </button>
         </div>
       </div>
 
@@ -644,6 +684,13 @@ export default function ChatRoom() {
             <span className="text-white text-xs mt-2 font-bold">تبديل</span>
           </div>
           <div className="flex flex-col items-center">
+            <button onClick={() => setLocation('/store')}
+              className="rounded-full p-3 bg-gradient-to-br from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg hover:scale-110">
+              <ShoppingBag className="w-6 h-6 text-white" />
+            </button>
+            <span className="text-white text-xs mt-2 font-bold">المتجر</span>
+          </div>
+          <div className="flex flex-col items-center">
             <button onClick={() => setIsSpeakerOn(v => !v)}
               className={`rounded-full p-3 transition-all shadow-lg hover:scale-110 ${isSpeakerOn ? 'bg-purple-500 hover:bg-purple-600' : 'bg-red-500 hover:bg-red-600'}`}>
               {isSpeakerOn ? <Volume2 className="w-6 h-6 text-white" /> : <VolumeX className="w-6 h-6 text-white" />}
@@ -673,14 +720,7 @@ export default function ChatRoom() {
             </button>
             <span className="text-white text-xs mt-2 font-bold">هدية</span>
           </div>
-          <div className="flex flex-col items-center relative">
-            <button disabled className="rounded-full p-3 bg-gradient-to-br from-yellow-400 to-yellow-500 opacity-70 cursor-not-allowed shadow-lg relative">
-              <Smartphone className="w-6 h-6 text-white" />
-              <Lock className="w-3 h-3 text-white absolute top-1 right-1" />
-            </button>
-            <span className="text-yellow-300 text-xs mt-2 font-bold">تبديل</span>
-            <span className="text-yellow-400 text-xs font-extrabold">PREMIUM</span>
-          </div>
+
           <div className="flex flex-col items-center">
             <button onClick={handleNext} disabled={status === 'connecting' || status === 'waiting'}
               className="rounded-full p-3 bg-yellow-500 hover:bg-yellow-600 disabled:opacity-40 transition-all shadow-lg hover:scale-110">

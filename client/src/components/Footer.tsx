@@ -80,6 +80,11 @@ export default function Footer() {
                   مركز الأمان
                 </a>
               </li>
+              <li>
+                <button onClick={() => window.location.href = '/store'} className="text-gray-400 hover:text-purple-400 transition-colors">
+                  المتجر
+                </button>
+              </li>
             </ul>
           </div>
 
