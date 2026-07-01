@@ -77,7 +77,7 @@ function makePeerId() { return `p_${Date.now()}_${Math.random().toString(36).sli
 
 export default function ChatRoom() {
   const [, setLocation] = useLocation();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const myName    = (user as any)?.name   || 'انت';
   const myAvatar  = (user as any)?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName)}`;
@@ -291,15 +291,15 @@ export default function ChatRoom() {
   }, [stopTimer, closePC]);
 
   useEffect(() => {
+    // Wait until auth finishes loading — otherwise startSession changes when
+    // user data arrives, which cancels the timer before it fires.
+    if (authLoading) return;
     const shouldAutoStart = autoStartParam || sessionStorage.getItem('chat_auto_start') === 'true';
     if (shouldAutoStart && status === 'setup') {
-      sessionStorage.removeItem('chat_auto_start'); // Clear it after use
-      const timer = setTimeout(() => {
-        startSession('any', 'any');
-      }, 300);
-      return () => clearTimeout(timer);
+      sessionStorage.removeItem('chat_auto_start');
+      startSession('any', 'any');
     }
-  }, [autoStartParam, status, startSession]);
+  }, [autoStartParam, status, authLoading, startSession]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { if (showChat) setUnread(0); }, [showChat]);
