@@ -83,9 +83,10 @@ export default function ChatRoom() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
 
-  const myName    = (user as any)?.name   || 'انت';
-  const myAvatar  = (user as any)?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName)}`;
-  const myGender  = (user as any)?.gender || 'other';
+  const myName    = (user as any)?.name    || 'انت';
+  const myAvatar  = (user as any)?.avatar  || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName)}`;
+  const myGender  = (user as any)?.gender  || 'other';
+  const myCountry = (user as any)?.country || null;
   const myId      = useRef(makePeerId()).current;
 
   // ── filter state (setup screen) ───────────────────────────────────────────
@@ -141,6 +142,13 @@ export default function ChatRoom() {
     onError:   (err)  => alert(err.message),
   });
   useEffect(() => { if (balanceQuery.data) setCredits(balanceQuery.data.credits); }, [balanceQuery.data]);
+
+  // Auto-fill country for premium users from their saved profile
+  useEffect(() => {
+    if ((user as any)?.isPremium && myCountry) {
+      setFilterCountry(myCountry);
+    }
+  }, [(user as any)?.isPremium, myCountry]);
 
   // ── signaling ──────────────────────────────────────────────────────────────
   const signal = useCallback(async (type: string, data?: unknown, text?: string) => {
@@ -441,55 +449,62 @@ export default function ChatRoom() {
             <div>
               <label className="block text-white font-semibold mb-3 text-sm flex items-center gap-2">
                 الدولة
-                {!(user as any)?.isPremium && (
+                {(user as any)?.isPremium ? (
+                  <span className="text-[10px] bg-green-500/20 border border-green-500/40 text-green-300 px-2 py-0.5 rounded-full font-bold">
+                    مفعّل ✓
+                  </span>
+                ) : (
                   <span className="text-[10px] bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                     <Lock className="w-2.5 h-2.5" /> Premium
                   </span>
                 )}
               </label>
-              <div
-                className="relative"
-                onClick={() => {
-                  if (!(user as any)?.isPremium) {
-                    sessionStorage.setItem('chat_auto_start', 'true');
-                    setLocation('/store?from=chat');
-                  }
-                }}
-              >
-                <select
-                  value={filterCountry}
-                  onChange={e => {
-                    if (!(user as any)?.isPremium) {
-                      sessionStorage.setItem('chat_auto_start', 'true');
-                      setLocation('/store?from=chat');
-                      return;
-                    }
-                    setFilterCountry(e.target.value);
-                  }}
-                  disabled={!(user as any)?.isPremium}
-                  className={`w-full border text-white rounded-2xl px-4 py-3 focus:outline-none text-sm appearance-none ${
-                    (user as any)?.isPremium
-                      ? 'bg-white/10 border-white/20 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30'
-                      : 'bg-white/5 border-yellow-500/30 text-white/40 cursor-pointer'
-                  }`}
+
+              {(user as any)?.isPremium ? (
+                <>
+                  <select
+                    value={filterCountry}
+                    onChange={e => setFilterCountry(e.target.value)}
+                    className="w-full bg-white/10 border border-white/20 text-white rounded-2xl px-4 py-3 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/30 text-sm"
+                  >
+                    {COUNTRIES.map(c => {
+                      const stat = countryStats?.find(s => s.country === c.code);
+                      const label = stat ? `${c.name} — ${stat.count} مستخدم` : c.name;
+                      return (
+                        <option key={c.code} value={c.code} className="bg-gray-900 text-white">
+                          {label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  {myCountry && filterCountry === myCountry && (
+                    <p className="text-green-400 text-[11px] mt-1.5 flex items-center gap-1">
+                      ✓ تم اختيار بلدك تلقائياً — يمكنك تغييره
+                    </p>
+                  )}
+                  {filterCountry === 'any' && (
+                    <p className="text-white/40 text-[11px] mt-1.5">
+                      ستتصل بأشخاص من جميع الدول
+                    </p>
+                  )}
+                </>
+              ) : (
+                <button
+                  onClick={() => { sessionStorage.setItem('chat_auto_start', 'true'); setLocation('/store?from=chat'); }}
+                  className="w-full bg-yellow-500/10 border border-yellow-500/30 rounded-2xl px-4 py-4 flex items-center justify-between group hover:bg-yellow-500/20 transition-colors"
                 >
-                  {COUNTRIES.map(c => {
-                    const stat = countryStats?.find(s => s.country === c.code);
-                    const label = stat ? `${c.name} (${stat.count})` : c.name;
-                    return (
-                      <option key={c.code} value={c.code} className="bg-gray-900 text-white">
-                        {label}
-                      </option>
-                    );
-                  })}
-                </select>
-                {!(user as any)?.isPremium && (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/30 cursor-pointer gap-2">
-                    <Lock className="w-4 h-4 text-yellow-400" />
-                    <span className="text-yellow-300 text-sm font-bold">اشترك للفلترة بالدولة</span>
+                  <div className="flex items-center gap-3">
+                    <Lock className="w-5 h-5 text-yellow-400" />
+                    <div className="text-right">
+                      <p className="text-yellow-300 text-sm font-bold">فلترة بالدولة</p>
+                      <p className="text-yellow-300/60 text-[11px]">اشترك لتختار بلداً معيناً</p>
+                    </div>
                   </div>
-                )}
-              </div>
+                  <span className="text-yellow-400 text-xs font-bold bg-yellow-500/20 px-3 py-1 rounded-full group-hover:bg-yellow-500/30">
+                    اشترك الآن
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* My profile preview */}
