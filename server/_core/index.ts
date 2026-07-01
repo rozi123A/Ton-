@@ -11,22 +11,23 @@ import { serveStatic, setupVite } from "./vite";
 import { ensureSchema } from "../db";
 
 // ── Signaling via Server-Sent Events (SSE) ────────────────────────────────────
-// No external WebSocket library needed — uses built-in Node.js HTTP streams.
 
 interface PeerInfo {
   res: Response;
   name: string;
   avatar: string;
+  gender: string;         // actual gender of this user
+  filterGender: string;   // 'male' | 'female' | 'any'
+  filterCountry: string;  // country code or 'any'
   partnerId: string | null;
 }
 
 const peers = new Map<string, PeerInfo>();
 const waitingQueue: string[] = [];
 
-// ── Feature 8: last-partner tracking for reconnect notifications ─────────────
 interface LastPartner { partnerName: string; partnerAvatar: string; ts: number; }
-const lastPeers = new Map<string, LastPartner>(); // key = user name
-const NOTIF_TTL = 5 * 60 * 1000; // 5 minutes
+const lastPeers = new Map<string, LastPartner>();
+const NOTIF_TTL = 5 * 60 * 1000;
 
 function sseEvent(res: Response, data: object) {
   if (!res.writableEnded) {
@@ -34,17 +35,45 @@ function sseEvent(res: Response, data: object) {
   }
 }
 
+// ── Filter-aware matching ─────────────────────────────────────────────────────
+function isCompatible(a: PeerInfo, b: PeerInfo): boolean {
+  // a wants b's gender?
+  const aWantsB = a.filterGender === 'any' || a.filterGender === b.gender;
+  // b wants a's gender?
+  const bWantsA = b.filterGender === 'any' || b.filterGender === a.gender;
+  // country: both any, or one any, or same country
+  const countryOk =
+    a.filterCountry === 'any' ||
+    b.filterCountry === 'any' ||
+    a.filterCountry === b.filterCountry;
+  return aWantsB && bWantsA && countryOk;
+}
+
 function matchPeers() {
-  while (waitingQueue.length >= 2) {
-    const id1 = waitingQueue.shift()!;
-    const id2 = waitingQueue.shift()!;
-    const p1 = peers.get(id1);
-    const p2 = peers.get(id2);
-    if (!p1 || !p2) continue;
-    p1.partnerId = id2;
-    p2.partnerId = id1;
-    sseEvent(p1.res, { type: "matched", role: "caller", peer: { name: p2.name, avatar: p2.avatar } });
-    sseEvent(p2.res, { type: "matched", role: "callee", peer: { name: p1.name, avatar: p2.avatar } });
+  const waiting = waitingQueue.filter(id => peers.has(id));
+  for (let i = 0; i < waiting.length; i++) {
+    for (let j = i + 1; j < waiting.length; j++) {
+      const id1 = waiting[i];
+      const id2 = waiting[j];
+      const p1 = peers.get(id1);
+      const p2 = peers.get(id2);
+      if (!p1 || !p2) continue;
+      if (!isCompatible(p1, p2)) continue;
+
+      // Remove from queue
+      const qi1 = waitingQueue.indexOf(id1);
+      if (qi1 !== -1) waitingQueue.splice(qi1, 1);
+      const qi2 = waitingQueue.indexOf(id2);
+      if (qi2 !== -1) waitingQueue.splice(qi2, 1);
+
+      p1.partnerId = id2;
+      p2.partnerId = id1;
+      sseEvent(p1.res, { type: "matched", role: "caller", peer: { name: p2.name, avatar: p2.avatar } });
+      sseEvent(p2.res, { type: "matched", role: "callee", peer: { name: p1.name, avatar: p1.avatar } });
+      // Restart to find more pairs
+      matchPeers();
+      return;
+    }
   }
 }
 
@@ -54,10 +83,8 @@ function removePeer(peerId: string) {
   if (peer.partnerId) {
     const partner = peers.get(peer.partnerId);
     if (partner) {
-      // Store last-partner info so we can notify on reconnect (Feature 8)
       lastPeers.set(peer.name,    { partnerName: partner.name, partnerAvatar: partner.avatar, ts: Date.now() });
       lastPeers.set(partner.name, { partnerName: peer.name,    partnerAvatar: peer.avatar,    ts: Date.now() });
-
       partner.partnerId = null;
       sseEvent(partner.res, { type: "peer-left" });
       if (!waitingQueue.includes(peer.partnerId)) {
@@ -73,15 +100,16 @@ function removePeer(peerId: string) {
 }
 
 function registerSignalingRoutes(app: express.Express) {
-  // SSE connection — client opens this to receive events
   app.get("/api/signal/connect", (req: Request, res: Response) => {
-    const peerId = req.query.peerId as string;
-    const name = (req.query.name as string) || "مستخدم";
-    const avatar = (req.query.avatar as string) || "";
+    const peerId        = req.query.peerId        as string;
+    const name          = (req.query.name          as string) || "مستخدم";
+    const avatar        = (req.query.avatar        as string) || "";
+    const gender        = (req.query.gender        as string) || "other";
+    const filterGender  = (req.query.filterGender  as string) || "any";
+    const filterCountry = (req.query.filterCountry as string) || "any";
 
     if (!peerId) { res.status(400).json({ error: "peerId required" }); return; }
 
-    // Clean up any previous connection for this peer
     removePeer(peerId);
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -90,12 +118,12 @@ function registerSignalingRoutes(app: express.Express) {
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
 
-    peers.set(peerId, { res, name, avatar, partnerId: null });
+    peers.set(peerId, { res, name, avatar, gender, filterGender, filterCountry, partnerId: null });
     waitingQueue.push(peerId);
     sseEvent(res, { type: "waiting" });
     matchPeers();
 
-    // ── Feature 8: notify if last partner is currently searching ─────────────
+    // Reconnect notification
     const last = lastPeers.get(name);
     if (last && Date.now() - last.ts < NOTIF_TTL) {
       const partnerWaiting = [...peers.values()].find(
@@ -113,13 +141,9 @@ function registerSignalingRoutes(app: express.Express) {
     req.on("close", () => removePeer(peerId));
   });
 
-  // Signal relay — client POSTs offer/answer/ICE/text/next
   app.post("/api/signal/send", express.json(), (req: Request, res: Response) => {
     const { peerId, type, data, text } = req.body as {
-      peerId: string;
-      type: string;
-      data?: unknown;
-      text?: string;
+      peerId: string; type: string; data?: unknown; text?: string;
     };
 
     const peer = peers.get(peerId);
@@ -145,7 +169,6 @@ function registerSignalingRoutes(app: express.Express) {
       return;
     }
 
-    // Relay to partner
     if (!peer.partnerId) { res.json({ ok: false, reason: "no partner" }); return; }
     const partner = peers.get(peer.partnerId);
     if (!partner) { res.json({ ok: false, reason: "partner not connected" }); return; }
@@ -153,7 +176,6 @@ function registerSignalingRoutes(app: express.Express) {
     if (type === "text-message") {
       sseEvent(partner.res, { type: "text-message", text, senderName: peer.name });
     } else if (type === "gift") {
-      // ── Feature 10: relay gift with sender name ──
       sseEvent(partner.res, { type: "gift", data: { ...(data as object), senderName: peer.name } });
     } else {
       sseEvent(partner.res, { type, data });
@@ -180,16 +202,11 @@ async function findAvailablePort(startPort = 3000): Promise<number> {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function startServer() {
-  // Ensure DB tables exist before handling any requests
   await ensureSchema();
-
   const app = express();
   const server = createServer(app);
 
-  // Trust the reverse proxy (Render, nginx, etc.) so req.protocol
-  // reflects HTTPS correctly → cookies get secure flag properly.
   app.set("trust proxy", 1);
-
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -199,30 +216,21 @@ async function startServer() {
 
   app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 
-  // ── Keep-alive ping ────────────────────────────────────────────────────────
-  // Render free tier sleeps after 15 min of inactivity. We expose a /ping
-  // route and schedule a self-request every 14 minutes so the process never
-  // idles long enough to be suspended.
   app.get("/ping", (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
   if (process.env.NODE_ENV !== "development") {
     const selfUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "");
     if (selfUrl) {
-      const INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
+      const INTERVAL_MS = 14 * 60 * 1000;
       setInterval(async () => {
-        try {
-          await fetch(`${selfUrl}/ping`);
-          console.log("[keep-alive] pinged", selfUrl);
-        } catch (err) {
-          console.warn("[keep-alive] ping failed:", err);
-        }
+        try { await fetch(`${selfUrl}/ping`); console.log("[keep-alive] pinged", selfUrl); }
+        catch (err) { console.warn("[keep-alive] ping failed:", err); }
       }, INTERVAL_MS);
       console.log(`[keep-alive] scheduled every 14 min → ${selfUrl}/ping`);
     } else {
       console.warn("[keep-alive] RENDER_EXTERNAL_URL not set — self-ping disabled");
     }
   }
-  // ──────────────────────────────────────────────────────────────────────────
 
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
