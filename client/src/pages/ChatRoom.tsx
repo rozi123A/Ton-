@@ -5,11 +5,14 @@ import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
   SwitchCamera, Lock, Gift, Bell, Star, Search, ShoppingBag, Zap,
-  Users, UserRound, Heart, ChevronLeft, Sparkles,
+  Users, UserRound, Heart, ChevronLeft, Sparkles, Globe, Wand2
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import GiftPanel, { GIFTS, type GiftItem } from '@/components/GiftPanel';
+import TranslationPanel from '@/components/TranslationPanel';
+import FaceFiltersPanel from '@/components/FaceFiltersPanel';
+import FriendsPanel from '@/components/FriendsPanel';
 import { toast } from 'sonner';
 
 // ── ICE config with TURN servers for 4G/5G mobile networks ───────────────────
@@ -109,6 +112,13 @@ export default function ChatRoom() {
   const [showGifts, setShowGifts] = useState(false);
   const [giftAnims, setGiftAnims] = useState<GiftAnim[]>([]);
   const [credits,   setCredits]   = useState(100);
+
+  // ── new features ────────────────────────────────────────────────────────────
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [showFaceFilters, setShowFaceFilters] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('none');
+  const [friends, setFriends] = useState<any[]>([]);
 
   // ── notification ───────────────────────────────────────────────────────────
   const [notif, setNotif] = useState<Notif | null>(null);
@@ -787,6 +797,41 @@ export default function ChatRoom() {
             </span>
           </button>
 
+          {/* Translation */}
+          <button
+            onClick={() => status === 'matched' ? setShowTranslation(v => !v) : undefined}
+            disabled={status !== 'matched'}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-blue-300' : 'text-white/30'}`}
+          >
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-blue-500 to-cyan-600 shadow-blue-900/50' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
+              <Globe className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-[11px] font-bold">ترجمة</span>
+          </button>
+
+          {/* Face Filters */}
+          <button
+            onClick={() => status === 'matched' ? setShowFaceFilters(v => !v) : undefined}
+            disabled={status !== 'matched'}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-purple-300' : 'text-white/30'}`}
+          >
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-900/50' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
+              <Wand2 className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-[11px] font-bold">فلاتر</span>
+          </button>
+
+          {/* Friends */}
+          <button
+            onClick={() => setShowFriends(v => !v)}
+            className="flex flex-col items-center gap-1.5 py-4 px-2 text-red-300 transition-all active:scale-95"
+          >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-red-500 to-pink-600 shadow-lg shadow-red-900/50">
+              <Heart className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-[11px] font-bold">أصدقاء</span>
+          </button>
+
           {/* Gift */}
           <button
             onClick={() => status === 'matched' ? setShowGifts(v => !v) : undefined}
@@ -849,6 +894,18 @@ export default function ChatRoom() {
 
       {showGifts && (
         <GiftPanel credits={credits} onSend={sendGift} onClose={() => setShowGifts(false)} disabled={spendGift.isPending} />
+      )}
+
+      {showTranslation && status === 'matched' && (
+        <TranslationPanel text="مرحبا بك" fromLang="ar" toLang="en" onClose={() => setShowTranslation(false)} />
+      )}
+
+      {showFaceFilters && status === 'matched' && (
+        <FaceFiltersPanel onClose={() => setShowFaceFilters(false)} isPremium={(user as any)?.isPremium} onSelectFilter={setSelectedFilter} />
+      )}
+
+      {showFriends && (
+        <FriendsPanel friends={friends} onClose={() => setShowFriends(false)} onStartChat={(friendId) => { toast.success('جاري بدء الدردشة...'); setShowFriends(false); }} />
       )}
 
       <style>{`
