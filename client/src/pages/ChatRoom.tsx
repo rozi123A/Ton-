@@ -5,7 +5,7 @@ import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
   SwitchCamera, Lock, Gift, Bell, Star, Search, ShoppingBag, Zap,
-  Users, UserRound, Heart, ChevronLeft,
+  Users, UserRound, Heart, ChevronLeft, Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
@@ -759,6 +759,30 @@ export default function ChatRoom() {
             </div>
             <span className="text-[11px] font-bold leading-tight text-center">
               {(user as any)?.isPremium ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
+            </span>
+          </button>
+
+          {/* Background — Premium (Paid Feature) */}
+          <button
+            onClick={() => {
+              if (!(user as any)?.isPremium) {
+                toast.error("الخلفيات المخصصة ميزة Premium فقط.");
+                sessionStorage.setItem('chat_auto_start', 'true');
+                setLocation('/store?from=chat');
+                return;
+              }
+              toast.info("ميزة الخلفيات قريباً!");
+            }}
+            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${(user as any)?.isPremium ? 'text-pink-300' : 'text-white/40'}`}
+          >
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg relative ${(user as any)?.isPremium ? 'bg-gradient-to-br from-pink-500 to-rose-600 shadow-pink-900/50' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
+              <Sparkles className={`w-5 h-5 ${(user as any)?.isPremium ? 'text-white' : 'text-white/50'}`} />
+              {!(user as any)?.isPremium && (
+                <Lock className="w-2.5 h-2.5 text-white/60 absolute top-1 right-1" />
+              )}
+            </div>
+            <span className="text-[11px] font-bold leading-tight text-center">
+              {(user as any)?.isPremium ? 'خلفية' : 'خلفية 🔒'}
             </span>
           </button>
 
