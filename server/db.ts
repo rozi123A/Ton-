@@ -130,6 +130,7 @@ export async function ensureSchema(): Promise<void> {
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 100`);
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "isPremium" BOOLEAN NOT NULL DEFAULT false`);
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileViews" INTEGER NOT NULL DEFAULT 0`);
+    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(10)`);
   } catch { /* ignore */ }
 
   console.log('[Database] Schema ready');
@@ -150,14 +151,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ['name', 'email', 'loginMethod'] as const;
+    const textFields = ['name', 'email', 'loginMethod', 'country'] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
-      const value = user[field];
+      const value = user[field as keyof InsertUser] as string | null | undefined;
       if (value === undefined) return;
       const normalized = value ?? null;
-      values[field] = normalized;
+      (values as any)[field] = normalized;
       updateSet[field] = normalized;
     };
 
