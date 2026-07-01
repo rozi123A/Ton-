@@ -151,18 +151,24 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     const values: InsertUser = { openId: user.openId };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ['name', 'email', 'loginMethod', 'country'] as const;
+    const textFields = ['name', 'email', 'loginMethod'] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
-      const value = user[field as keyof InsertUser] as string | null | undefined;
+      const value = user[field];
       if (value === undefined) return;
       const normalized = value ?? null;
-      (values as any)[field] = normalized;
+      values[field] = normalized;
       updateSet[field] = normalized;
     };
 
     textFields.forEach(assignNullable);
+
+    // Handle country explicitly
+    if (user.country !== undefined) {
+      values.country = user.country ?? null;
+      updateSet.country = user.country ?? null;
+    }
 
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
@@ -373,6 +379,23 @@ export async function saveGift(senderId: number, receiverId: number, giftType: s
     await db.insert(gifts).values({ senderId, receiverId, giftType, cost });
   } catch (err) {
     console.error('[Database] saveGift failed:', err);
+  }
+}
+
+export async function getCountryStats(): Promise<Array<{ country: string; count: number }>> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db
+      .select({ country: users.country, count: sql<number>`cast(count(*) as int)` })
+      .from(users)
+      .where(isNotNull(users.country))
+      .groupBy(users.country)
+      .orderBy(desc(sql`count(*)`));
+    return rows.filter(r => r.country).map(r => ({ country: r.country!, count: r.count }));
+  } catch (err) {
+    console.error('[Database] getCountryStats failed:', err);
+    return [];
   }
 }
 
