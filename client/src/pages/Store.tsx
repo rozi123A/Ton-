@@ -74,15 +74,24 @@ export default function Store() {
       <Header />
       
       <main className="flex-grow container mx-auto px-4 py-12">
-        <div className="mb-8">
-          <Button 
-            variant="ghost" 
+        <div className="mb-10 flex justify-start">
+          <button 
             onClick={handleBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-purple-600 mb-4"
+            className="group relative flex items-center gap-3 px-6 py-3 bg-gradient-to-b from-yellow-300 to-yellow-500 text-gray-900 font-bold rounded-2xl shadow-[0_4px_0_0_#a16207] active:shadow-none active:translate-y-1 transition-all hover:brightness-110"
           >
-            <ArrowRight className="w-4 h-4" />
-            العودة {fromChat ? 'للدردشة' : 'للرئيسية'}
-          </Button>
+            <div className="bg-white/20 p-2 rounded-xl group-hover:scale-110 transition-transform">
+              <ArrowRight className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="text-sm leading-tight">العودة مباشرة</span>
+              <span className="text-[10px] opacity-70 uppercase tracking-wider">{fromChat ? 'للدردشة الآن' : 'للصفحة الرئيسية'}</span>
+            </div>
+            {fromChat && (
+              <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full animate-bounce shadow-lg border-2 border-white">
+                !
+              </div>
+            )}
+          </button>
         </div>
 
         <div className="text-center mb-12">
