@@ -35,11 +35,12 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      // Clear the Preview auto-login token mirrored into sessionStorage, so
-      // header-based sessions (Safari ITP / WebView) are logged out too. The
-      // backend cookie is cleared by the logout mutation.
+      // Clear all stored session tokens so the user is fully logged out
+      // across cookies, sessionStorage, and localStorage.
       try {
         sessionStorage.removeItem("manus-cookie");
+        localStorage.removeItem("guest_token");
+        localStorage.removeItem("manus-cookie");
       } catch {}
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
