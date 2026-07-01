@@ -4,7 +4,7 @@ import { useLocation } from 'wouter';
 import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
-  Smartphone, Lock, Gift, Bell, Star, UserCircle, Search, ShoppingBag,
+  Smartphone, Lock, Gift, Bell, Star, UserCircle, Search, ShoppingBag, Zap,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
