@@ -284,6 +284,33 @@ export default function ChatRoom() {
   useEffect(() => { if (showChat) setUnread(0); }, [showChat]);
 
   // ── controls ───────────────────────────────────────────────────────────────
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const toggleCamera = async () => {
+    if (!localStreamRef.current) return;
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    try {
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: newMode },
+        audio: true
+      });
+      
+      // Replace tracks in PC
+      if (pcRef.current) {
+        const videoTrack = newStream.getVideoTracks()[0];
+        const sender = pcRef.current.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(videoTrack);
+      }
+
+      // Stop old tracks
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      
+      localStreamRef.current = newStream;
+      if (localVideoRef.current) localVideoRef.current.srcObject = newStream;
+      setFacingMode(newMode);
+    } catch (e) {
+      console.error("Failed to switch camera", e);
+    }
+  };
   const toggleMic   = () => { localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !isMicOn; }); setIsMicOn(v => !v); };
   const toggleVideo = () => { localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = !isVideoOn; }); setIsVideoOn(v => !v); };
   const handleNext  = () => { setMessages([]); stopTimer(); closePC(); if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null; signal('next'); };
@@ -595,6 +622,13 @@ export default function ChatRoom() {
               {isVideoOn ? <Video className="w-6 h-6 text-white" /> : <VideoOff className="w-6 h-6 text-white" />}
             </button>
             <span className="text-white text-xs mt-2 font-bold">كاميرا</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <button onClick={toggleCamera}
+              className="rounded-full p-3 transition-all shadow-lg hover:scale-110 bg-purple-500 hover:bg-purple-600">
+              <Smartphone className="w-6 h-6 text-white" />
+            </button>
+            <span className="text-white text-xs mt-2 font-bold">تبديل</span>
           </div>
           <div className="flex flex-col items-center">
             <button onClick={() => setIsSpeakerOn(v => !v)}

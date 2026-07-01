@@ -27,6 +27,7 @@ export default function Header() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
           <a href="#features" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">الميزات</a>
+          <button onClick={() => setLocation('/store')} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">المتجر</button>
           <a href="#faq"      className="text-gray-700 hover:text-purple-600 font-medium transition-colors">الأسئلة الشائعة</a>
           <a href="#security" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">الأمان</a>
         </nav>
@@ -94,6 +95,7 @@ export default function Header() {
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-200 py-4 px-4 space-y-4 animate-in fade-in slide-in-from-top-2">
           <a href="#features" className="block text-gray-700 hover:text-purple-600 font-medium py-2">الميزات</a>
+          <button onClick={() => { setIsMenuOpen(false); setLocation('/store'); }} className="block text-right w-full text-gray-700 hover:text-purple-600 font-medium py-2">المتجر</button>
           <a href="#faq"      className="block text-gray-700 hover:text-purple-600 font-medium py-2">الأسئلة الشائعة</a>
           <a href="#security" className="block text-gray-700 hover:text-purple-600 font-medium py-2">الأمان</a>
 
