@@ -659,87 +659,98 @@ export default function ChatRoom() {
       </div>
 
       {/* Controls */}
-      <div className="mt-3 bg-black/30 backdrop-blur-md rounded-3xl p-4 border border-white/10">
-        <div className="flex flex-wrap gap-4 justify-center mb-4">
-          <div className="flex flex-col items-center">
+      <div className="mt-3 bg-black/40 backdrop-blur-xl rounded-[2.5rem] p-6 border border-white/10 shadow-2xl">
+        <div className="grid grid-cols-5 gap-4 mb-6">
+          {/* Row 1: Primary Controls */}
+          <div className="flex flex-col items-center gap-1.5">
             <button onClick={toggleMic}
-              className={`rounded-full p-3 transition-all shadow-lg hover:scale-110 ${isMicOn ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}>
-              {isMicOn ? <Mic className="w-6 h-6 text-white" /> : <MicOff className="w-6 h-6 text-white" />}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isMicOn ? 'bg-white/10 text-white' : 'bg-red-500 text-white'}`}>
+              {isMicOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
             </button>
-            <span className="text-white text-xs mt-2 font-bold">{isMicOn ? 'صوت' : 'كتم'}</span>
+            <span className="text-white/60 text-[10px] font-bold">ميكروفون</span>
           </div>
-          <div className="flex flex-col items-center">
+
+          <div className="flex flex-col items-center gap-1.5">
             <button onClick={toggleVideo}
-              className={`rounded-full p-3 transition-all shadow-lg hover:scale-110 ${isVideoOn ? 'bg-blue-500 hover:bg-blue-600' : 'bg-red-500 hover:bg-red-600'}`}>
-              {isVideoOn ? <Video className="w-6 h-6 text-white" /> : <VideoOff className="w-6 h-6 text-white" />}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isVideoOn ? 'bg-white/10 text-white' : 'bg-red-500 text-white'}`}>
+              {isVideoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
             </button>
-            <span className="text-white text-xs mt-2 font-bold">كاميرا</span>
+            <span className="text-white/60 text-[10px] font-bold">كاميرا</span>
           </div>
-          <div className="flex flex-col items-center">
+
+          <div className="flex flex-col items-center gap-1.5">
             <button onClick={toggleCamera}
-              className={`rounded-full p-3 transition-all shadow-lg hover:scale-110 ${(user as any)?.isPremium ? 'bg-purple-500 hover:bg-purple-600' : 'bg-gray-500 opacity-70'}`}>
-              <Smartphone className="w-6 h-6 text-white" />
-              {!(user as any)?.isPremium && <Lock className="w-3 h-3 text-white absolute top-0 right-0" />}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg relative ${(user as any)?.isPremium ? 'bg-yellow-400 text-gray-900' : 'bg-white/5 text-white/30'}`}>
+              <Smartphone className="w-5 h-5" />
+              {!(user as any)?.isPremium && <Lock className="w-2.5 h-2.5 absolute top-1.5 right-1.5" />}
             </button>
-            <span className="text-white text-xs mt-2 font-bold">تبديل</span>
+            <span className="text-white/60 text-[10px] font-bold">تبديل</span>
           </div>
-          <div className="flex flex-col items-center">
-            <button onClick={() => setLocation('/store')}
-              className="rounded-full p-3 bg-gradient-to-br from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 transition-all shadow-lg hover:scale-110">
-              <ShoppingBag className="w-6 h-6 text-white" />
-            </button>
-            <span className="text-white text-xs mt-2 font-bold">المتجر</span>
-          </div>
-          <div className="flex flex-col items-center">
+
+          <div className="flex flex-col items-center gap-1.5">
             <button onClick={() => setIsSpeakerOn(v => !v)}
-              className={`rounded-full p-3 transition-all shadow-lg hover:scale-110 ${isSpeakerOn ? 'bg-purple-500 hover:bg-purple-600' : 'bg-red-500 hover:bg-red-600'}`}>
-              {isSpeakerOn ? <Volume2 className="w-6 h-6 text-white" /> : <VolumeX className="w-6 h-6 text-white" />}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${isSpeakerOn ? 'bg-white/10 text-white' : 'bg-red-500 text-white'}`}>
+              {isSpeakerOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
             </button>
-            <span className="text-white text-xs mt-2 font-bold">صوت</span>
+            <span className="text-white/60 text-[10px] font-bold">صوت</span>
           </div>
-          <div className="flex flex-col items-center">
+
+          <div className="flex flex-col items-center gap-1.5">
             <button onClick={() => { setShowChat(v => !v); setUnread(0); }}
-              className="relative rounded-full p-3 bg-cyan-500 hover:bg-cyan-600 transition-all shadow-lg hover:scale-110">
-              <MessageSquare className="w-6 h-6 text-white" />
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg relative ${showChat ? 'bg-cyan-500 text-white' : 'bg-white/10 text-white'}`}>
+              <MessageSquare className="w-5 h-5" />
               {unread > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">{unread}</span>
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold border-2 border-gray-900">{unread}</span>
               )}
             </button>
-            <span className="text-white text-xs mt-2 font-bold">دردشة</span>
+            <span className="text-white/60 text-[10px] font-bold">دردشة</span>
           </div>
-          <div className="flex flex-col items-center">
+
+          {/* Row 2: Secondary & Action Controls */}
+          <div className="flex flex-col items-center gap-1.5">
+            <button onClick={() => setLocation('/store')}
+              className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg">
+              <ShoppingBag className="w-5 h-5" />
+            </button>
+            <span className="text-white/60 text-[10px] font-bold">المتجر</span>
+          </div>
+
+          <div className="flex flex-col items-center gap-1.5">
             <button
               onClick={() => status === 'matched' ? setShowGifts(v => !v) : undefined}
               disabled={status !== 'matched'}
-              className={`rounded-full p-3 transition-all shadow-lg hover:scale-110 ${
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg ${
                 status === 'matched'
-                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600'
-                  : 'bg-gray-600 opacity-50 cursor-not-allowed'
+                  ? 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white'
+                  : 'bg-white/5 text-white/20 cursor-not-allowed'
               }`}>
-              <Gift className="w-6 h-6 text-white" />
+              <Gift className="w-5 h-5" />
             </button>
-            <span className="text-white text-xs mt-2 font-bold">هدية</span>
+            <span className="text-white/60 text-[10px] font-bold">هدية</span>
           </div>
 
-          <div className="flex flex-col items-center">
+          <div className="col-span-2 flex flex-col items-center gap-1.5">
             <button onClick={handleNext} disabled={status === 'connecting' || status === 'waiting'}
-              className="rounded-full p-3 bg-yellow-500 hover:bg-yellow-600 disabled:opacity-40 transition-all shadow-lg hover:scale-110">
-              <SkipForward className="w-6 h-6 text-white" />
+              className="w-full h-12 rounded-2xl bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 transition-all active:scale-95">
+              <SkipForward className="w-5 h-5" />
+              <span>التالي</span>
             </button>
-            <span className="text-white text-xs mt-2 font-bold">التالي</span>
+            <span className="text-white/60 text-[10px] font-bold">البحث عن شخص جديد</span>
           </div>
-          <div className="flex flex-col items-center">
-            <button className="rounded-full p-3 bg-rose-500 hover:bg-rose-600 transition-all shadow-lg hover:scale-110">
-              <Flag className="w-6 h-6 text-white" />
+
+          <div className="flex flex-col items-center gap-1.5">
+            <button className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white/5 text-white/40 hover:bg-rose-500/20 hover:text-rose-500 transition-all">
+              <Flag className="w-5 h-5" />
             </button>
-            <span className="text-white text-xs mt-2 font-bold">إبلاغ</span>
+            <span className="text-white/60 text-[10px] font-bold">إبلاغ</span>
           </div>
         </div>
-        <Button onClick={handleEnd}
-          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2">
+
+        <button onClick={handleEnd}
+          className="w-full bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 transition-all border border-rose-500/20">
           <PhoneOff className="w-5 h-5" />
-          انهاء الاتصال
-        </Button>
+          <span>انهاء الاتصال</span>
+        </button>
       </div>
 
       {showGifts && (
