@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   bio: text("bio"),
   credits: integer("credits").default(100).notNull(),
   profileViews: integer("profileViews").default(0).notNull(),
+  country: varchar("country", { length: 10 }),
   isPremium: boolean("isPremium").default(false).notNull(),
   isOnline: boolean("isOnline").default(false).notNull(),
   lastSeen: timestamp("lastSeen").defaultNow().notNull(),
