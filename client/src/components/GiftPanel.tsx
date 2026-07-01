@@ -8,6 +8,9 @@ export const GIFTS = [
   { id: 'gift',    emoji: '🎁',  name: 'هدية',   cost: 30  },
   { id: 'diamond', emoji: '💎',  name: 'جوهرة',  cost: 50  },
   { id: 'crown',   emoji: '👑',  name: 'تاج',    cost: 100 },
+  { id: 'fire',    emoji: '🔥',  name: 'نار',    cost: 25  },
+  { id: 'rocket',  emoji: '🚀',  name: 'صاروخ',  cost: 40  },
+  { id: 'unicorn', emoji: '🦄',  name: 'يونيكورن', cost: 75 },
 ] as const;
 
 export type GiftItem = typeof GIFTS[number];
@@ -53,7 +56,7 @@ export default function GiftPanel({ credits, onSend, onClose, disabled }: GiftPa
                   : 'border-white/5 opacity-35 cursor-not-allowed'
               }`}
             >
-              <span className="text-2xl mb-1.5 leading-none drop-shadow-lg group-hover:scale-110 transition-transform duration-200">{gift.emoji}</span>
+              <span className="text-3xl mb-1.5 leading-none drop-shadow-lg group-hover:scale-125 group-hover:animate-bounce transition-transform duration-200">{gift.emoji}</span>
               <span className="text-white text-xs font-bold">{gift.name}</span>
               <div className="flex items-center gap-0.5 mt-1 bg-yellow-500/20 px-2 py-0.5 rounded-full">
                 <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />

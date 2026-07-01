@@ -771,7 +771,8 @@ export default function ChatRoom() {
                 setLocation('/store?from=chat');
                 return;
               }
-              toast.info("ميزة الخلفيات قريباً!");
+              // TODO: Implement background selection modal
+              toast.success("اختر خلفية مميزة لغرفتك!");
             }}
             className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${(user as any)?.isPremium ? 'text-pink-300' : 'text-white/40'}`}
           >
