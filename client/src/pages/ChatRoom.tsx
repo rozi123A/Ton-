@@ -91,7 +91,7 @@ export default function ChatRoom() {
   // ── core state ─────────────────────────────────────────────────────────────
   const queryParams = new URLSearchParams(window.location.search);
   const autoStart = queryParams.get('autoStart') === 'true';
-  const [status,       setStatus]      = useState<Status>(autoStart ? 'connecting' : 'setup');
+  const [status,       setStatus]      = useState<Status>('setup');
   const [peerName,     setPeerName]    = useState('');
   const [peerAvatar,   setPeerAvatar]  = useState('');
   const [isMicOn,      setIsMicOn]     = useState(true);
@@ -291,10 +291,13 @@ export default function ChatRoom() {
   }, [stopTimer, closePC]);
 
   useEffect(() => {
-    if (autoStart && status === 'setup') {
-      startSession(filterGender, filterCountry);
+    if (autoStart) {
+      const timer = setTimeout(() => {
+        startSession('any', 'any');
+      }, 300);
+      return () => clearTimeout(timer);
     }
-  }, [autoStart, status, startSession, filterGender, filterCountry]);
+  }, [autoStart, startSession]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { if (showChat) setUnread(0); }, [showChat]);
@@ -704,7 +707,7 @@ export default function ChatRoom() {
               {!(user as any)?.isPremium && <Lock className="w-2.5 h-2.5 absolute top-1.5 right-1.5" />}
             </button>
             <span className={`text-[10px] font-bold ${(user as any)?.isPremium ? 'text-yellow-400' : 'text-white/40'}`}>
-              {facingMode === 'user' ? 'خلفية' : 'أمامية'}
+              {facingMode === 'user' ? 'كاميرا خلفية' : 'كاميرا أمامية'}
             </span>
           </div>
 
