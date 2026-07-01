@@ -1,7 +1,8 @@
-import { ShoppingBag, Star, Camera, ShieldCheck, Zap, Sparkles } from "lucide-react";
+import { ShoppingBag, Star, Camera, ShieldCheck, Zap, Sparkles, ArrowRight } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
@@ -9,7 +10,19 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 
 export default function Store() {
+  const [location, setLocation] = useLocation();
   const { user, mutate: mutateAuth } = useAuth();
+  
+  const queryParams = new URLSearchParams(window.location.search);
+  const fromChat = queryParams.get('from') === 'chat';
+
+  const handleBack = () => {
+    if (fromChat) {
+      setLocation('/chat');
+    } else {
+      setLocation('/');
+    }
+  };
   const upgradeMutation = trpc.gifts.upgrade.useMutation({
     onSuccess: () => {
       toast.success("تم تفعيل اشتراك Premium بنجاح! استمتع بالميزات الحصرية.");
@@ -60,6 +73,17 @@ export default function Store() {
       <Header />
       
       <main className="flex-grow container mx-auto px-4 py-12">
+        <div className="mb-8">
+          <Button 
+            variant="ghost" 
+            onClick={handleBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-purple-600 mb-4"
+          >
+            <ArrowRight className="w-4 h-4" />
+            العودة {fromChat ? 'للدردشة' : 'للرئيسية'}
+          </Button>
+        </div>
+
         <div className="text-center mb-12">
           <Badge className="mb-4 px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">
             عروض حصرية

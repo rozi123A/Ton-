@@ -680,11 +680,17 @@ export default function ChatRoom() {
 
           <div className="flex flex-col items-center gap-1.5">
             <button onClick={toggleCamera}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg relative ${(user as any)?.isPremium ? 'bg-yellow-400 text-gray-900' : 'bg-white/5 text-white/30'}`}>
-              <Smartphone className="w-5 h-5" />
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg relative active:scale-90 ${
+                (user as any)?.isPremium 
+                  ? 'bg-gradient-to-b from-yellow-300 to-yellow-500 text-gray-900 border-b-4 border-yellow-700 hover:brightness-110' 
+                  : 'bg-white/5 text-white/30 cursor-not-allowed'
+              }`}>
+              <Smartphone className={`w-6 h-6 ${(user as any)?.isPremium ? 'animate-pulse' : ''}`} />
               {!(user as any)?.isPremium && <Lock className="w-2.5 h-2.5 absolute top-1.5 right-1.5" />}
             </button>
-            <span className="text-white/60 text-[10px] font-bold">تبديل</span>
+            <span className={`text-[10px] font-bold ${(user as any)?.isPremium ? 'text-yellow-400' : 'text-white/40'}`}>
+              {facingMode === 'user' ? 'خلفية' : 'أمامية'}
+            </span>
           </div>
 
           <div className="flex flex-col items-center gap-1.5">
@@ -708,8 +714,8 @@ export default function ChatRoom() {
 
           {/* Row 2: Secondary & Action Controls */}
           <div className="flex flex-col items-center gap-1.5">
-            <button onClick={() => setLocation('/store')}
-              className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg">
+            <button onClick={() => setLocation('/store?from=chat')}
+              className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg hover:brightness-110 active:scale-90">
               <ShoppingBag className="w-5 h-5" />
             </button>
             <span className="text-white/60 text-[10px] font-bold">المتجر</span>
