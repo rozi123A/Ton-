@@ -18,7 +18,8 @@ export default function Store() {
 
   const handleBack = () => {
     if (fromChat) {
-      setLocation('/chat');
+      // Use window.history.back() if possible to maintain state, or direct navigation
+      setLocation('/chat?autoStart=true');
     } else {
       setLocation('/');
     }

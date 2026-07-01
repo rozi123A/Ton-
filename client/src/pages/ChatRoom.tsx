@@ -89,7 +89,9 @@ export default function ChatRoom() {
   const [filterCountry, setFilterCountry] = useState('any');
 
   // ── core state ─────────────────────────────────────────────────────────────
-  const [status,       setStatus]      = useState<Status>('setup');
+  const queryParams = new URLSearchParams(window.location.search);
+  const autoStart = queryParams.get('autoStart') === 'true';
+  const [status,       setStatus]      = useState<Status>(autoStart ? 'connecting' : 'setup');
   const [peerName,     setPeerName]    = useState('');
   const [peerAvatar,   setPeerAvatar]  = useState('');
   const [isMicOn,      setIsMicOn]     = useState(true);
@@ -242,6 +244,13 @@ export default function ChatRoom() {
 
   // ── start session (called after filter screen) ────────────────────────────
   const startSession = useCallback(async (fg: string, fc: string) => {
+    if (fg !== 'any' || fc !== 'any') {
+      if (!(user as any)?.isPremium) {
+        toast.error("فلتر الجنس والدولة ميزة Premium فقط.");
+        setLocation('/store');
+        return;
+      }
+    }
     destroyedRef.current = false;
     setStatus('connecting');
     try {
@@ -280,6 +289,12 @@ export default function ChatRoom() {
       esRef.current?.close();
     };
   }, [stopTimer, closePC]);
+
+  useEffect(() => {
+    if (autoStart && status === 'setup') {
+      startSession(filterGender, filterCountry);
+    }
+  }, [autoStart, status, startSession, filterGender, filterCountry]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => { if (showChat) setUnread(0); }, [showChat]);
