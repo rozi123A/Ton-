@@ -758,6 +758,19 @@ export default function ChatRoom() {
                 <button
                   onClick={() => {
                     if (status !== 'matched') {
+                      toast.info("فلاتر الوجه تفتح أثناء المكالمة النشطة.");
+                      return;
+                    }
+                    setShowFaceFilters(v => !v);
+                  }}
+                  className={`transition-colors ${status === 'matched' ? 'text-purple-300 hover:text-purple-200' : 'text-white/25'}`}
+                  title="فلاتر"
+                >
+                  <Wand2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    if (status !== 'matched') {
                       toast.info("ميزة الترجمة تفتح أثناء المكالمة النشطة.");
                       return;
                     }
