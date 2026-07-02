@@ -52,11 +52,22 @@ export default function Login() {
     if (!gender) { setError('يرجى اختيار الجنس'); return; }
     setIsLoading(true);
     try {
+      // Detect country from browser language (e.g. "ar-SA" → "SA", "ar-DZ" → "DZ")
+      let browserCountry: string | undefined;
+      try {
+        const lang = navigator.language || '';
+        if (lang.includes('-')) {
+          const code = lang.split('-').pop()?.toUpperCase();
+          if (code && code.length === 2 && /^[A-Z]{2}$/.test(code)) browserCountry = code;
+        }
+      } catch { /* ignore */ }
+
       const result = await guestLoginMutation.mutateAsync({
         name: name.trim(),
         age: parseInt(age),
         gender: gender as 'male' | 'female' | 'other',
         avatar: finalAvatar,
+        ...(browserCountry ? { country: browserCountry } : {}),
       });
       // Store token in localStorage so it survives browser restarts and
       // works even when cookies are blocked (mobile / private browsing).
