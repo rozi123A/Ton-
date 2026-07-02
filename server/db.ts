@@ -382,6 +382,28 @@ export async function saveGift(senderId: number, receiverId: number, giftType: s
   }
 }
 
+export async function getNewRegistrations(limit = 50): Promise<Array<{
+  id: number; name: string | null; country: string | null; avatar: string | null;
+  gender: string | null; createdAt: Date; loginMethod: string | null; isPremium: boolean;
+}>> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select({
+        id: users.id, name: users.name, country: users.country, avatar: users.avatar,
+        gender: users.gender, createdAt: users.createdAt, loginMethod: users.loginMethod,
+        isPremium: users.isPremium,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(limit);
+  } catch (err) {
+    console.error('[Database] getNewRegistrations failed:', err);
+    return [];
+  }
+}
+
 export async function getCountryStats(): Promise<Array<{ country: string; count: number }>> {
   const db = await getDb();
   if (!db) return [];
