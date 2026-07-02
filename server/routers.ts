@@ -1,12 +1,12 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_core/trpc";
 import {
   saveUserProfile, getUsersByGender, getMessages, saveMessage,
   upsertUser, getUserByOpenId, getRecentUsers, incrementProfileViews,
   getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
-  getCountryStats,
+  getCountryStats, getNewRegistrations,
 } from "./db";
 import { sdk } from "./_core/sdk";
 import { nanoid } from "nanoid";
@@ -135,6 +135,15 @@ export const appRouter = router({
         await upgradeToPremium(ctx.user.id);
         return { success: true };
       }),
+  }),
+
+  admin: router({
+    newRegistrations: adminProcedure
+      .input(z.number().min(1).max(200).optional())
+      .query(async ({ input }) => getNewRegistrations(input ?? 50)),
+
+    countryStats: adminProcedure
+      .query(async () => getCountryStats()),
   }),
 });
 
