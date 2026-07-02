@@ -16,9 +16,9 @@ interface PeerInfo {
   res: Response;
   name: string;
   avatar: string;
-  gender: string;         // actual gender of this user
-  filterGender: string;   // 'male' | 'female' | 'any'
-  filterCountry: string;  // country code or 'any'
+  gender: string;
+  filterGender: string;
+  filterCountry: string;
   partnerId: string | null;
 }
 
@@ -35,13 +35,9 @@ function sseEvent(res: Response, data: object) {
   }
 }
 
-// ── Filter-aware matching ─────────────────────────────────────────────────────
 function isCompatible(a: PeerInfo, b: PeerInfo): boolean {
-  // a wants b's gender?
   const aWantsB = a.filterGender === 'any' || a.filterGender === b.gender;
-  // b wants a's gender?
   const bWantsA = b.filterGender === 'any' || b.filterGender === a.gender;
-  // country: both any, or one any, or same country
   const countryOk =
     a.filterCountry === 'any' ||
     b.filterCountry === 'any' ||
@@ -60,7 +56,6 @@ function matchPeers() {
       if (!p1 || !p2) continue;
       if (!isCompatible(p1, p2)) continue;
 
-      // Remove from queue
       const qi1 = waitingQueue.indexOf(id1);
       if (qi1 !== -1) waitingQueue.splice(qi1, 1);
       const qi2 = waitingQueue.indexOf(id2);
@@ -70,7 +65,6 @@ function matchPeers() {
       p2.partnerId = id1;
       sseEvent(p1.res, { type: "matched", role: "caller", peer: { name: p2.name, avatar: p2.avatar } });
       sseEvent(p2.res, { type: "matched", role: "callee", peer: { name: p1.name, avatar: p1.avatar } });
-      // Restart to find more pairs
       matchPeers();
       return;
     }
@@ -123,7 +117,6 @@ function registerSignalingRoutes(app: express.Express) {
     sseEvent(res, { type: "waiting" });
     matchPeers();
 
-    // Reconnect notification
     const last = lastPeers.get(name);
     if (last && Date.now() - last.ts < NOTIF_TTL) {
       const partnerWaiting = [...peers.values()].find(
@@ -177,9 +170,106 @@ function registerSignalingRoutes(app: express.Express) {
       sseEvent(partner.res, { type: "text-message", text, senderName: peer.name });
     } else if (type === "gift") {
       sseEvent(partner.res, { type: "gift", data: { ...(data as object), senderName: peer.name } });
+    } else if (type === "friend-request") {
+      sseEvent(partner.res, {
+        type: "friend-request",
+        fromName: peer.name,
+        fromAvatar: peer.avatar,
+        fromPeerId: peerId,
+      });
+    } else if (type === "friend-accepted") {
+      sseEvent(partner.res, {
+        type: "friend-accepted",
+        fromName: peer.name,
+        fromAvatar: peer.avatar,
+      });
     } else {
       sseEvent(partner.res, { type, data });
     }
+    res.json({ ok: true });
+  });
+}
+
+// ── User Notification System (SSE per userId) ─────────────────────────────────
+
+interface NotifPayload {
+  type: string;
+  title?: string;
+  message?: string;
+  fromName?: string;
+  fromAvatar?: string;
+  ts: number;
+  [key: string]: unknown;
+}
+
+const notifyClients = new Map<string, Response>();
+const pendingNotifs = new Map<string, NotifPayload[]>();
+const MAX_PENDING = 30;
+
+function sendUserNotification(userId: string, notif: NotifPayload) {
+  const client = notifyClients.get(userId);
+  if (client && !client.writableEnded) {
+    sseEvent(client, notif);
+  } else {
+    const queue = pendingNotifs.get(userId) || [];
+    queue.push(notif);
+    if (queue.length > MAX_PENDING) queue.shift();
+    pendingNotifs.set(userId, queue);
+  }
+}
+
+function registerNotifyRoutes(app: express.Express) {
+  app.get("/api/notify/stream", (req: Request, res: Response) => {
+    const userId = req.query.userId as string;
+    if (!userId) { res.status(400).json({ error: "userId required" }); return; }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    notifyClients.set(userId, res);
+
+    const pending = pendingNotifs.get(userId) || [];
+    pending.forEach(n => sseEvent(res, n));
+    pendingNotifs.delete(userId);
+
+    sseEvent(res, { type: "connected", ts: Date.now() });
+
+    const keepAlive = setInterval(() => {
+      if (!res.writableEnded) res.write(": ping\n\n");
+      else clearInterval(keepAlive);
+    }, 25000);
+
+    req.on("close", () => {
+      notifyClients.delete(userId);
+      clearInterval(keepAlive);
+    });
+  });
+
+  app.post("/api/notify/send", express.json(), (req: Request, res: Response) => {
+    const { userId, type, title, message, fromName, fromAvatar } = req.body as {
+      userId: string;
+      type?: string;
+      title?: string;
+      message?: string;
+      fromName?: string;
+      fromAvatar?: string;
+    };
+
+    if (!userId) { res.json({ ok: false, reason: "userId required" }); return; }
+
+    const notif: NotifPayload = {
+      type: type || "notification",
+      title,
+      message,
+      fromName,
+      fromAvatar,
+      ts: Date.now(),
+    };
+
+    sendUserNotification(String(userId), notif);
     res.json({ ok: true });
   });
 }
@@ -213,6 +303,7 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerSignalingRoutes(app);
+  registerNotifyRoutes(app);
 
   app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 
