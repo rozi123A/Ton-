@@ -17,6 +17,7 @@ interface FriendsPanelProps {
   currentPeerName?: string;
   currentPeerAvatar?: string;
   currentPeerId?: string;
+  myPeerId?: string;
   onSendFriendRequest?: (peerId: string) => void;
 }
 
@@ -27,6 +28,7 @@ export default function FriendsPanel({
   currentPeerName,
   currentPeerAvatar,
   currentPeerId,
+  myPeerId,
   onSendFriendRequest,
 }: FriendsPanelProps) {
   const [requestSent, setRequestSent] = useState(false);
@@ -35,10 +37,24 @@ export default function FriendsPanel({
   const onlineFriends = friends.filter(f => f.status === 'online');
   const offlineFriends = friends.filter(f => f.status === 'offline');
 
-  const handleSendRequest = () => {
-    if (!currentPeerId) return;
+  const handleSendRequest = async () => {
+    if (!currentPeerId || !myPeerId) return;
     setRequestSent(true);
     toast.success(`تم إرسال طلب صداقة إلى ${currentPeerName || 'المستخدم'}`);
+
+    // Send via signal SSE so partner sees it live in ChatRoom
+    try {
+      await fetch('/api/signal/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          peerId: myPeerId,
+          type: 'friend-request',
+          data: { fromName: currentPeerName },
+        }),
+      });
+    } catch {}
+
     if (onSendFriendRequest) onSendFriendRequest(currentPeerId);
   };
 
