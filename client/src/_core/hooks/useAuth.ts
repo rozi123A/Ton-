@@ -1,4 +1,5 @@
 import { getLoginUrl } from "@/const";
+import { detectBrowserCountry } from "@/lib/detectCountry";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -25,15 +26,7 @@ export function useAuth(options?: UseAuthOptions) {
     const key = `country_detected_${(user as { id?: number }).id ?? 'u'}`;
     if (sessionStorage.getItem(key)) return;
     sessionStorage.setItem(key, '1');
-    // Detect from navigator.language: "ar-SA"→"SA", "ar-DZ"→"DZ", "en-US"→"US"
-    let browserCountry: string | undefined;
-    try {
-      const lang = navigator.language || '';
-      if (lang.includes('-')) {
-        const code = lang.split('-').pop()?.toUpperCase();
-        if (code && code.length === 2 && /^[A-Z]{2}$/.test(code)) browserCountry = code;
-      }
-    } catch { /* ignore */ }
+    const browserCountry = detectBrowserCountry();
     updateCountry.mutate(browserCountry ? { country: browserCountry } : undefined);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meQuery.data]);
