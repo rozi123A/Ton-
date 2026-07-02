@@ -29,27 +29,36 @@ export function registerOAuthRoutes(app: Express) {
       }
 
       // Detect country from IP — best-effort, multiple fallbacks
-      let detectedCountry: string | null = null;
+      let detectedCountry: string | undefined = undefined;
       try {
         // 1) Cloudflare header (most reliable when behind CF)
         const cfCountry = req.headers['cf-ipcountry'] as string | undefined;
         if (cfCountry && cfCountry.length === 2 && cfCountry !== 'XX') {
-          detectedCountry = cfCountry;
+          detectedCountry = cfCountry.toUpperCase();
         }
 
-        // 2) ip-api.com (free, no key, reliable)
+        // 2) ip-api.com with all possible IP headers
         if (!detectedCountry) {
-          const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
-            || (req.socket.remoteAddress || '').replace('::ffff:', '');
-          if (ip && ip !== '127.0.0.1' && ip !== '::1') {
+          // Try all common proxy headers in order
+          const rawIp =
+            (req.headers['cf-connecting-ip'] as string) ||
+            (req.headers['x-real-ip'] as string) ||
+            (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+            (req.socket.remoteAddress || '').replace('::ffff:', '');
+
+          const ip = rawIp?.trim();
+          console.log('[GEO] Detected IP:', ip);
+
+          if (ip && ip !== '127.0.0.1' && ip !== '::1' && ip !== '') {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 4000);
+            const timer = setTimeout(() => controller.abort(), 5000);
             try {
-              const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, { signal: controller.signal });
+              const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode,status`, { signal: controller.signal });
               if (geoRes.ok) {
-                const data = await geoRes.json() as { countryCode?: string };
-                if (data.countryCode && data.countryCode.length === 2) {
-                  detectedCountry = data.countryCode;
+                const data = await geoRes.json() as { countryCode?: string; status?: string };
+                console.log('[GEO] ip-api result:', JSON.stringify(data));
+                if (data.status === 'success' && data.countryCode && data.countryCode.length === 2) {
+                  detectedCountry = data.countryCode.toUpperCase();
                 }
               }
             } finally {
@@ -57,7 +66,11 @@ export function registerOAuthRoutes(app: Express) {
             }
           }
         }
-      } catch { /* geo detection is best-effort */ }
+      } catch (geoErr) {
+        console.error('[GEO] Country detection failed:', geoErr);
+      }
+
+      console.log('[GEO] Final country:', detectedCountry ?? 'none');
 
       await db.upsertUser({
         openId: userInfo.openId,
@@ -65,7 +78,8 @@ export function registerOAuthRoutes(app: Express) {
         email: userInfo.email ?? null,
         loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
         lastSignedIn: new Date(),
-        country: detectedCountry,
+        // Only pass country if we actually detected one — never overwrite with undefined/null
+        ...(detectedCountry ? { country: detectedCountry } : {}),
       });
 
       const sessionToken = await sdk.createSessionToken(userInfo.openId, {
