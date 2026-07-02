@@ -12,33 +12,32 @@ import { sdk } from "./_core/sdk";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-/** Detect country from request IP — tries CF headers first, then ip-api.com */
+/** Detect country from request IP — uses req.ip (Express trust proxy), then ip-api.com */
 async function detectCountry(req: import('express').Request): Promise<string | null> {
   try {
+    // 1) Cloudflare header (most reliable behind CF proxy)
     const cf = req.headers['cf-ipcountry'] as string | undefined;
     if (cf && cf.length === 2 && cf !== 'XX') return cf.toUpperCase();
 
-    const ip = (
-      (req.headers['cf-connecting-ip'] as string) ||
-      (req.headers['x-real-ip'] as string) ||
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
-      (req.socket.remoteAddress || '').replace('::ffff:', '')
-    )?.trim();
+    // 2) Use req.ip — Express sets this correctly when "trust proxy" is enabled
+    const ip = (req.ip || req.socket.remoteAddress || '').replace('::ffff:', '').trim();
+    console.log('[GEO] req.ip =', ip, '| x-forwarded-for =', req.headers['x-forwarded-for']);
 
     if (!ip || ip === '127.0.0.1' || ip === '::1') return null;
 
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 5000);
+    const t = setTimeout(() => ctrl.abort(), 6000);
     try {
       const r = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode,status`, { signal: ctrl.signal });
       if (r.ok) {
         const d = await r.json() as { countryCode?: string; status?: string };
+        console.log('[GEO] ip-api result for', ip, ':', JSON.stringify(d));
         if (d.status === 'success' && d.countryCode?.length === 2) {
           return d.countryCode.toUpperCase();
         }
       }
     } finally { clearTimeout(t); }
-  } catch { /* best-effort */ }
+  } catch (e) { console.error('[GEO] detectCountry error:', e); }
   return null;
 }
 
@@ -53,14 +52,17 @@ export const appRouter = router({
       return { success: true } as const;
     }),
 
-    /** Detect and save country for the current logged-in user from their IP */
-    updateCountry: protectedProcedure.mutation(async ({ ctx }) => {
-      const country = await detectCountry(ctx.req);
-      if (country && ctx.user) {
-        await upsertUser({ openId: ctx.user.openId, country });
-      }
-      return { country };
-    }),
+    /** Detect and save country — accepts client-detected country or falls back to IP */
+    updateCountry: protectedProcedure
+      .input(z.object({ country: z.string().length(2).optional() }).optional())
+      .mutation(async ({ ctx, input }) => {
+        // Prefer client-side browser country (always accurate), fall back to IP
+        const country = input?.country?.toUpperCase() || await detectCountry(ctx.req);
+        if (country && ctx.user) {
+          await upsertUser({ openId: ctx.user.openId, country });
+        }
+        return { country };
+      }),
   }),
 
   users: router({
@@ -70,13 +72,14 @@ export const appRouter = router({
         age: z.number().min(13).max(100),
         gender: z.enum(['male', 'female', 'other']),
         avatar: z.string().optional(),
+        country: z.string().length(2).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const guestOpenId = `guest_${nanoid()}`;
         const avatarUrl = input.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`;
 
-        // Detect country at registration time so flag shows immediately
-        const country = await detectCountry(ctx.req);
+        // Use client-provided browser country first (always accurate), then IP fallback
+        const country = input.country?.toUpperCase() || await detectCountry(ctx.req);
 
         try {
           await upsertUser({ openId: guestOpenId, name: input.name, loginMethod: 'guest', lastSignedIn: new Date(), ...(country ? { country } : {}) });
