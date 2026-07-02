@@ -9,37 +9,9 @@ import {
   getCountryStats, getNewRegistrations,
 } from "./db";
 import { sdk } from "./_core/sdk";
+import { detectCountry } from "./_core/detectCountry";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-
-/** Detect country from request IP — uses req.ip (Express trust proxy), then ip-api.com */
-async function detectCountry(req: import('express').Request): Promise<string | null> {
-  try {
-    // 1) Cloudflare header (most reliable behind CF proxy)
-    const cf = req.headers['cf-ipcountry'] as string | undefined;
-    if (cf && cf.length === 2 && cf !== 'XX') return cf.toUpperCase();
-
-    // 2) Use req.ip — Express sets this correctly when "trust proxy" is enabled
-    const ip = (req.ip || req.socket.remoteAddress || '').replace('::ffff:', '').trim();
-    console.log('[GEO] req.ip =', ip, '| x-forwarded-for =', req.headers['x-forwarded-for']);
-
-    if (!ip || ip === '127.0.0.1' || ip === '::1') return null;
-
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 6000);
-    try {
-      const r = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode,status`, { signal: ctrl.signal });
-      if (r.ok) {
-        const d = await r.json() as { countryCode?: string; status?: string };
-        console.log('[GEO] ip-api result for', ip, ':', JSON.stringify(d));
-        if (d.status === 'success' && d.countryCode?.length === 2) {
-          return d.countryCode.toUpperCase();
-        }
-      }
-    } finally { clearTimeout(t); }
-  } catch (e) { console.error('[GEO] detectCountry error:', e); }
-  return null;
-}
 
 export const appRouter = router({
   system: systemRouter,
