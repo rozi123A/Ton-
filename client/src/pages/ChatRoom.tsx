@@ -13,6 +13,7 @@ import GiftPanel, { GIFTS, type GiftItem } from '@/components/GiftPanel';
 import TranslationPanel from '@/components/TranslationPanel';
 import FaceFiltersPanel from '@/components/FaceFiltersPanel';
 import FriendsPanel from '@/components/FriendsPanel';
+import { playMessageSound, playFriendSound } from '@/lib/notificationSound';
 import { toast } from 'sonner';
 
 // ── ICE config with TURN servers for 4G/5G mobile networks ───────────────────
@@ -173,6 +174,7 @@ export default function ChatRoom() {
     if (!mine) {
       setUnread(u => u + 1);
       setLastIncomingMsg(text);
+      playMessageSound();
       // Browser push notification when window is not focused
       if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
         try { new Notification('رسالة جديدة من ' + name, { body: text, icon: '/favicon.ico' }); } catch {}
@@ -274,6 +276,7 @@ export default function ChatRoom() {
       case 'friend-request':
         setFriendReqBanner({ name: msg.fromName || 'مستخدم', avatar: msg.fromAvatar || '' });
         toast(`طلب صداقة من ${msg.fromName || 'مستخدم'}`, { icon: '👥' });
+        playFriendSound();
         if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
           try { new Notification('طلب صداقة جديد', { body: `${msg.fromName || 'مستخدم'} يريد إضافتك كصديق`, icon: '/favicon.ico' }); } catch {}
         }
@@ -281,6 +284,7 @@ export default function ChatRoom() {
         break;
       case 'friend-accepted':
         toast.success(`${msg.fromName || 'مستخدم'} قبل طلب صداقتك! 🎉`);
+        playFriendSound();
         if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
           try { new Notification('تم قبول طلب الصداقة', { body: `${msg.fromName || 'مستخدم'} قبل طلب صداقتك`, icon: '/favicon.ico' }); } catch {}
         }
