@@ -74,6 +74,7 @@ export async function ensureSchema(): Promise<void> {
        avatar        TEXT,
        bio           TEXT,
        credits       INTEGER NOT NULL DEFAULT 100,
+       wallet        INTEGER NOT NULL DEFAULT 0,
        "isPremium"   BOOLEAN NOT NULL DEFAULT false,
        "isOnline"    BOOLEAN NOT NULL DEFAULT false,
        "lastSeen"    TIMESTAMP NOT NULL DEFAULT now(),
@@ -153,6 +154,7 @@ export async function ensureSchema(): Promise<void> {
   // Add credits and isPremium columns to existing tables that predate this migration
   try {
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 100`);
+    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet INTEGER NOT NULL DEFAULT 0`);
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "isPremium" BOOLEAN NOT NULL DEFAULT false`);
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileViews" INTEGER NOT NULL DEFAULT 0`);
     await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(10)`);
@@ -402,7 +404,14 @@ export async function saveGift(senderId: number, receiverId: number, giftType: s
   const db = await getDb();
   if (!db) return;
   try {
-    await db.insert(gifts).values({ senderId, receiverId, giftType, cost });
+    await db.transaction(async (tx) => {
+      // Deduct from sender
+      await tx.update(users).set({ credits: sql`${users.credits} - ${cost}` }).where(eq(users.id, senderId));
+      // Add to receiver wallet
+      await tx.update(users).set({ wallet: sql`${users.wallet} + ${cost}` }).where(eq(users.id, receiverId));
+      // Log gift
+      await tx.insert(gifts).values({ senderId, receiverId, giftType, cost });
+    });
   } catch (err) {
     console.error('[Database] saveGift failed:', err);
   }

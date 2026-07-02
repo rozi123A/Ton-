@@ -127,17 +127,36 @@ export const appRouter = router({
     spend: protectedProcedure
       .input(z.object({
         giftType: z.string(),
-        cost: z.number().min(1).max(500),
-        receiverName: z.string().optional(), // informational only
+        cost: z.number().min(1).max(1000),
+        receiverId: z.number().optional(),
+        receiverName: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const ok = await deductCredits(ctx.user.id, input.cost);
-        if (!ok) throw new Error('رصيدك غير كافٍ لإرسال هذه الهدية');
+        const current = await getUserCredits(ctx.user.id);
+        if (current < input.cost) throw new Error('رصيدك غير كافٍ لإرسال هذه الهدية');
+        
+        const receiverId = input.receiverId || 0;
+        await saveGift(ctx.user.id, receiverId, input.giftType, input.cost);
+        
+        if (receiverId > 0) {
+          await createNotification(receiverId, {
+            type: 'gift',
+            fromName: ctx.user.name || 'مستخدم',
+            fromAvatar: ctx.user.avatar || '',
+            message: `أرسل لك هدية: ${input.giftType}`,
+          });
+        }
+        
         const newBalance = await getUserCredits(ctx.user.id);
-        // Best-effort gift log (receiverId unknown without pairing info — use 0)
-        await saveGift(ctx.user.id, 0, input.giftType, input.cost).catch(() => {});
         return { success: true, newBalance };
       }),
+
+    getWallet: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return { wallet: 0 };
+      const result = await db.select({ wallet: users.wallet }).from(users).where(eq(users.id, ctx.user.id)).limit(1);
+      return { wallet: result[0]?.wallet ?? 0 };
+    }),
 
     /** Simulate purchasing credits (Stripe coming soon) */
     buyCredits: protectedProcedure

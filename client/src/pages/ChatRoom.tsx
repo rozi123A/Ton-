@@ -154,6 +154,7 @@ export default function ChatRoom() {
 
   // ── tRPC ───────────────────────────────────────────────────────────────────
   const balanceQuery    = trpc.gifts.getBalance.useQuery(undefined, { staleTime: 30_000 });
+  const walletQuery     = trpc.gifts.getWallet.useQuery(undefined, { staleTime: 30_000 });
   const { data: countryStats } = trpc.users.countryStats.useQuery(undefined, { staleTime: 60_000 });
   const spendGift    = trpc.gifts.spend.useMutation({
     onSuccess: (data) => setCredits(data.newBalance),
@@ -210,7 +211,12 @@ export default function ChatRoom() {
 
   const sendGift = useCallback((gift: GiftItem) => {
     if (status !== 'matched') return;
-    spendGift.mutate({ giftType: gift.id, cost: gift.cost });
+    const peerUserId = (window as any).currentPeerUserId;
+    spendGift.mutate({ 
+      giftType: gift.id, 
+      cost: gift.cost,
+      receiverId: peerUserId 
+    });
     signal('gift', { giftType: gift.id, emoji: gift.emoji, giftName: gift.name });
     showGiftAnim(gift.emoji, gift.name, myName);
     setShowGifts(false);
@@ -700,16 +706,28 @@ export default function ChatRoom() {
           )}
         </div>
 
-        {/* Right: Credits */}
-        <div className="flex flex-col items-end gap-0.5">
-          <div className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 px-2.5 py-1 rounded-full shadow-sm">
-            <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-            <span className="text-yellow-300 text-xs font-black">{credits}</span>
+        {/* Right: Wallet & Credits */}
+        <div className="flex items-center gap-3">
+          {/* Star Wallet */}
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2.5 py-1 rounded-full shadow-sm">
+              <Star className="w-3 h-3 text-purple-400 fill-purple-400" />
+              <span className="text-purple-300 text-xs font-black">{walletQuery.data?.wallet || 0}</span>
+            </div>
+            <span className="text-[8px] text-purple-400 font-bold mt-0.5">محفظة النجوم</span>
           </div>
-          <button onClick={() => setLocation('/store')} className="text-[9px] text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5">
-            <ShoppingBag className="w-2.5 h-2.5" />
-            شحن
-          </button>
+
+          {/* Credits */}
+          <div className="flex flex-col items-end gap-0.5">
+            <div className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 px-2.5 py-1 rounded-full shadow-sm">
+              <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+              <span className="text-yellow-300 text-xs font-black">{credits}</span>
+            </div>
+            <button onClick={() => setLocation('/store')} className="text-[9px] text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5">
+              <ShoppingBag className="w-2.5 h-2.5" />
+              شحن
+            </button>
+          </div>
         </div>
       </div>
 
