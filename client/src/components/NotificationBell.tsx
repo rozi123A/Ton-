@@ -1,6 +1,7 @@
 import { Bell, X, MessageCircle, UserPlus, Check, Heart } from 'lucide-react';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { playFriendSound, playMessageSound } from '@/lib/notificationSound';
 
 interface AppNotif {
   id: string;
@@ -80,6 +81,11 @@ export default function NotificationBell() {
       raw.message || (raw.fromName ? `من ${raw.fromName}` : ''),
       raw.fromAvatar,
     );
+    if (raw.type === 'friend-request' || raw.type === 'friend-accepted') {
+      playFriendSound();
+    } else {
+      playMessageSound();
+    }
   }, []);
 
   // Connect to notification stream
