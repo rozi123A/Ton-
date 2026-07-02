@@ -158,6 +158,32 @@ export const appRouter = router({
       return { wallet: result[0]?.wallet ?? 0 };
     }),
 
+    convertStars: protectedProcedure
+      .input(z.object({ amount: z.number().min(10) }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const user = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        if (!user[0] || user[0].wallet < input.amount) {
+          throw new Error("رصيد نجوم غير كافٍ للتحويل");
+        }
+        
+        // Conversion rate: 2 stars = 1 credit
+        const creditsToGain = Math.floor(input.amount / 2);
+        
+        await db.transaction(async (tx) => {
+          await tx.update(users)
+            .set({ 
+              wallet: sql`${users.wallet} - ${input.amount}`,
+              credits: sql`${users.credits} + ${creditsToGain}`
+            })
+            .where(eq(users.id, ctx.user.id));
+        });
+        
+        return { success: true, creditsGained: creditsToGain };
+      }),
+
     /** Simulate purchasing credits (Stripe coming soon) */
     buyCredits: protectedProcedure
       .input(z.number().min(1).max(10000))

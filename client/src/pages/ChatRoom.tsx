@@ -160,6 +160,14 @@ export default function ChatRoom() {
     onSuccess: (data) => setCredits(data.newBalance),
     onError:   (err)  => alert(err.message),
   });
+  const convertStars = trpc.gifts.convertStars.useMutation({
+    onSuccess: (data) => {
+      toast.success(`تم تحويل النجوم! حصلت على ${data.creditsGained} نقاط`);
+      walletQuery.refetch();
+      balanceQuery.refetch();
+    },
+    onError: (err) => toast.error(err.message)
+  });
   useEffect(() => { if (balanceQuery.data) setCredits(balanceQuery.data.credits); }, [balanceQuery.data]);
 
   // Auto-fill country for premium users from their saved profile
@@ -710,10 +718,22 @@ export default function ChatRoom() {
         <div className="flex items-center gap-3">
           {/* Star Wallet */}
           <div className="flex flex-col items-center">
-            <div className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2.5 py-1 rounded-full shadow-sm">
+            <button 
+              onClick={() => {
+                const stars = walletQuery.data?.wallet || 0;
+                if (stars < 10) {
+                  toast.info("تحتاج إلى 10 نجوم على الأقل للتحويل");
+                  return;
+                }
+                if (confirm(`هل تريد تحويل ${stars} نجوم إلى ${Math.floor(stars/2)} نقاط؟`)) {
+                  convertStars.mutate({ amount: stars });
+                }
+              }}
+              className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2.5 py-1 rounded-full shadow-sm hover:bg-purple-500/30 transition-colors"
+            >
               <Star className="w-3 h-3 text-purple-400 fill-purple-400" />
               <span className="text-purple-300 text-xs font-black">{walletQuery.data?.wallet || 0}</span>
-            </div>
+            </button>
             <span className="text-[8px] text-purple-400 font-bold mt-0.5">محفظة النجوم</span>
           </div>
 

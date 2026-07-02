@@ -217,6 +217,25 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
+    // Check for daily bonus before updating
+    const existingUser = await getUserByOpenId(user.openId);
+    if (existingUser) {
+      const lastVisit = new Date(existingUser.lastSignedIn);
+      const today = new Date();
+      const isNewDay = lastVisit.toDateString() !== today.toDateString();
+      
+      if (isNewDay) {
+        // Grant 10 credits daily bonus
+        updateSet.credits = sql`${users.credits} + 10`;
+        // Create a notification for the bonus
+        await createNotification(existingUser.id, {
+          type: 'system',
+          title: 'مكافأة يومية 🎁',
+          message: 'لقد حصلت على 10 نقاط مجانية لزيارتك اليوم! عد غداً للمزيد.',
+        });
+      }
+    }
+
     await db.insert(users).values(values).onConflictDoUpdate({
       target: users.openId,
       set: updateSet,
