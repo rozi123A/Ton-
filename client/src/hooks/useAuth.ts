@@ -1,0 +1,114 @@
+import { getLoginUrl } from "@/const";
+import { trpc } from "@/lib/trpc";
+import { TRPCClientError } from "@trpc/client";
+import { useCallback, useEffect, useMemo } from "react";
+
+type UseAuthOptions = {
+  redirectOnUnauthenticated?: boolean;
+  redirectPath?: string;
+};
+
+export function useAuth(options?: UseAuthOptions) {
+  const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
+  const utils = trpc.useUtils();
+
+  const meQuery = trpc.auth.me.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Auto-detect and save country once per session — uses browser language first
+  const updateCountry = trpc.auth.updateCountry.useMutation();
+  useEffect(() => {
+    const user = meQuery.data;
+    if (!user) return;
+    const key = `country_detected_${(user as { id?: number }).id ?? 'u'}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    // Detect from navigator.language: "ar-SA"→"SA", "ar-DZ"→"DZ", "en-US"→"US"
+    let browserCountry: string | undefined;
+    try {
+      const lang = navigator.language || '';
+      if (lang.includes('-')) {
+        const code = lang.split('-').pop()?.toUpperCase();
+        if (code && code.length === 2 && /^[A-Z]{2}$/.test(code)) browserCountry = code;
+      }
+    } catch { /* ignore */ }
+    updateCountry.mutate(browserCountry ? { country: browserCountry } : undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meQuery.data]);
+
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSuccess: () => {
+      utils.auth.me.setData(undefined, null);
+    },
+  });
+
+  const logout = useCallback(async () => {
+    try {
+      await logoutMutation.mutateAsync();
+    } catch (error: unknown) {
+      if (
+        error instanceof TRPCClientError &&
+        error.data?.code === "UNAUTHORIZED"
+      ) {
+        return;
+      }
+      throw error;
+    } finally {
+      // Clear all stored session tokens so the user is fully logged out
+      // across cookies, sessionStorage, and localStorage.
+      try {
+        sessionStorage.removeItem("manus-cookie");
+        localStorage.removeItem("guest_token");
+        localStorage.removeItem("manus-cookie");
+      } catch {}
+      utils.auth.me.setData(undefined, null);
+      await utils.auth.me.invalidate();
+    }
+  }, [logoutMutation, utils]);
+
+  const state = useMemo(() => {
+    localStorage.setItem(
+      "manus-runtime-user-info",
+      JSON.stringify(meQuery.data)
+    );
+    return {
+      user: meQuery.data ?? null,
+      loading: meQuery.isLoading || logoutMutation.isPending,
+      error: meQuery.error ?? logoutMutation.error ?? null,
+      isAuthenticated: Boolean(meQuery.data),
+    };
+  }, [
+    meQuery.data,
+    meQuery.error,
+    meQuery.isLoading,
+    logoutMutation.error,
+    logoutMutation.isPending,
+  ]);
+
+  useEffect(() => {
+    if (!redirectOnUnauthenticated) return;
+    if (meQuery.isLoading || logoutMutation.isPending) return;
+    if (state.user) return;
+    if (typeof window === "undefined") return;
+
+    // Build the login URL lazily — only when we actually need to redirect.
+    const target = redirectPath ?? getLoginUrl();
+    if (window.location.pathname === target) return;
+
+    window.location.href = target;
+  }, [
+    redirectOnUnauthenticated,
+    redirectPath,
+    logoutMutation.isPending,
+    meQuery.isLoading,
+    state.user,
+  ]);
+
+  return {
+    ...state,
+    refresh: () => meQuery.refetch(),
+    logout,
+  };
+}
