@@ -2,6 +2,7 @@ import { Menu, X, LogOut, Video, UserCircle, Star } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -40,6 +41,9 @@ export default function Header() {
             <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
           ) : isAuthenticated && user ? (
             <>
+              {/* Notification Bell */}
+              <NotificationBell />
+
               {/* Avatar → profile */}
               <button onClick={handleProfile} title="الملف الشخصي"
                 className="relative group"
@@ -113,7 +117,7 @@ export default function Header() {
                     alt={(user as any).name || "المستخدم"}
                     className="w-11 h-11 rounded-full border-2 border-purple-400 object-cover flex-shrink-0"
                   />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-bold text-gray-800 flex items-center gap-1 truncate">
                       {(user as any).name || "المستخدم"}
                       {(user as any).isPremium && (
@@ -124,6 +128,8 @@ export default function Header() {
                       {(user as any).isPremium ? "⭐ عضو VIP" : "مسجّل الدخول"}
                     </p>
                   </div>
+                  {/* Notification bell in mobile menu too */}
+                  <NotificationBell />
                 </div>
                 <button onClick={() => { setIsMenuOpen(false); handleProfile(); }}
                   className="border-2 border-purple-300 text-purple-600 font-bold py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors"
