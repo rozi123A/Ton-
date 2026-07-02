@@ -78,9 +78,7 @@ function UserCard({ user }: { user: DisplayUser }) {
                 `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name)}`;
             }}
           />
-          {user.online && (
-            <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg" />
-          )}
+          <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-lg ${user.online ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>
 
         <h3 className="font-bold text-lg text-gray-900 mb-1">{user.name}</h3>
