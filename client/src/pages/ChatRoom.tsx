@@ -754,7 +754,22 @@ export default function ChatRoom() {
           <div className="flex flex-col bg-gray-800/80 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl w-full md:w-72" style={{ maxHeight: 400 }}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <span className="text-white font-semibold text-sm">الدردشة الكتابية</span>
-              <button onClick={() => setShowChat(false)} className="text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    if (status !== 'matched') {
+                      toast.info("ميزة الترجمة تفتح أثناء المكالمة النشطة.");
+                      return;
+                    }
+                    setShowTranslation(v => !v);
+                  }}
+                  className={`transition-colors ${status === 'matched' ? 'text-blue-300 hover:text-blue-200' : 'text-white/25'}`}
+                  title="ترجمة"
+                >
+                  <Globe className="w-4 h-4" />
+                </button>
+                <button onClick={() => setShowChat(false)} className="text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
               {messages.length === 0 && <p className="text-white/30 text-xs text-center mt-4">لا توجد رسائل بعد</p>}
@@ -856,40 +871,6 @@ export default function ChatRoom() {
             <span className="text-[11px] font-bold leading-tight text-center">
               {(user as any)?.isPremium ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
             </span>
-          </button>
-
-          {/* Translation */}
-          <button
-            onClick={() => {
-              if (status !== 'matched') {
-                toast.info("ميزة الترجمة تفتح أثناء المكالمة النشطة.");
-                return;
-              }
-              setShowTranslation(v => !v);
-            }}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-blue-300' : 'text-blue-400/50'}`}
-          >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-blue-500 to-cyan-600 shadow-blue-900/50' : 'bg-gradient-to-br from-blue-900/40 to-cyan-900/40 border border-blue-500/20'}`}>
-              <Globe className={`w-5 h-5 ${status === 'matched' ? 'text-white' : 'text-blue-400/60'}`} />
-            </div>
-            <span className="text-[11px] font-bold">ترجمة</span>
-          </button>
-
-          {/* Face Filters */}
-          <button
-            onClick={() => {
-              if (status !== 'matched') {
-                toast.info("فلاتر الوجه تفتح أثناء المكالمة النشطة.");
-                return;
-              }
-              setShowFaceFilters(v => !v);
-            }}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-purple-300' : 'text-purple-400/50'}`}
-          >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-900/50' : 'bg-gradient-to-br from-purple-900/40 to-indigo-900/40 border border-purple-500/20'}`}>
-              <Wand2 className={`w-5 h-5 ${status === 'matched' ? 'text-white' : 'text-purple-400/60'}`} />
-            </div>
-            <span className="text-[11px] font-bold">فلاتر</span>
           </button>
 
           {/* Friends */}
