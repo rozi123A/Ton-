@@ -1,27 +1,44 @@
-import { Heart, Eye, Loader2, UserCheck } from "lucide-react";
+import { Heart, UserCheck, Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 
+/** Convert ISO country code → emoji flag */
+function countryFlag(code: string | null | undefined): string {
+  if (!code || code.length !== 2) return '';
+  return code.toUpperCase().replace(/./g, c =>
+    String.fromCodePoint(127397 + c.charCodeAt(0))
+  );
+}
+
+const COUNTRY_NAMES: Record<string, string> = {
+  SA:'السعودية', AE:'الإمارات', EG:'مصر', KW:'الكويت',
+  QA:'قطر', BH:'البحرين', OM:'عمان', JO:'الأردن',
+  LB:'لبنان', IQ:'العراق', SY:'سوريا', MA:'المغرب',
+  DZ:'الجزائر', TN:'تونس', LY:'ليبيا', YE:'اليمن',
+  SD:'السودان', TR:'تركيا', PK:'باكستان', IN:'الهند',
+  US:'أمريكا', GB:'بريطانيا', DE:'ألمانيا', FR:'فرنسا',
+};
+
 const MOCK_USERS = [
-  { id: 1, name: "سارة",    age: 22, online: true, profileViews: 1250, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sara"      },
-  { id: 2, name: "احمد",    age: 25, online: true, profileViews: 980,  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed"     },
-  { id: 3, name: "فاطمة",   age: 20, online: true, profileViews: 1540, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima"    },
-  { id: 4, name: "محمد",    age: 23, online: true, profileViews: 1120, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mohammed"  },
-  { id: 5, name: "ليلى",    age: 21, online: true, profileViews: 1890, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Layla"     },
-  { id: 6, name: "علي",     age: 24, online: true, profileViews: 2100, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ali"       },
+  { id: -1, name: "سارة",  age: 22, online: true, profileViews: 1250, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sara",     country: null },
+  { id: -2, name: "احمد",  age: 25, online: true, profileViews: 980,  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed",    country: null },
+  { id: -3, name: "فاطمة", age: 20, online: true, profileViews: 1540, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima",   country: null },
+  { id: -4, name: "محمد",  age: 23, online: true, profileViews: 1120, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mohammed", country: null },
+  { id: -5, name: "ليلى",  age: 21, online: true, profileViews: 1890, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Layla",    country: null },
+  { id: -6, name: "علي",   age: 24, online: true, profileViews: 2100, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ali",      country: null },
 ];
 
-/** A single user card that records a real view when it enters the viewport */
-function UserCard({ user }: { user: typeof MOCK_USERS[0] }) {
+type DisplayUser = typeof MOCK_USERS[0];
+
+function UserCard({ user }: { user: DisplayUser }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const viewedRef = useRef(false);
   const recordView = trpc.users.recordView.useMutation();
 
   useEffect(() => {
-    if (user.id < 0) return; // mock user — skip
+    if (user.id < 0) return;
     const el = cardRef.current;
     if (!el) return;
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !viewedRef.current) {
@@ -36,6 +53,9 @@ function UserCard({ user }: { user: typeof MOCK_USERS[0] }) {
     return () => observer.disconnect();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
+
+  const flag = countryFlag(user.country);
+  const countryName = user.country ? (COUNTRY_NAMES[user.country.toUpperCase()] ?? user.country) : null;
 
   return (
     <div
@@ -59,13 +79,23 @@ function UserCard({ user }: { user: typeof MOCK_USERS[0] }) {
           )}
         </div>
 
-        <h3 className="font-bold text-lg text-gray-900 mb-1">{user.name}</h3>
+        <h3 className="font-bold text-lg text-gray-900 mb-0.5">{user.name}</h3>
+
+        {/* Country flag + name */}
+        {flag && countryName ? (
+          <div className="flex items-center justify-center gap-1.5 mb-1">
+            <span className="text-xl leading-none">{flag}</span>
+            <span className="text-sm text-gray-500 font-medium">{countryName}</span>
+          </div>
+        ) : (
+          <div className="h-6 mb-1" />
+        )}
+
         {user.age > 0 && (
-          <p className="text-sm text-gray-600 mb-4">{user.age} سنة</p>
+          <p className="text-sm text-gray-500 mb-4">{user.age} سنة</p>
         )}
 
         <div className="flex items-center justify-center gap-4 text-sm text-gray-600 mb-4">
-          {/* Profile visits counter — real visits from the DB */}
           <div className="flex items-center gap-1" title="عدد زيارات الملف الشخصي">
             <UserCheck className="w-4 h-4 text-purple-600" />
             <span className="font-semibold text-purple-700">{user.profileViews.toLocaleString('ar')}</span>
@@ -94,7 +124,7 @@ export default function TrendingUsers() {
 
   const hasRealUsers = realUsers && realUsers.length > 0;
 
-  const displayUsers = hasRealUsers
+  const displayUsers: DisplayUser[] = hasRealUsers
     ? realUsers.map(u => ({
         id: u.id,
         name: u.name || 'مستخدم',
@@ -102,6 +132,7 @@ export default function TrendingUsers() {
         online: true,
         profileViews: u.profileViews ?? 0,
         avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || String(u.id))}`,
+        country: u.country ?? null,
       }))
     : MOCK_USERS;
 
