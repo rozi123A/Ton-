@@ -17,6 +17,18 @@ export function useAuth(options?: UseAuthOptions) {
     refetchOnWindowFocus: false,
   });
 
+  // Auto-detect and save country once per session for every authenticated user
+  const updateCountry = trpc.auth.updateCountry.useMutation();
+  useEffect(() => {
+    const user = meQuery.data;
+    if (!user) return;
+    const key = `country_detected_${(user as { id?: number }).id ?? 'u'}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    updateCountry.mutate();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meQuery.data]);
+
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       utils.auth.me.setData(undefined, null);
