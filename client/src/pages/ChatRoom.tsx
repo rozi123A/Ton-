@@ -120,6 +120,10 @@ export default function ChatRoom() {
   const [showFriends, setShowFriends] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('none');
   const [friends, setFriends] = useState<any[]>([]);
+  const [lastIncomingMsg, setLastIncomingMsg] = useState('');
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSent, setReportSent] = useState(false);
 
   // ── notification ───────────────────────────────────────────────────────────
   const [notif, setNotif] = useState<Notif | null>(null);
@@ -165,7 +169,10 @@ export default function ChatRoom() {
   const addMessage = useCallback((text: string, mine: boolean, name: string) => {
     const time = new Date().toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
     setMessages(prev => [...prev, { text, mine, name, time }]);
-    if (!mine) setUnread(u => u + 1);
+    if (!mine) {
+      setUnread(u => u + 1);
+      setLastIncomingMsg(text);
+    }
   }, []);
 
   const stopTimer   = useCallback(() => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } }, []);
@@ -897,6 +904,15 @@ export default function ChatRoom() {
 
           {/* Report */}
           <button
+            onClick={() => {
+              if (status !== 'matched') {
+                toast.info("يمكنك الإبلاغ فقط أثناء المكالمة النشطة.");
+                return;
+              }
+              setReportSent(false);
+              setReportReason('');
+              setShowReport(true);
+            }}
             className="flex flex-col items-center gap-1.5 py-4 px-2 text-rose-400 transition-all active:scale-95"
           >
             <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-rose-600 to-red-800 shadow-lg shadow-rose-900/50">
@@ -937,7 +953,22 @@ export default function ChatRoom() {
       )}
 
       {showTranslation && (
-        <TranslationPanel text="مرحبا بك" fromLang="ar" toLang="en" onClose={() => setShowTranslation(false)} />
+        <TranslationPanel
+          text={lastIncomingMsg}
+          fromLang="auto"
+          toLang="ar"
+          onClose={() => setShowTranslation(false)}
+          autoTranslate={true}
+          onTranslatedMessage={(original, translated) => {
+            if (translated && translated !== original) {
+              setMessages(prev => prev.map(m =>
+                m.text === original && !m.mine
+                  ? { ...m, translated }
+                  : m
+              ));
+            }
+          }}
+        />
       )}
 
       {showFaceFilters && (
@@ -945,7 +976,86 @@ export default function ChatRoom() {
       )}
 
       {showFriends && (
-        <FriendsPanel friends={friends} onClose={() => setShowFriends(false)} onStartChat={(friendId) => { toast.success('جاري بدء الدردشة...'); setShowFriends(false); }} />
+        <FriendsPanel
+          friends={friends}
+          onClose={() => setShowFriends(false)}
+          onStartChat={(friendId) => { toast.success('جاري بدء الدردشة...'); setShowFriends(false); }}
+          currentPeerName={peerName}
+          currentPeerAvatar={peerAvatar}
+          currentPeerId={status === 'matched' ? 'peer_current' : undefined}
+          onSendFriendRequest={() => {
+            signal('friend-request', { senderName: myName, senderAvatar: myAvatar });
+          }}
+        />
+      )}
+
+      {/* Report Modal */}
+      {showReport && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl border border-white/10 max-w-sm w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-white font-bold">
+                <Flag className="w-5 h-5 text-rose-400" />
+                الإبلاغ عن مستخدم
+              </div>
+              <button onClick={() => setShowReport(false)} className="text-white/50 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {reportSent ? (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <div className="w-14 h-14 rounded-full bg-green-500/20 border border-green-500/40 flex items-center justify-center">
+                  <Flag className="w-7 h-7 text-green-400" />
+                </div>
+                <p className="text-white font-bold text-lg">تم إرسال البلاغ</p>
+                <p className="text-white/50 text-sm text-center">شكراً لك. سنراجع البلاغ في أقرب وقت.</p>
+                <button
+                  onClick={() => { setShowReport(false); handleNext(); }}
+                  className="mt-2 w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl transition-all"
+                >
+                  الانتقال للشخص التالي
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-white/60 text-sm mb-3">اختر سبب الإبلاغ:</p>
+                <div className="space-y-2 mb-4">
+                  {['محتوى غير لائق', 'تحرش أو إزعاج', 'عنف أو تهديد', 'خطاب كراهية', 'محتوى للأطفال', 'أخرى'].map(reason => (
+                    <button
+                      key={reason}
+                      onClick={() => setReportReason(reason)}
+                      className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                        reportReason === reason
+                          ? 'bg-rose-600/30 border-rose-500/60 text-rose-300'
+                          : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!reportReason) { toast.error('اختر سبب الإبلاغ أولاً'); return; }
+                    try {
+                      await fetch('/api/report', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reportedPeerId: 'peer_current', reason: reportReason, reporterName: myName }),
+                      });
+                    } catch { /* best effort */ }
+                    setReportSent(true);
+                  }}
+                  disabled={!reportReason}
+                  className="w-full bg-gradient-to-r from-rose-600 to-red-700 hover:opacity-90 disabled:opacity-40 text-white font-bold py-2.5 rounded-xl transition-all"
+                >
+                  إرسال البلاغ
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       <style>{`
