@@ -30,6 +30,26 @@ interface LastPartner { partnerName: string; partnerAvatar: string; ts: number; 
 const lastPeers = new Map<string, LastPartner>();
 const NOTIF_TTL = 5 * 60 * 1000;
 
+// Track recently-rejected pairs to avoid immediate re-match after rejection
+const rejectedPairs = new Map<string, number>(); // "id1:id2" -> timestamp
+const REJECT_COOLDOWN = 30 * 1000; // 30 seconds cooldown after rejection
+
+function markRejected(id1: string, id2: string) {
+  const key = [id1, id2].sort().join(':');
+  rejectedPairs.set(key, Date.now());
+}
+
+function wereRecentlyRejected(id1: string, id2: string): boolean {
+  const key = [id1, id2].sort().join(':');
+  const ts = rejectedPairs.get(key);
+  if (!ts) return false;
+  if (Date.now() - ts > REJECT_COOLDOWN) {
+    rejectedPairs.delete(key);
+    return false;
+  }
+  return true;
+}
+
 function sseEvent(res: Response, data: object) {
   if (!res.writableEnded) {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
@@ -56,6 +76,7 @@ function matchPeers() {
       const p2 = peers.get(id2);
       if (!p1 || !p2) continue;
       if (!isCompatible(p1, p2)) continue;
+      if (wereRecentlyRejected(id1, id2)) continue;
 
       const qi1 = waitingQueue.indexOf(id1);
       if (qi1 !== -1) waitingQueue.splice(qi1, 1);
@@ -146,12 +167,15 @@ function registerSignalingRoutes(app: express.Express) {
 
     if (type === "next") {
       if (peer.partnerId) {
-        const partner = peers.get(peer.partnerId);
+        const partnerId = peer.partnerId;
+        const partner = peers.get(partnerId);
         if (partner) {
+          // Mark this pair as recently rejected to avoid immediate re-match
+          markRejected(peerId, partnerId);
           partner.partnerId = null;
           sseEvent(partner.res, { type: "peer-left" });
-          if (!waitingQueue.includes(peer.partnerId)) {
-            waitingQueue.push(peer.partnerId);
+          if (!waitingQueue.includes(partnerId)) {
+            waitingQueue.push(partnerId);
             sseEvent(partner.res, { type: "waiting" });
           }
         }

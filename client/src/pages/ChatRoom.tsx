@@ -522,8 +522,8 @@ export default function ChatRoom() {
   // ── SETUP SCREEN ───────────────────────────────────────────────────────────
   if (status === 'setup') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4" dir="rtl">
-        <div className="w-full max-w-md">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-start justify-center p-4 overflow-y-auto" dir="rtl">
+        <div className="w-full max-w-md py-4">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4 shadow-2xl">
