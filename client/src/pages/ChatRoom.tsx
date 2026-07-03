@@ -1058,7 +1058,13 @@ export default function ChatRoom() {
 
       {showFriends && (
         <FriendsPanel
-          friends={dbFriends || []}
+          friends={(dbFriends || []).map((f: any) => ({
+            id: String(f.id),
+            name: f.name || 'مستخدم',
+            avatar: f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.id}`,
+            status: f.isOnline ? 'online' : 'offline',
+            lastSeen: f.lastSeen ? new Date(f.lastSeen).toLocaleString('ar') : '',
+          }))}
           onClose={() => setShowFriends(false)}
           onStartChat={(friendId) => { toast.success('جاري بدء الدردشة...'); setShowFriends(false); }}
           currentPeerName={peerName}
