@@ -1181,6 +1181,7 @@ export default function ChatRoom() {
           currentPeerAvatar={peerAvatar}
           currentPeerId={status === 'matched' ? 'peer_current' : undefined}
           myPeerId={myId}
+          onFriendAccepted={() => refetchFriends()}
           onSendFriendRequest={() => {
             const peerUserId = (window as any).currentPeerUserId;
             signal('friend-request', { 

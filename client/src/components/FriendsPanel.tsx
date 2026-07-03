@@ -20,6 +20,7 @@ interface FriendsPanelProps {
   currentPeerId?: string;
   myPeerId?: string;
   onSendFriendRequest?: (peerId: string) => void;
+  onFriendAccepted?: () => void;
 }
 
 export default function FriendsPanel({
@@ -31,6 +32,7 @@ export default function FriendsPanel({
   currentPeerId,
   myPeerId,
   onSendFriendRequest,
+  onFriendAccepted,
 }: FriendsPanelProps) {
   const [requestSent, setRequestSent] = useState(false);
   const [activeTab, setActiveTab] = useState<'friends' | 'add' | 'requests'>('friends');
@@ -43,11 +45,11 @@ export default function FriendsPanel({
   });
 
   const acceptRequestMutation = trpc.social.acceptRequest.useMutation({
-    onSuccess: (_data, variables) => {
-      toast.success('تم قبول طلب الصداقة!');
+    onSuccess: (_data, _variables) => {
+      toast.success('تم قبول طلب الصداقة! يمكنك الآن مراسلته من قائمة الأصدقاء');
       refetchRequests();
-      const req = incomingRequests?.find(r => r.senderId === variables.senderId);
-      if (req) onStartChat(String(req.senderId));
+      onFriendAccepted?.();   // refresh friends list in ChatRoom
+      setActiveTab('friends'); // switch to friends tab so they see the new friend
     },
     onError: () => toast.error('حدث خطأ أثناء قبول الطلب'),
   });
