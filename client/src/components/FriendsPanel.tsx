@@ -14,7 +14,7 @@ interface Friend {
 interface FriendsPanelProps {
   friends: Friend[];
   onClose: () => void;
-  onStartChat: (friendId: string) => void;
+  onStartChat: (friend: Friend) => void;
   currentPeerName?: string;
   currentPeerAvatar?: string;
   currentPeerId?: string;
@@ -231,7 +231,7 @@ export default function FriendsPanel({
                         </div>
                         <div className="flex gap-1">
                           <button
-                            onClick={() => onStartChat(friend.id)}
+                            onClick={() => onStartChat(friend)}
                             className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
                           >
                             <MessageCircle className="w-4 h-4" />
@@ -272,6 +272,12 @@ export default function FriendsPanel({
                             آخر ظهور: {friend.lastSeen}
                           </p>
                         </div>
+                        <button
+                          onClick={() => onStartChat(friend)}
+                          className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   ))}
