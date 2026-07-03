@@ -5,7 +5,7 @@ import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
   SwitchCamera, Lock, Gift, Bell, Star, Search, ShoppingBag, Zap,
-  Users, UserRound, Heart, ChevronLeft, Globe, Wand2, Play
+  Users, UserRound, Heart, ChevronLeft, Globe, Wand2, Play, Square
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
@@ -491,6 +491,21 @@ export default function ChatRoom() {
   const toggleMic   = () => { localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !isMicOn; }); setIsMicOn(v => !v); };
   const toggleVideo = () => { localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = !isVideoOn; }); setIsVideoOn(v => !v); };
   const handleNext  = () => { setMessages([]); stopTimer(); closePC(); if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null; signal('next'); };
+
+  // ── stop searching (cancel queue without ending a call) ───────────────────
+  const stopSession = useCallback(() => {
+    destroyedRef.current = true;
+    esRef.current?.close();
+    esRef.current = null;
+    closePC();
+    stopTimer();
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    localStreamRef.current = null;
+    if (localVideoRef.current)  localVideoRef.current.srcObject  = null;
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+    setStatus('idle');
+    destroyedRef.current = false;   // allow restart
+  }, [closePC, stopTimer]);
   const handleAcceptMatch = useCallback(async () => {
     const match = pendingMatchRef.current;
     if (!match) return;
@@ -1103,19 +1118,35 @@ export default function ChatRoom() {
 
         {/* Row 3 — Quick start + Report */}
         <div className="grid grid-cols-2 gap-px bg-white/5">
-          {/* Quick start */}
-          <button
-            onClick={() => {
-              if (status === 'matched') { handleNext(); }
-              else if (status === 'idle' || status === 'setup' || status === 'ended') { startSession('any', 'any'); }
-            }}
-            className="flex flex-col items-center gap-1.5 py-4 px-2 text-green-300 transition-all active:scale-95"
-          >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-900/50">
-              <Play className="w-5 h-5 text-white fill-white" />
-            </div>
-            <span className="text-[11px] font-bold">ابدأ مباشرة</span>
-          </button>
+          {/* Quick start / Stop */}
+          {(() => {
+            const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
+            const isMatched   = status === 'matched';
+            return (
+              <button
+                onClick={() => {
+                  if (isMatched)    { handleNext(); }
+                  else if (isSearching) { stopSession(); }
+                  else              { startSession('any', 'any'); }
+                }}
+                className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${isSearching ? 'text-red-300' : 'text-green-300'}`}
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
+                  isSearching
+                    ? 'bg-gradient-to-br from-red-500 to-rose-600 shadow-red-900/50 animate-pulse'
+                    : 'bg-gradient-to-br from-green-500 to-emerald-600 shadow-green-900/50'
+                }`}>
+                  {isSearching
+                    ? <Square className="w-5 h-5 text-white fill-white" />
+                    : <Play   className="w-5 h-5 text-white fill-white" />
+                  }
+                </div>
+                <span className="text-[11px] font-bold">
+                  {isSearching ? 'إيقاف البحث' : 'ابدأ مباشرة'}
+                </span>
+              </button>
+            );
+          })()}
 
           {/* Report */}
           <button
