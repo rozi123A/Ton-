@@ -13,6 +13,7 @@ import GiftPanel, { GIFTS, type GiftItem } from '@/components/GiftPanel';
 import TranslationPanel from '@/components/TranslationPanel';
 import FaceFiltersPanel from '@/components/FaceFiltersPanel';
 import FriendsPanel from '@/components/FriendsPanel';
+import DirectMessagePanel from '@/components/DirectMessagePanel';
 import { playMessageSound, playFriendSound } from '@/lib/notificationSound';
 import { toast } from 'sonner';
 
@@ -119,6 +120,7 @@ export default function ChatRoom() {
   const [showTranslation, setShowTranslation] = useState(false);
   const [showFaceFilters, setShowFaceFilters] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
+  const [dmTarget, setDmTarget] = useState<{ id: number; name: string; avatar: string } | null>(null);
   const [selectedFilter, setSelectedFilter] = useState('none');
   const { data: dbFriends, refetch: refetchFriends } = trpc.social.getFriends.useQuery(undefined, { enabled: !!user });
   const sendFriendRequestMutation = trpc.social.sendRequest.useMutation({
@@ -1066,7 +1068,7 @@ export default function ChatRoom() {
             lastSeen: f.lastSeen ? new Date(f.lastSeen).toLocaleString('ar') : '',
           }))}
           onClose={() => setShowFriends(false)}
-          onStartChat={(friendId) => { toast.success('جاري بدء الدردشة...'); setShowFriends(false); }}
+          onStartChat={(friend) => { setDmTarget({ id: Number(friend.id), name: friend.name, avatar: friend.avatar }); setShowFriends(false); }}
           currentPeerName={peerName}
           currentPeerAvatar={peerAvatar}
           currentPeerId={status === 'matched' ? 'peer_current' : undefined}
@@ -1082,6 +1084,15 @@ export default function ChatRoom() {
               sendFriendRequestMutation.mutate({ receiverId: peerUserId });
             }
           }}
+        />
+      )}
+
+      {dmTarget && (
+        <DirectMessagePanel
+          friendId={dmTarget.id}
+          friendName={dmTarget.name}
+          friendAvatar={dmTarget.avatar}
+          onClose={() => setDmTarget(null)}
         />
       )}
 
