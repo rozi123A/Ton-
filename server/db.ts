@@ -225,13 +225,14 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       const isNewDay = lastVisit.toDateString() !== today.toDateString();
       
       if (isNewDay) {
-        // Grant 10 credits daily bonus
+        // Grant 10 credits and 5 stars daily bonus
         updateSet.credits = sql`${users.credits} + 10`;
+        updateSet.wallet = sql`${users.wallet} + 5`;
         // Create a notification for the bonus
         await createNotification(existingUser.id, {
           type: 'system',
           title: 'مكافأة يومية 🎁',
-          message: 'لقد حصلت على 10 نقاط مجانية لزيارتك اليوم! عد غداً للمزيد.',
+          message: 'لقد حصلت على 10 نقاط و 5 نجوم مجانية لزيارتك اليوم! استخدم النجوم في الرادار الآن.',
         });
       }
     }

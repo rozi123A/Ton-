@@ -41,6 +41,25 @@ export default function Store() {
     }
     upgradeMutation.mutate();
   };
+  const buyStarsMutation = trpc.gifts.buyCredits.useMutation({
+    onSuccess: () => {
+      toast.success("تمت عملية الشراء بنجاح! تم إضافة النجوم إلى محفظتك.");
+      mutateAuth();
+    },
+    onError: (error) => toast.error(`فشل الشراء: ${error.message}`)
+  });
+
+  const handleBuyStars = (amount: number) => {
+    // In a real app, this would trigger Stripe/PayPal. For now, we simulate success.
+    buyStarsMutation.mutate(amount);
+  };
+
+  const starPackages = [
+    { amount: 50, price: "$1.99", description: "باقة المبتدئين" },
+    { amount: 150, price: "$4.99", description: "الباقة الاقتصادية", popular: true },
+    { amount: 500, price: "$12.99", description: "باقة المحترفين" },
+  ];
+
   const premiumFeatures = [
     {
       title: "تبديل الكاميرا",
@@ -117,11 +136,43 @@ export default function Store() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
+          {/* Star Packages */}
+          <div className="lg:col-span-3 grid sm:grid-cols-3 gap-6 mb-8">
+            {starPackages.map((pkg, index) => (
+              <Card key={index} className={`relative overflow-hidden border-2 transition-all hover:scale-[1.02] ${pkg.popular ? 'border-yellow-500 shadow-lg' : 'border-gray-200'}`}>
+                {pkg.popular && (
+                  <div className="absolute top-0 left-0 bg-yellow-500 text-white px-3 py-1 rounded-br-lg font-bold text-[10px] uppercase">
+                    الأكثر توفيراً
+                  </div>
+                )}
+                <CardHeader className="text-center pb-2">
+                  <div className="mx-auto w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-2">
+                    <Star className="w-6 h-6 text-yellow-600 fill-yellow-600" />
+                  </div>
+                  <CardTitle className="text-xl font-bold">{pkg.amount} نجمة</CardTitle>
+                  <CardDescription>{pkg.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <div className="text-3xl font-black text-gray-900 mb-2">{pkg.price}</div>
+                  <p className="text-xs text-gray-500">استخدمها في الرادار والهدايا</p>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    onClick={() => handleBuyStars(pkg.amount)}
+                    className={`w-full font-bold rounded-xl ${pkg.popular ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : 'bg-gray-900 hover:bg-gray-800 text-white'}`}
+                  >
+                    شراء الآن
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+
           {/* Premium Card */}
           <Card className="relative overflow-hidden border-2 border-purple-500 shadow-xl lg:col-span-1">
             <div className="absolute top-0 right-0 bg-purple-500 text-white px-4 py-1 rounded-bl-lg font-bold text-sm">
-              الأكثر شعبية
+              VIP
             </div>
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl font-bold">Premium VIP</CardTitle>
