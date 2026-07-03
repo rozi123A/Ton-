@@ -5,7 +5,7 @@ import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
   SwitchCamera, Lock, Gift, Bell, Star, Search, ShoppingBag, Zap,
-  Users, UserRound, Heart, ChevronLeft, Globe, Wand2
+  Users, UserRound, Heart, ChevronLeft, Globe, Wand2, Play
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
