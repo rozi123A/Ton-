@@ -44,3 +44,12 @@ export function playFriendSound() {
   beep(ctx, 880, now + 0.11, 0.12);
   beep(ctx, 1046.5, now + 0.22, 0.18);
 }
+
+/** Classic phone-style ring (two short pulses) — used when a chat match is found. */
+export function playRingSound() {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  beep(ctx, 1000, now, 0.28, 0.22);
+  beep(ctx, 1000, now + 0.35, 0.28, 0.22);
+}
