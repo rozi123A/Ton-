@@ -1,4 +1,4 @@
-import { desc, eq, isNotNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications } from '../drizzle/schema';
