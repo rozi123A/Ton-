@@ -102,6 +102,55 @@ export const appRouter = router({
         const views = await incrementProfileViews(input);
         return { views };
       }),
+
+    claimDailyBonus: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const { getDb, users } = await import("./db");
+        const { eq, sql } = await import("drizzle-orm");
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const user = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
+        if (!user[0]) throw new Error("User not found");
+
+        const lastVisit = new Date(user[0].lastSignedIn);
+        const today = new Date();
+        const isNewDay = lastVisit.toDateString() !== today.toDateString();
+
+        // Also check if they already claimed today via a dedicated flag or just the lastSignedIn
+        // For simplicity and immediate fix, we'll allow it if lastSignedIn was NOT today
+        if (!isNewDay && user[0].lastSignedIn.getTime() > today.setHours(0,0,0,0)) {
+           // If they already signed in today, we can't be sure if they got it via upsertUser
+           // So we'll add a check: if they haven't received a 'system' notification today
+           const { getNotifications } = await import("./db");
+           const notifs = await getNotifications(ctx.user.id);
+           const alreadyClaimed = notifs.some(n => 
+             n.type === 'system' && 
+             n.title === 'مكافأة يومية 🎁' && 
+             new Date(n.createdAt).toDateString() === new Date().toDateString()
+           );
+           if (alreadyClaimed) throw new Error("لقد استلمت مكافأتك اليومية بالفعل!");
+        }
+
+        await db.transaction(async (tx) => {
+          await tx.update(users)
+            .set({ 
+              credits: sql`${users.credits} + 10`,
+              wallet: sql`${users.wallet} + 5`,
+              lastSignedIn: new Date() 
+            })
+            .where(eq(users.id, ctx.user.id));
+          
+          const { createNotification } = await import("./db");
+          await createNotification(ctx.user.id, {
+            type: 'system',
+            title: 'مكافأة يومية 🎁',
+            message: 'لقد حصلت على 10 نقاط و 5 نجوم مجانية لزيارتك اليوم! استخدم النجوم في الرادار الآن.',
+          });
+        });
+
+        return { success: true, starsGained: 5, creditsGained: 10 };
+      }),
   }),
 
   messages: router({
