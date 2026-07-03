@@ -1,6 +1,7 @@
-import { Heart, X, MessageCircle, Video, UserPlus, Check, Clock } from 'lucide-react';
+import { Heart, X, MessageCircle, Video, UserPlus, Check, Clock, Bell } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
 
 interface Friend {
   id: string;
@@ -32,10 +33,26 @@ export default function FriendsPanel({
   onSendFriendRequest,
 }: FriendsPanelProps) {
   const [requestSent, setRequestSent] = useState(false);
-  const [activeTab, setActiveTab] = useState<'friends' | 'add'>('friends');
+  const [activeTab, setActiveTab] = useState<'friends' | 'add' | 'requests'>('friends');
 
   const onlineFriends = friends.filter(f => f.status === 'online');
   const offlineFriends = friends.filter(f => f.status === 'offline');
+
+  const { data: incomingRequests, refetch: refetchRequests } = trpc.social.getIncomingRequests.useQuery(undefined, {
+    refetchInterval: 15000,
+  });
+
+  const acceptRequestMutation = trpc.social.acceptRequest.useMutation({
+    onSuccess: (_data, variables) => {
+      toast.success('تم قبول طلب الصداقة!');
+      refetchRequests();
+      const req = incomingRequests?.find(r => r.senderId === variables.senderId);
+      if (req) onStartChat(String(req.senderId));
+    },
+    onError: () => toast.error('حدث خطأ أثناء قبول الطلب'),
+  });
+
+  const pendingCount = incomingRequests?.length || 0;
 
   const handleSendRequest = async () => {
     if (!currentPeerId || !myPeerId) return;
@@ -84,6 +101,19 @@ export default function FriendsPanel({
           >
             قائمة الأصدقاء ({friends.length})
           </button>
+          <button
+            onClick={() => setActiveTab('requests')}
+            className={`relative flex-1 py-2.5 text-sm font-bold transition-colors ${
+              activeTab === 'requests'
+                ? 'text-white border-b-2 border-purple-500'
+                : 'text-white/40 hover:text-white/70'
+            }`}
+          >
+            طلبات واردة ({pendingCount})
+            {pendingCount > 0 && (
+              <span className="absolute top-1.5 left-1/2 translate-x-3 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            )}
+          </button>
           {currentPeerId && (
             <button
               onClick={() => setActiveTab('add')}
@@ -129,6 +159,47 @@ export default function FriendsPanel({
                 <UserPlus className="w-5 h-5" />
                 إرسال طلب صداقة
               </button>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Incoming Requests */}
+        {activeTab === 'requests' && (
+          <div className="flex-1 overflow-y-auto">
+            {pendingCount === 0 ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <Bell className="w-12 h-12 text-white/20 mb-3" />
+                <p className="text-white/60 text-sm font-semibold">لا توجد طلبات صداقة واردة</p>
+                <p className="text-white/40 text-xs mt-1 leading-relaxed">
+                  ستظهر هنا طلبات الصداقة التي يرسلها لك الآخرون
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {incomingRequests?.map(req => (
+                  <div key={req.requestId} className="p-3 hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={req.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.name}`}
+                        alt={req.name}
+                        className="w-10 h-10 rounded-full border-2 border-white/20 object-cover"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-semibold text-sm truncate">{req.name}</p>
+                        <p className="text-white/40 text-xs">يريد إضافتك كصديق</p>
+                      </div>
+                      <button
+                        onClick={() => acceptRequestMutation.mutate({ senderId: req.senderId })}
+                        disabled={acceptRequestMutation.isPending}
+                        className="flex items-center gap-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        قبول
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
