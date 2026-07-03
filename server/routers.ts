@@ -7,7 +7,7 @@ import {
   upsertUser, getUserByOpenId, getRecentUsers, incrementProfileViews,
   getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
   getCountryStats, getNewRegistrations,
-  createFriendRequest, acceptFriendRequest, getFriends,
+  createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   createNotification, getNotifications, markNotificationsAsRead,
 } from "./db";
 import { sdk } from "./_core/sdk";
@@ -241,6 +241,9 @@ export const appRouter = router({
 
     getFriends: protectedProcedure
       .query(async ({ ctx }) => getFriends(ctx.user.id)),
+
+    getIncomingRequests: protectedProcedure
+      .query(async ({ ctx }) => getIncomingFriendRequests(ctx.user.id)),
   }),
 
   notifications: router({
