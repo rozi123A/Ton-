@@ -1000,176 +1000,172 @@ export default function ChatRoom() {
       {/* ── Controls Bar ─────────────────────────────────────────────────────── */}
       <div className="mt-3 bg-gray-900/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
 
-        {/* Row 1 — 4 primary toggles */}
-        <div className="grid grid-cols-4 gap-px bg-white/5">
-          {/* Mic */}
-          <button
-            onClick={toggleMic}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${isMicOn ? 'text-blue-300' : 'text-red-400 bg-red-500/10'}`}
-          >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${isMicOn ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-900/50' : 'bg-gradient-to-br from-red-500 to-red-700 shadow-red-900/50'}`}>
-              {isMicOn ? <Mic className="w-5 h-5 text-white" /> : <MicOff className="w-5 h-5 text-white" />}
-            </div>
-            <span className="text-[11px] font-bold">{isMicOn ? 'ميكروفون' : 'مكتوم'}</span>
-          </button>
+        {/* ═══════════════ Controls Panel ═══════════════ */}
+        <div className="px-3 pt-3 pb-2 space-y-2.5">
 
-          {/* Camera */}
-          <button
-            onClick={toggleVideo}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${isVideoOn ? 'text-indigo-300' : 'text-red-400 bg-red-500/10'}`}
-          >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${isVideoOn ? 'bg-gradient-to-br from-indigo-500 to-violet-700 shadow-violet-900/50' : 'bg-gradient-to-br from-red-500 to-red-700 shadow-red-900/50'}`}>
-              {isVideoOn ? <Video className="w-5 h-5 text-white" /> : <VideoOff className="w-5 h-5 text-white" />}
-            </div>
-            <span className="text-[11px] font-bold">{isVideoOn ? 'كاميرا' : 'مطفأة'}</span>
-          </button>
+          {/* ── Row 1 : دردشة · صوت · كاميرا · ميكروفون ─── */}
+          <div className="grid grid-cols-4 gap-2.5">
 
-          {/* Speaker */}
-          <button
-            onClick={() => setIsSpeakerOn(v => !v)}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${isSpeakerOn ? 'text-teal-300' : 'text-red-400 bg-red-500/10'}`}
-          >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${isSpeakerOn ? 'bg-gradient-to-br from-teal-500 to-cyan-600 shadow-teal-900/50' : 'bg-gradient-to-br from-red-500 to-red-700 shadow-red-900/50'}`}>
-              {isSpeakerOn ? <Volume2 className="w-5 h-5 text-white" /> : <VolumeX className="w-5 h-5 text-white" />}
-            </div>
-            <span className="text-[11px] font-bold">{isSpeakerOn ? 'صوت' : 'صامت'}</span>
-          </button>
+            {/* Chat */}
+            <button
+              onClick={() => { setShowChat(v => !v); setUnread(0); }}
+              className={`relative flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 hover:scale-[1.03] ${showChat ? 'bg-cyan-500/20 text-cyan-300' : 'bg-white/[0.07] text-emerald-300 hover:bg-white/[0.11]'}`}
+            >
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md relative ${showChat ? 'bg-gradient-to-br from-cyan-500 to-blue-600 shadow-cyan-900/40' : 'bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-900/40'}`}>
+                <MessageSquare className="w-[18px] h-[18px] text-white" />
+                {unread > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5">
+                    {unread}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10.5px] font-bold tracking-wide">دردشة</span>
+            </button>
 
-          {/* Chat */}
-          <button
-            onClick={() => { setShowChat(v => !v); setUnread(0); }}
-            className={`relative flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${showChat ? 'text-cyan-300' : 'text-emerald-300'}`}
-          >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg relative ${showChat ? 'bg-gradient-to-br from-cyan-500 to-blue-600 shadow-cyan-900/50' : 'bg-gradient-to-br from-emerald-500 to-green-700 shadow-emerald-900/50'}`}>
-              <MessageSquare className="w-5 h-5 text-white" />
-              {unread > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5">
-                  {unread}
-                </span>
-              )}
-            </div>
-            <span className="text-[11px] font-bold">دردشة</span>
-          </button>
-        </div>
+            {/* Speaker */}
+            <button
+              onClick={() => setIsSpeakerOn(v => !v)}
+              className={`flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 hover:scale-[1.03] ${isSpeakerOn ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/25' : 'bg-red-500/10 text-red-400 hover:bg-red-500/15'}`}
+            >
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md ${isSpeakerOn ? 'bg-gradient-to-br from-teal-500 to-cyan-600 shadow-teal-900/40' : 'bg-gradient-to-br from-red-500 to-red-700 shadow-red-900/40'}`}>
+                {isSpeakerOn ? <Volume2 className="w-[18px] h-[18px] text-white" /> : <VolumeX className="w-[18px] h-[18px] text-white" />}
+              </div>
+              <span className="text-[10.5px] font-bold tracking-wide">{isSpeakerOn ? 'صوت' : 'صامت'}</span>
+            </button>
 
-        {/* Divider */}
-        <div className="h-px bg-white/5 mx-4" />
+            {/* Camera */}
+            <button
+              onClick={toggleVideo}
+              className={`flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 hover:scale-[1.03] ${isVideoOn ? 'bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/25' : 'bg-red-500/10 text-red-400 hover:bg-red-500/15'}`}
+            >
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md ${isVideoOn ? 'bg-gradient-to-br from-indigo-500 to-violet-700 shadow-violet-900/40' : 'bg-gradient-to-br from-red-500 to-red-700 shadow-red-900/40'}`}>
+                {isVideoOn ? <Video className="w-[18px] h-[18px] text-white" /> : <VideoOff className="w-[18px] h-[18px] text-white" />}
+              </div>
+              <span className="text-[10.5px] font-bold tracking-wide">{isVideoOn ? 'كاميرا' : 'مطفأة'}</span>
+            </button>
 
-        {/* Row 2 — 4 secondary actions */}
-        <div className="grid grid-cols-4 gap-px bg-white/5">
-          {/* Camera Switch — Premium */}
-          <button
-            onClick={toggleCamera}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${(user as any)?.isPremium ? 'text-yellow-300' : 'text-white/40'}`}
-          >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg relative ${(user as any)?.isPremium ? 'bg-gradient-to-br from-yellow-400 to-amber-600 shadow-amber-900/50' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
-              <SwitchCamera className={`w-5 h-5 ${(user as any)?.isPremium ? 'text-gray-900' : 'text-white/50'}`} />
-              {!(user as any)?.isPremium && (
-                <Lock className="w-2.5 h-2.5 text-white/60 absolute top-1 right-1" />
-              )}
-            </div>
-            <span className="text-[11px] font-bold leading-tight text-center">
-              {(user as any)?.isPremium ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
-            </span>
-          </button>
+            {/* Mic */}
+            <button
+              onClick={toggleMic}
+              className={`flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 hover:scale-[1.03] ${isMicOn ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/25' : 'bg-red-500/10 text-red-400 hover:bg-red-500/15'}`}
+            >
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md ${isMicOn ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-900/40' : 'bg-gradient-to-br from-red-500 to-red-700 shadow-red-900/40'}`}>
+                {isMicOn ? <Mic className="w-[18px] h-[18px] text-white" /> : <MicOff className="w-[18px] h-[18px] text-white" />}
+              </div>
+              <span className="text-[10.5px] font-bold tracking-wide">{isMicOn ? 'ميكروفون' : 'مكتوم'}</span>
+            </button>
+          </div>
 
-          {/* Friends */}
-          <button
-            onClick={() => { setShowFriends(v => !v); refetchUnread(); }}
-            className="relative flex flex-col items-center gap-1.5 py-4 px-2 text-red-300 transition-all active:scale-95"
-          >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-red-500 to-pink-600 shadow-lg shadow-red-900/50 relative">
-              <Heart className="w-5 h-5 text-white" />
-              {unreadDmCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-gray-900 text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5">
-                  {unreadDmCount > 99 ? '99+' : unreadDmCount}
-                </span>
-              )}
-            </div>
-            <span className="text-[11px] font-bold">أصدقاء</span>
-          </button>
+          {/* ── Row 2 : أصدقاء · المتجر · الخلفية · هدية ── */}
+          <div className="grid grid-cols-4 gap-2.5">
 
-          {/* Gift */}
-          <button
-            onClick={() => status === 'matched' ? setShowGifts(v => !v) : undefined}
-            disabled={status !== 'matched'}
-            className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${status === 'matched' ? 'text-orange-300' : 'text-white/30'}`}
-          >
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${status === 'matched' ? 'bg-gradient-to-br from-orange-400 to-pink-600 shadow-orange-900/50' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
-              <Gift className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-[11px] font-bold">هدية</span>
-          </button>
+            {/* Friends */}
+            <button
+              onClick={() => { setShowFriends(v => !v); refetchUnread(); }}
+              className="relative flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] bg-white/[0.07] text-red-300 transition-all duration-200 active:scale-95 hover:scale-[1.03] hover:bg-white/[0.11]"
+            >
+              <div className="w-11 h-11 rounded-[14px] flex items-center justify-center bg-gradient-to-br from-red-500 to-pink-600 shadow-md shadow-red-900/40 relative">
+                <Heart className="w-[18px] h-[18px] text-white" />
+                {unreadDmCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-gray-900 text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5">
+                    {unreadDmCount > 99 ? '99+' : unreadDmCount}
+                  </span>
+                )}
+              </div>
+              <span className="text-[10.5px] font-bold tracking-wide">أصدقاء</span>
+            </button>
 
-          {/* Store */}
-          <button
-            onClick={() => { sessionStorage.setItem('chat_auto_start', 'true'); setLocation('/store?from=chat'); }}
-            className="flex flex-col items-center gap-1.5 py-4 px-2 text-fuchsia-300 transition-all active:scale-95"
-          >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-fuchsia-500 to-pink-700 shadow-lg shadow-fuchsia-900/50">
-              <ShoppingBag className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-[11px] font-bold">المتجر</span>
-          </button>
-        </div>
+            {/* Store */}
+            <button
+              onClick={() => { sessionStorage.setItem('chat_auto_start', 'true'); setLocation('/store?from=chat'); }}
+              className="flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] bg-white/[0.07] text-fuchsia-300 transition-all duration-200 active:scale-95 hover:scale-[1.03] hover:bg-white/[0.11]"
+            >
+              <div className="w-11 h-11 rounded-[14px] flex items-center justify-center bg-gradient-to-br from-fuchsia-500 to-pink-700 shadow-md shadow-fuchsia-900/40">
+                <ShoppingBag className="w-[18px] h-[18px] text-white" />
+              </div>
+              <span className="text-[10.5px] font-bold tracking-wide">المتجر</span>
+            </button>
 
-        {/* Divider */}
-        <div className="h-px bg-white/5 mx-4" />
+            {/* Camera Switch — الخلفية */}
+            <button
+              onClick={toggleCamera}
+              className={`flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 ${(user as any)?.isPremium ? 'bg-amber-500/15 text-yellow-300 hover:scale-[1.03] hover:bg-amber-500/22' : 'bg-white/[0.04] text-white/35 cursor-not-allowed'}`}
+            >
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md relative ${(user as any)?.isPremium ? 'bg-gradient-to-br from-yellow-400 to-amber-600 shadow-amber-900/40' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
+                <SwitchCamera className={`w-[18px] h-[18px] ${(user as any)?.isPremium ? 'text-gray-900' : 'text-white/40'}`} />
+                {!(user as any)?.isPremium && (
+                  <Lock className="w-2.5 h-2.5 text-white/50 absolute top-1 right-1" />
+                )}
+              </div>
+              <span className="text-[10.5px] font-bold tracking-wide leading-tight text-center">
+                {(user as any)?.isPremium ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
+              </span>
+            </button>
 
-        {/* Row 3 — Quick start + Report */}
-        <div className="grid grid-cols-2 gap-px bg-white/5">
-          {/* Quick start / Stop */}
-          {(() => {
-            const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
-            const isMatched   = status === 'matched';
-            return (
-              <button
-                onClick={() => {
-                  if (isMatched)    { handleNext(); }
-                  else if (isSearching) { stopSession(); }
-                  else              { startSession('any', 'any'); }
-                }}
-                className={`flex flex-col items-center gap-1.5 py-4 px-2 transition-all active:scale-95 ${isSearching ? 'text-red-300' : 'text-green-300'}`}
-              >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${
-                  isSearching
-                    ? 'bg-gradient-to-br from-red-500 to-rose-600 shadow-red-900/50 animate-pulse'
-                    : 'bg-gradient-to-br from-green-500 to-emerald-600 shadow-green-900/50'
-                }`}>
+            {/* Gift */}
+            <button
+              onClick={() => status === 'matched' ? setShowGifts(v => !v) : undefined}
+              disabled={status !== 'matched'}
+              className={`flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 ${status === 'matched' ? 'bg-orange-500/15 text-orange-300 hover:scale-[1.03] hover:bg-orange-500/22' : 'bg-white/[0.04] text-white/25 cursor-not-allowed'}`}
+            >
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md ${status === 'matched' ? 'bg-gradient-to-br from-orange-400 to-pink-600 shadow-orange-900/40' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
+                <Gift className="w-[18px] h-[18px] text-white" />
+              </div>
+              <span className="text-[10.5px] font-bold tracking-wide">هدية</span>
+            </button>
+          </div>
+
+          {/* ── Row 3 : ابدأ مباشرة · إبلاغ ─────────────── */}
+          <div className="grid grid-cols-2 gap-2.5 pb-1">
+
+            {/* Quick start / Stop */}
+            {(() => {
+              const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
+              const isMatched   = status === 'matched';
+              return (
+                <button
+                  onClick={() => {
+                    if (isMatched)        { handleNext(); }
+                    else if (isSearching) { stopSession(); }
+                    else                  { startSession('any', 'any'); }
+                  }}
+                  className={`flex items-center justify-center gap-2.5 py-3.5 rounded-[18px] font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 shadow-lg ${
+                    isSearching
+                      ? 'bg-gradient-to-r from-red-500 to-rose-600 shadow-red-900/40 text-white animate-pulse hover:from-red-400 hover:to-rose-500'
+                      : 'bg-gradient-to-r from-green-500 to-emerald-600 shadow-green-900/40 text-white hover:from-green-400 hover:to-emerald-500 hover:scale-[1.02]'
+                  }`}
+                >
                   {isSearching
-                    ? <Square className="w-5 h-5 text-white fill-white" />
-                    : <Play   className="w-5 h-5 text-white fill-white" />
+                    ? <Square className="w-4 h-4 fill-white text-white" />
+                    : <Play   className="w-4 h-4 fill-white text-white" />
                   }
-                </div>
-                <span className="text-[11px] font-bold">
                   {isSearching ? 'إيقاف البحث' : 'ابدأ مباشرة'}
-                </span>
-              </button>
-            );
-          })()}
+                </button>
+              );
+            })()}
 
-          {/* Report */}
-          <button
-            onClick={() => {
-              if (status !== 'matched') {
-                toast.info("يمكنك الإبلاغ فقط أثناء المكالمة النشطة.");
-                return;
-              }
-              setReportSent(false);
-              setReportReason('');
-              setShowReport(true);
-            }}
-            className="flex flex-col items-center gap-1.5 py-4 px-2 text-rose-400 transition-all active:scale-95"
-          >
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-rose-600 to-red-800 shadow-lg shadow-rose-900/50">
-              <Flag className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-[11px] font-bold">إبلاغ</span>
-          </button>
+            {/* Report */}
+            <button
+              onClick={() => {
+                if (status !== 'matched') {
+                  toast.info("يمكنك الإبلاغ فقط أثناء المكالمة النشطة.");
+                  return;
+                }
+                setReportSent(false);
+                setReportReason('');
+                setShowReport(true);
+              }}
+              className="flex items-center justify-center gap-2.5 py-3.5 rounded-[18px] bg-white/[0.07] hover:bg-white/[0.12] text-rose-400 font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02]"
+            >
+              <Flag className="w-4 h-4" />
+              إبلاغ
+            </button>
+          </div>
+
         </div>
 
-        {/* Divider */}
-        <div className="h-px bg-white/5 mx-4" />
+        {/* Divider before action row */}
+        <div className="h-px bg-white/8 mx-3 mb-0" />
 
         {/* Next + End Call row */}
         <div className="grid grid-cols-3 gap-3 p-4">
