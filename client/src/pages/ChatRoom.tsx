@@ -441,6 +441,11 @@ export default function ChatRoom() {
   // ── controls ───────────────────────────────────────────────────────────────
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const toggleCamera = async () => {
+    if (!(user as any)?.isPremium) {
+      sessionStorage.setItem('chat_auto_start', 'true');
+      setLocation('/store?from=chat');
+      return;
+    }
     if (!localStreamRef.current) return;
     
     const newMode = facingMode === 'user' ? 'environment' : 'user';
@@ -1091,16 +1096,19 @@ export default function ChatRoom() {
               <span className="text-[10.5px] font-bold tracking-wide">المتجر</span>
             </button>
 
-            {/* Camera Switch — الخلفية (Free for all) */}
+            {/* Camera Switch — الخلفية (Paid Premium) */}
             <button
               onClick={toggleCamera}
-              className="flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 bg-amber-500/15 text-yellow-300 hover:scale-[1.03] hover:bg-amber-500/22"
+              className={`flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 ${(user as any)?.isPremium ? 'bg-amber-500/15 text-yellow-300 hover:scale-[1.03] hover:bg-amber-500/22' : 'bg-white/[0.04] text-white/35 cursor-not-allowed'}`}
             >
-              <div className="w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md relative bg-gradient-to-br from-yellow-400 to-amber-600 shadow-amber-900/40">
-                <SwitchCamera className="w-[18px] h-[18px] text-gray-900" />
+              <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md relative ${(user as any)?.isPremium ? 'bg-gradient-to-br from-yellow-400 to-amber-600 shadow-amber-900/40' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
+                <SwitchCamera className={`w-[18px] h-[18px] ${(user as any)?.isPremium ? 'text-gray-900' : 'text-white/40'}`} />
+                {!(user as any)?.isPremium && (
+                  <Lock className="w-2.5 h-2.5 text-white/50 absolute top-1 right-1" />
+                )}
               </div>
               <span className="text-[10.5px] font-bold tracking-wide leading-tight text-center">
-                {facingMode === 'user' ? 'خلفية' : 'أمامية'}
+                {(user as any)?.isPremium ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
               </span>
             </button>
 
