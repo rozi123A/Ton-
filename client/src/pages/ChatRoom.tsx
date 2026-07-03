@@ -14,7 +14,7 @@ import TranslationPanel from '@/components/TranslationPanel';
 import FaceFiltersPanel from '@/components/FaceFiltersPanel';
 import FriendsPanel from '@/components/FriendsPanel';
 import DirectMessagePanel from '@/components/DirectMessagePanel';
-import { playMessageSound, playFriendSound } from '@/lib/notificationSound';
+import { playMessageSound, playFriendSound, playRingSound } from '@/lib/notificationSound';
 import { toast } from 'sonner';
 
 // ── ICE config with TURN servers for 4G/5G mobile networks ───────────────────
@@ -74,10 +74,11 @@ const COUNTRIES = [
   { code: 'FR', name: 'فرنسا 🇫🇷' },
 ];
 
-type Status = 'setup' | 'connecting' | 'waiting' | 'matched' | 'ended';
+type Status = 'setup' | 'connecting' | 'waiting' | 'confirming' | 'matched' | 'ended';
 interface ChatMsg  { text: string; mine: boolean; name: string; time: string; }
 interface GiftAnim { emoji: string; name: string; senderName: string; id: number; }
 interface Notif    { partnerName: string; partnerAvatar: string; }
+interface PendingMatch { name: string; avatar: string; userId?: number; role: 'caller' | 'callee'; }
 
 function makePeerId() { return `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
 
@@ -110,6 +111,10 @@ export default function ChatRoom() {
   const [callDuration, setCallDuration]= useState(0);
   const [peerVideoOff, setPeerVideoOff]= useState(false);
   const [unread,       setUnread]      = useState(0);
+  const [pendingMatch, setPendingMatchState] = useState<PendingMatch | null>(null);
+  const pendingMatchRef = useRef<PendingMatch | null>(null);
+  const setPendingMatch = useCallback((m: PendingMatch | null) => { pendingMatchRef.current = m; setPendingMatchState(m); }, []);
+  const ringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── gifts ──────────────────────────────────────────────────────────────────
   const [showGifts, setShowGifts] = useState(false);
@@ -255,27 +260,37 @@ export default function ChatRoom() {
     return pc;
   }, [closePC, signal, stopTimer, resetRemote]);
 
+  // ── finalize a confirmed match: update UI state (no PC handling here) ───────
+  const finalizeMatch = useCallback((match: PendingMatch) => {
+    setPeerName(match.name);
+    setPeerAvatar(match.avatar);
+    (window as any).currentPeerUserId = match.userId;
+    setPendingMatch(null);
+    setStatus('matched'); startTimer(); setNotif(null);
+  }, [startTimer]);
+
   // ── SSE event handler ──────────────────────────────────────────────────────
   const handleEvent = useCallback(async (msg: any) => {
     switch (msg.type) {
       case 'waiting':
+        setPendingMatch(null);
         setStatus('waiting'); stopTimer(); closePC(); resetRemote(); setMessages([]); setShowGifts(false);
         break;
       case 'matched': {
-        setPeerName(msg.peer?.name || 'مستخدم');
-        setPeerAvatar(msg.peer?.avatar || '');
-        // Store peer userId for persistent social actions
-        (window as any).currentPeerUserId = msg.peer?.userId;
-        setStatus('matched'); startTimer(); setNotif(null);
-        const pc = createPC();
-        if (msg.role === 'caller') {
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          signal('offer', offer);
-        }
+        // Show an accept/reject confirmation before connecting, with a phone-style ring.
+        setPendingMatch({
+          name: msg.peer?.name || 'مستخدم',
+          avatar: msg.peer?.avatar || '',
+          userId: msg.peer?.userId,
+          role: msg.role === 'caller' ? 'caller' : 'callee',
+        });
+        setStatus('confirming');
+        setNotif(null);
         break;
       }
       case 'offer': {
+        // Partner already accepted and started the connection — auto-confirm our side too.
+        if (pendingMatchRef.current) finalizeMatch(pendingMatchRef.current);
         const pc = pcRef.current || createPC();
         await pc.setRemoteDescription(new RTCSessionDescription(msg.data));
         const answer = await pc.createAnswer();
@@ -293,6 +308,7 @@ export default function ChatRoom() {
         addMessage(msg.text, false, msg.senderName || 'مستخدم');
         break;
       case 'peer-left':
+        setPendingMatch(null);
         stopTimer(); closePC(); resetRemote(); setStatus('waiting'); setShowGifts(false);
         break;
       case 'gift': {
@@ -456,6 +472,22 @@ export default function ChatRoom() {
   const toggleMic   = () => { localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !isMicOn; }); setIsMicOn(v => !v); };
   const toggleVideo = () => { localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = !isVideoOn; }); setIsVideoOn(v => !v); };
   const handleNext  = () => { setMessages([]); stopTimer(); closePC(); if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null; signal('next'); };
+  const handleAcceptMatch = useCallback(async () => {
+    const match = pendingMatchRef.current;
+    if (!match) return;
+    finalizeMatch(match);
+    const pc = createPC();
+    if (match.role === 'caller') {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      signal('offer', offer);
+    }
+  }, [finalizeMatch, createPC, signal]);
+  const handleRejectMatch = useCallback(() => {
+    setPendingMatch(null);
+    setStatus('waiting');
+    signal('next');
+  }, [signal]);
   const handleEnd   = () => {
     destroyedRef.current = true;
     esRef.current?.close();
@@ -472,8 +504,20 @@ export default function ChatRoom() {
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
   const statusLabel = status === 'connecting' ? 'جاري الاتصال...'
     : status === 'waiting'  ? 'جاري البحث...'
+    : status === 'confirming' ? 'تم العثور على شخص!'
     : status === 'matched'  ? fmt(callDuration)
     : 'انتهت المكالمة';
+
+  // ── ring while a match confirmation is pending ──────────────────────────────
+  useEffect(() => {
+    if (status === 'confirming') {
+      playRingSound();
+      ringIntervalRef.current = setInterval(playRingSound, 2200);
+    }
+    return () => {
+      if (ringIntervalRef.current) { clearInterval(ringIntervalRef.current); ringIntervalRef.current = null; }
+    };
+  }, [status]);
 
   // ── SETUP SCREEN ───────────────────────────────────────────────────────────
   if (status === 'setup') {
@@ -669,6 +713,42 @@ export default function ChatRoom() {
           <button onClick={() => setNotif(null)} className="text-white/60 hover:text-white flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Match Found — Accept / Reject */}
+      {status === 'confirming' && pendingMatch && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 via-purple-900/60 to-gray-900 rounded-3xl border border-white/20 shadow-2xl max-w-xs w-full p-6 flex flex-col items-center text-center">
+            <p className="text-white/60 text-xs font-bold mb-4 tracking-wide">تم العثور على شخص!</p>
+            <div className="relative mb-4">
+              <span className="absolute inset-0 rounded-full bg-purple-500/40 animate-ping" />
+              <span className="absolute -inset-2 rounded-full bg-pink-500/20 animate-ping" style={{ animationDelay: '0.3s' }} />
+              <img
+                src={pendingMatch.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pendingMatch.name}`}
+                alt={pendingMatch.name}
+                className="relative w-24 h-24 rounded-full border-4 border-purple-400 object-cover shadow-2xl"
+              />
+            </div>
+            <h2 className="text-white font-bold text-xl mb-1">{pendingMatch.name}</h2>
+            <p className="text-purple-300 text-sm mb-6 animate-pulse">📞 جاري الاتصال...</p>
+            <div className="flex gap-4 w-full">
+              <button
+                onClick={handleRejectMatch}
+                className="flex-1 flex flex-col items-center gap-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-red-900/40"
+              >
+                <PhoneOff className="w-6 h-6" />
+                رفض
+              </button>
+              <button
+                onClick={handleAcceptMatch}
+                className="flex-1 flex flex-col items-center gap-1.5 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-green-900/40"
+              >
+                <Video className="w-6 h-6" />
+                قبول
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1013,7 +1093,7 @@ export default function ChatRoom() {
           {/* Next — spans 2 cols */}
           <button
             onClick={handleNext}
-            disabled={status === 'connecting' || status === 'waiting'}
+            disabled={status === 'connecting' || status === 'waiting' || status === 'confirming'}
             className="col-span-2 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-gray-900 font-black flex items-center justify-center gap-2.5 shadow-lg shadow-amber-900/40 disabled:opacity-40 active:scale-95 transition-all text-sm py-3.5 border-b-4 border-amber-600 active:border-b-0 active:translate-y-0.5"
           >
             <SkipForward className="w-5 h-5" />
