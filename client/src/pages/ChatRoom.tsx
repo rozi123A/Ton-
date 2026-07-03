@@ -512,6 +512,12 @@ export default function ChatRoom() {
     setStatus('idle');
     destroyedRef.current = false;   // allow restart
   }, [closePC, stopTimer]);
+  const handleRejectMatch = useCallback(() => {
+    setPendingMatch(null);
+    setStatus('waiting');
+    signal('next');
+  }, [signal, setPendingMatch]);
+
   const handleAcceptMatch = useCallback(async () => {
     const match = pendingMatchRef.current;
     if (!match) return;
@@ -537,11 +543,6 @@ export default function ChatRoom() {
       signal('offer', offer);
     }
   }, [finalizeMatch, createPC, signal, filterGender, filterCountry, user, deductRadarStars, walletQuery, handleRejectMatch]);
-  const handleRejectMatch = useCallback(() => {
-    setPendingMatch(null);
-    setStatus('waiting');
-    signal('next');
-  }, [signal]);
   const handleEnd   = () => {
     destroyedRef.current = true;
     esRef.current?.close();
