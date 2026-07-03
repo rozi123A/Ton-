@@ -659,17 +659,6 @@ export default function ChatRoom() {
               ابدأ البحث الآن
             </button>
 
-            {/* Quick start — skips filters */}
-            <div className="flex justify-center">
-              <button
-                onClick={() => startSession('any', 'any')}
-                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-10 rounded-2xl shadow-2xl shadow-green-900/50 transform hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 text-lg tracking-wide"
-              >
-                <Play className="w-5 h-5 fill-white" />
-                ابدأ مباشرة
-              </button>
-            </div>
-
             <button
               onClick={() => setLocation('/')}
               className="w-full flex items-center justify-center gap-2 text-white/50 hover:text-white/90 text-sm transition-colors py-2"
@@ -1074,6 +1063,26 @@ export default function ChatRoom() {
               <ShoppingBag className="w-5 h-5 text-white" />
             </div>
             <span className="text-[11px] font-bold">المتجر</span>
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="h-px bg-white/5 mx-4" />
+
+        {/* Row 3 — Quick start + Report */}
+        <div className="grid grid-cols-2 gap-px bg-white/5">
+          {/* Quick start */}
+          <button
+            onClick={() => {
+              if (status === 'matched') { handleNext(); }
+              else { startSession('any', 'any'); }
+            }}
+            className="flex flex-col items-center gap-1.5 py-4 px-2 text-green-300 transition-all active:scale-95"
+          >
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-900/50">
+              <Play className="w-5 h-5 text-white fill-white" />
+            </div>
+            <span className="text-[11px] font-bold">ابدأ مباشرة</span>
           </button>
 
           {/* Report */}
