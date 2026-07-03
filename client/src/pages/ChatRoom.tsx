@@ -367,21 +367,16 @@ export default function ChatRoom() {
 
   // ── start session (called after filter screen) ────────────────────────────
   const startSession = useCallback(async (fg: string, fc: string) => {
-    // Star Radar logic: Paid filters
+    // Star Radar logic: Check stars before starting
     if (fg !== 'any' || fc !== 'any') {
       if (!(user as any)?.isPremium) {
-        const cost = 5; // Cost in stars
-        const confirmRadar = window.confirm(`استخدام رادار النجوم للفلترة يكلف ${cost} نجوم لكل بحث. هل تريد المتابعة؟`);
-        if (!confirmRadar) return;
-        
-        try {
-          await deductRadarStars.mutateAsync({ amount: cost });
-          toast.success("تم تفعيل رادار النجوم! جاري البحث...");
-          walletQuery.refetch();
-        } catch (err: any) {
-          toast.error(err.message || "فشل خصم النجوم");
+        const stars = walletQuery.data?.wallet || 0;
+        if (stars < 5) {
+          toast.error("رصيد نجوم غير كافٍ لاستخدام الرادار. يرجى الشحن أولاً.");
+          setLocation('/store');
           return;
         }
+        toast.success("تم تفعيل رادار النجوم! سيتم خصم 5 نجوم عند بدء المكالمة.");
       }
     }
     destroyedRef.current = false;
@@ -520,6 +515,20 @@ export default function ChatRoom() {
   const handleAcceptMatch = useCallback(async () => {
     const match = pendingMatchRef.current;
     if (!match) return;
+
+    // Star Radar Deduction on Accept
+    if ((filterGender !== 'any' || filterCountry !== 'any') && !(user as any)?.isPremium) {
+      try {
+        await deductRadarStars.mutateAsync({ amount: 5 });
+        toast.success("تم خصم 5 نجوم لاستخدام الرادار");
+        walletQuery.refetch();
+      } catch (err: any) {
+        toast.error(err.message || "رصيد نجوم غير كافٍ");
+        handleRejectMatch();
+        return;
+      }
+    }
+
     finalizeMatch(match);
     const pc = createPC();
     if (match.role === 'caller') {
@@ -527,7 +536,7 @@ export default function ChatRoom() {
       await pc.setLocalDescription(offer);
       signal('offer', offer);
     }
-  }, [finalizeMatch, createPC, signal]);
+  }, [finalizeMatch, createPC, signal, filterGender, filterCountry, user, deductRadarStars, walletQuery, handleRejectMatch]);
   const handleRejectMatch = useCallback(() => {
     setPendingMatch(null);
     setStatus('waiting');
