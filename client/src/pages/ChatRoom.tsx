@@ -659,6 +659,15 @@ export default function ChatRoom() {
               ابدأ البحث الآن
             </button>
 
+            {/* Quick start — skips filters */}
+            <button
+              onClick={() => startSession('any', 'any')}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 rounded-2xl shadow-2xl shadow-green-900/50 transform hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 text-lg tracking-wide"
+            >
+              <Play className="w-5 h-5 fill-white" />
+              ابدأ مباشرة
+            </button>
+
             <button
               onClick={() => setLocation('/')}
               className="w-full flex items-center justify-center gap-2 text-white/50 hover:text-white/90 text-sm transition-colors py-2"

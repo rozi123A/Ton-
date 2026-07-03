@@ -96,14 +96,6 @@ export default function Hero() {
               </div>
             </button>
 
-            {/* Quick Start button — skips the setup screen */}
-            <button
-              onClick={() => setLocation('/chat?autoStart=true')}
-              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white font-bold px-10 py-3 rounded-full shadow-xl transition-all duration-300 transform hover:scale-105 active:scale-95"
-            >
-              <Play className="w-5 h-5 fill-white" />
-              ابدأ مباشرة
-            </button>
 
             {/* Secondary actions */}
             <div className="flex flex-col sm:flex-row gap-3 mt-3 flex-wrap justify-center">
