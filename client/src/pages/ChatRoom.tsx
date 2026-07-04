@@ -128,6 +128,7 @@ export default function ChatRoom() {
   const [dmTarget, setDmTarget] = useState<{ id: number; name: string; avatar: string } | null>(null);
   const [selectedFilter, setSelectedFilter] = useState('none');
   const [showDailyBonus, setShowDailyBonus] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
   const { data: dbFriends, refetch: refetchFriends } = trpc.social.getFriends.useQuery(undefined, { enabled: !!user });
   const { data: unreadDmData, refetch: refetchUnread } = trpc.messages.getUnreadCount.useQuery(undefined, {
     enabled: !!user,
@@ -872,13 +873,17 @@ export default function ChatRoom() {
           {showDailyBonus && (
             <button
               onClick={() => claimBonus.mutate()}
-              className="relative flex items-center justify-center w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full shadow-lg animate-bounce hover:scale-110 transition-transform flex-shrink-0"
+              disabled={claimBonus.isPending}
+              className="relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 shadow-lg shadow-orange-900/40 hover:scale-105 active:scale-95 transition-all duration-200 flex-shrink-0"
               title="استلم مكافأتك اليومية"
             >
-              <Gift className="w-5 h-5 text-white" />
-              <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+              {/* Glow ring */}
+              <span className="absolute inset-0 rounded-2xl animate-ping bg-yellow-400 opacity-20 pointer-events-none" />
+              <span className="text-xl leading-none">🎁</span>
+              <span className="text-[9px] font-black text-white/90 leading-tight">مكافأة</span>
+              {/* Red dot */}
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-gray-900 flex items-center justify-center">
+                <span className="text-[7px] text-white font-black">!</span>
               </span>
             </button>
           )}
@@ -898,9 +903,7 @@ export default function ChatRoom() {
                   });
                   return;
                 }
-                if (confirm(`هل تريد تحويل ${stars} نجوم إلى ${Math.floor(stars/2)} نقاط؟`)) {
-                  convertStars.mutate({ amount: stars });
-                }
+                setShowConvertModal(true);
               }}
               className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2.5 py-1 rounded-full shadow-sm hover:bg-purple-500/30 transition-colors"
             >
@@ -1247,6 +1250,69 @@ export default function ChatRoom() {
       {showGifts && (
         <GiftPanel credits={credits} onSend={sendGift} onClose={() => setShowGifts(false)} disabled={spendGift.isPending} />
       )}
+
+      {/* ── Convert Stars Modal ─────────────────────────────────────── */}
+      {showConvertModal && (() => {
+        const stars = walletQuery.data?.wallet || 0;
+        const gains = Math.floor(stars / 2);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowConvertModal(false)}>
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-white/10 rounded-3xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg text-2xl">⭐</div>
+                <div>
+                  <h3 className="text-white font-black text-lg">تحويل النجوم</h3>
+                  <p className="text-white/50 text-xs">نجومك تساوي نقاطاً قيّمة</p>
+                </div>
+              </div>
+
+              {/* Exchange rate card */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-5 flex items-center justify-between gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-2xl font-black text-purple-300">{stars}</span>
+                  <span className="text-[11px] text-purple-400 font-bold">⭐ نجوم</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 text-white/40">
+                  <span className="text-xl">→</span>
+                  <span className="text-[10px]">معدل 2:1</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-2xl font-black text-yellow-300">{gains}</span>
+                  <span className="text-[11px] text-yellow-400 font-bold">⚡ نقطة</span>
+                </div>
+              </div>
+
+              {stars < 2 ? (
+                <div className="text-center text-white/50 text-sm mb-5">
+                  لا يكفي نجوم للتحويل (الحد الأدنى نجمتان)
+                </div>
+              ) : (
+                <p className="text-white/60 text-sm text-center mb-5">
+                  ستتحول <span className="text-purple-300 font-bold">{stars} نجمة</span> إلى <span className="text-yellow-300 font-bold">{gains} نقطة</span> وتُضاف لرصيدك فوراً
+                </p>
+              )}
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConvertModal(false)}
+                  className="flex-1 py-3 rounded-2xl bg-white/8 hover:bg-white/12 text-white/70 font-bold text-sm transition-all active:scale-95"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={() => { convertStars.mutate({ amount: stars }); setShowConvertModal(false); }}
+                  disabled={stars < 2 || convertStars.isPending}
+                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm shadow-lg shadow-purple-900/40 disabled:opacity-40 transition-all active:scale-95 hover:brightness-110"
+                >
+                  {convertStars.isPending ? '...' : 'تحويل الآن ✓'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showTranslation && (
         <TranslationPanel
