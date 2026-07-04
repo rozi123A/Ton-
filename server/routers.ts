@@ -247,10 +247,28 @@ export const appRouter = router({
         return { success: true, newBalance };
       }),
 
-    /** Upgrade user to premium */
+    /** Upgrade user to premium (free/admin) */
     upgrade: protectedProcedure
       .mutation(async ({ ctx }) => {
         await upgradeToPremium(ctx.user.id);
+        return { success: true };
+      }),
+
+    /** Upgrade to Premium by spending 500 credits */
+    upgradeWithCredits: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        if ((ctx.user as any).isPremium) throw new Error("أنت مشترك بالفعل في Premium!");
+        const COST = 500;
+        const balance = await getUserCredits(ctx.user.id);
+        if (balance < COST) throw new Error(`رصيدك ${balance} نقطة فقط. تحتاج ${COST} نقطة للاشتراك.`);
+        const ok = await deductCredits(ctx.user.id, COST);
+        if (!ok) throw new Error("فشل خصم النقاط، حاول مجدداً.");
+        await upgradeToPremium(ctx.user.id);
+        await createNotification(ctx.user.id, {
+          type: 'system',
+          title: '🎉 مرحباً بك في Premium!',
+          message: `تم اشتراكك بـ ${COST} نقطة. استمتع بجميع الميزات الحصرية!`,
+        });
         return { success: true };
       }),
 
