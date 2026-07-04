@@ -868,62 +868,75 @@ export default function ChatRoom() {
         </div>
 
         {/* Right: Wallet & Credits */}
-        <div className="flex items-center gap-3">
-          {/* Daily Bonus Button */}
-          {showDailyBonus && (
-            <button
-              onClick={() => claimBonus.mutate()}
-              disabled={claimBonus.isPending}
-              className="relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 shadow-lg shadow-orange-900/40 hover:scale-105 active:scale-95 transition-all duration-200 flex-shrink-0"
-              title="استلم مكافأتك اليومية"
-            >
-              {/* Glow ring */}
-              <span className="absolute inset-0 rounded-2xl animate-ping bg-yellow-400 opacity-20 pointer-events-none" />
-              <span className="text-xl leading-none">🎁</span>
-              <span className="text-[9px] font-black text-white/90 leading-tight">مكافأة</span>
-              {/* Red dot */}
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-gray-900 flex items-center justify-center">
-                <span className="text-[7px] text-white font-black">!</span>
-              </span>
-            </button>
-          )}
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
 
-          {/* Star Wallet */}
-          <div className="flex flex-col items-center">
-            <button 
+          {/* Row 1: Star wallet + Credits */}
+          <div className="flex items-center gap-2">
+            {/* Star Wallet */}
+            <button
               onClick={() => {
                 const stars = walletQuery.data?.wallet || 0;
                 if (stars < 10) {
                   toast("محفظة النجوم 🌟", {
                     description: `رصيدك الحالي ${stars} نجوم. اشحن النجوم لاستخدام الرادار أو أرسل هدايا مميزة.`,
-                    action: {
-                      label: "شحن",
-                      onClick: () => setLocation('/store')
-                    }
+                    action: { label: "شحن", onClick: () => setLocation('/store') }
                   });
                   return;
                 }
                 setShowConvertModal(true);
               }}
-              className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2.5 py-1 rounded-full shadow-sm hover:bg-purple-500/30 transition-colors"
+              className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2 py-1 rounded-full shadow-sm hover:bg-purple-500/30 transition-colors"
             >
               <Star className="w-3 h-3 text-purple-400 fill-purple-400" />
-              <span className="text-purple-300 text-xs font-black">{walletQuery.data?.wallet || 0}</span>
+              <span className="text-purple-300 text-[11px] font-black">{walletQuery.data?.wallet || 0}</span>
+              <span className="text-purple-500 text-[9px]">⭐</span>
             </button>
-            <span className="text-[8px] text-purple-400 font-bold mt-0.5">محفظة النجوم</span>
+
+            {/* Credits */}
+            <button
+              onClick={() => setLocation('/store')}
+              className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 px-2 py-1 rounded-full shadow-sm hover:bg-yellow-500/30 transition-colors"
+            >
+              <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+              <span className="text-yellow-300 text-[11px] font-black">{credits}</span>
+            </button>
           </div>
 
-          {/* Credits */}
-          <div className="flex flex-col items-end gap-0.5">
-            <div className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 px-2.5 py-1 rounded-full shadow-sm">
-              <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-              <span className="text-yellow-300 text-xs font-black">{credits}</span>
-            </div>
-            <button onClick={() => setLocation('/store')} className="text-[9px] text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center gap-0.5">
-              <ShoppingBag className="w-2.5 h-2.5" />
-              شحن
+          {/* Row 2: Daily Bonus compact card */}
+          {showDailyBonus && (
+            <button
+              onClick={() => claimBonus.mutate()}
+              disabled={claimBonus.isPending}
+              className="relative flex items-center gap-2 px-3 py-0 h-[42px] w-[115px] rounded-2xl
+                         bg-gradient-to-r from-orange-500/80 to-amber-400/80
+                         backdrop-blur-md border border-orange-300/25
+                         shadow-sm shadow-orange-900/20
+                         active:scale-[0.97] hover:brightness-110
+                         transition-all duration-150 overflow-hidden flex-shrink-0"
+            >
+              {/* Glassmorphism sheen */}
+              <span className="absolute inset-0 bg-gradient-to-br from-white/15 to-transparent pointer-events-none rounded-2xl" />
+
+              {/* Gift icon with glow */}
+              <span
+                className="text-[20px] leading-none flex-shrink-0 relative z-10"
+                style={{ filter: 'drop-shadow(0 0 5px rgba(255,200,50,0.7))' }}
+              >🎁</span>
+
+              {/* Text */}
+              <div className="flex flex-col leading-tight relative z-10">
+                <span className="text-white font-black text-[11px] tracking-wide">مكافأة</span>
+                <span className="text-white/65 text-[9px]">اضغط للاستلام</span>
+              </div>
+
+              {/* Red pulse dot */}
+              <span className="absolute top-1.5 left-1.5 flex h-2 w-2 z-20">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-70" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              </span>
             </button>
-          </div>
+          )}
+
         </div>
       </div>
 
