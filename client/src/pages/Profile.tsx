@@ -104,7 +104,7 @@ export default function Profile() {
       <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-black/30 backdrop-blur-md border-b border-white/10">
+      <header className="sticky top-0 z-10 bg-black/30 border-b border-white/10">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4 max-w-lg">
           <button onClick={() => setLocation("/")} className="text-white/70 hover:text-white transition-colors p-1">
             <ArrowLeft className="w-5 h-5" />
@@ -127,7 +127,7 @@ export default function Profile() {
       <div className="container mx-auto px-4 py-6 max-w-lg space-y-4">
 
         {/* ── Hero card ─────────────────────────────────────────────────── */}
-        <section className="bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 overflow-hidden">
+        <section className="bg-white/10 rounded-3xl border border-white/20 overflow-hidden">
           <div className="h-24 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 relative">
             {u?.isPremium && (
               <div className="absolute top-3 left-3 flex items-center gap-1 bg-yellow-400 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-full shadow">
@@ -203,7 +203,7 @@ export default function Profile() {
 
         {/* ── Profile completion ────────────────────────────────────────── */}
         {completionPct < 100 && (
-          <section className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-4">
+          <section style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.15)', padding: '16px' }}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-purple-400" />
@@ -211,20 +211,23 @@ export default function Profile() {
               </div>
               <span className="text-purple-300 font-bold text-sm">{completionPct}%</span>
             </div>
-            <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-3">
+            <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden', marginBottom: '12px' }}>
               <div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500"
-                style={{ width: `${completionPct}%` }}
+                style={{ height: '100%', background: 'linear-gradient(to right, #9333ea, #ec4899)', borderRadius: '99px', width: `${completionPct}%`, transition: 'width 0.5s' }}
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {completionItems.map(item => (
                 <span key={item.label}
-                  className={`text-xs px-2.5 py-1 rounded-full border font-medium flex items-center gap-1 ${
-                    item.done
-                      ? "bg-green-500/20 border-green-500/40 text-green-300"
-                      : "bg-white/5 border-white/20 text-white/40"
-                  }`}
+                  style={{
+                    fontSize: '12px',
+                    padding: '4px 10px',
+                    borderRadius: '99px',
+                    border: item.done ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.15)',
+                    backgroundColor: item.done ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)',
+                    color: item.done ? '#86efac' : 'rgba(255,255,255,0.35)',
+                    display: 'flex', alignItems: 'center', gap: '4px'
+                  }}
                 >
                   {item.done ? "✓" : "○"} {item.label}
                 </span>
@@ -234,7 +237,7 @@ export default function Profile() {
         )}
 
         {/* ── Info fields ──────────────────────────────────────────────── */}
-        <section className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-5 space-y-4">
+        <section className="bg-white/10 rounded-2xl border border-white/20 p-5 space-y-4">
           <h2 className="font-bold text-white flex items-center gap-2">
             <User className="w-4 h-4 text-purple-400" /> معلوماتك
           </h2>
@@ -293,7 +296,7 @@ export default function Profile() {
         </section>
 
         {/* ── Credits & Stars ───────────────────────────────────────────── */}
-        <section className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-5">
+        <section className="bg-white/10 rounded-2xl border border-white/20 p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-white flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-400" /> رصيد النجوم
