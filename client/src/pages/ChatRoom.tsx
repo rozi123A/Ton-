@@ -401,15 +401,21 @@ export default function ChatRoom() {
   const startSession = useCallback(async (fg: string, fc: string) => {
     // Star Radar logic: free for "any" gender + own/any country; paid otherwise
     const isPaidRadar = fg !== 'any' || (fc !== 'any' && fc !== myCountry);
-    if (isPaidRadar) {
-      if (!(user as any)?.isPremium) {
-        const stars = walletQuery.data?.wallet || 0;
-        if (stars < 5) {
-          toast.error("رصيد نجوم غير كافٍ لاستخدام الرادار. يرجى الشحن أولاً.");
-          setLocation('/store');
-          return;
-        }
-        toast.info("تم تفعيل رادار النجوم! سيتم خصم 5 نجوم عند بدء المكالمة.");
+    if (isPaidRadar && !(user as any)?.isPremium) {
+      const stars = walletQuery.data?.wallet || 0;
+      if (stars < 5) {
+        toast.error(`رصيد نجومك ${stars} نجمة فقط. تحتاج 5 نجوم لاستخدام الرادار. يرجى الشحن أولاً.`);
+        setLocation('/store');
+        return;
+      }
+      // Deduct stars immediately on start
+      try {
+        await deductRadarStars.mutateAsync({ amount: 5 });
+        toast.success("تم خصم 5 نجوم لتفعيل رادار النجوم 🌟");
+        walletQuery.refetch();
+      } catch (err: any) {
+        toast.error(err.message || "رصيد نجوم غير كافٍ");
+        return;
       }
     }
     destroyedRef.current = false;
@@ -444,7 +450,7 @@ export default function ChatRoom() {
     esRef.current = es;
     es.onmessage = (e) => { try { handleEvent(JSON.parse(e.data)); } catch { /* ignore */ } };
     es.onerror   = () => { if (!destroyedRef.current) setStatus('ended'); };
-  }, [myId, myName, myAvatar, myGender, handleEvent]);
+  }, [myId, myName, myAvatar, myGender, myCountry, handleEvent, user, walletQuery, deductRadarStars, setLocation]);
 
   // ── cleanup on unmount ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -555,22 +561,7 @@ export default function ChatRoom() {
     const match = pendingMatchRef.current;
     if (!match) return;
 
-    // Star Radar Deduction on Accept (free for own/any country + any gender)
-    const isPaidRadar = filterGender !== 'any' || (filterCountry !== 'any' && filterCountry !== myCountry);
-    if (isPaidRadar && !(user as any)?.isPremium) {
-      try {
-        console.log("[StarRadar] Attempting to deduct 5 stars...");
-        await deductRadarStars.mutateAsync({ amount: 5 });
-        toast.success("تم خصم 5 نجوم لاستخدام الرادار 🌟");
-        walletQuery.refetch();
-      } catch (err: any) {
-        console.error("[StarRadar] Deduction failed:", err);
-        toast.error(err.message || "رصيد نجوم غير كافٍ");
-        handleRejectMatch();
-        return;
-      }
-    }
-
+    // Deduction already happened at startSession — proceed directly
     finalizeMatch(match);
     const pc = createPC();
     if (match.role === 'caller') {
@@ -578,7 +569,7 @@ export default function ChatRoom() {
       await pc.setLocalDescription(offer);
       signal('offer', offer);
     }
-  }, [finalizeMatch, createPC, signal, filterGender, filterCountry, user, deductRadarStars, walletQuery, handleRejectMatch]);
+  }, [finalizeMatch, createPC, signal, handleRejectMatch]);
   const handleEnd   = () => {
     destroyedRef.current = true;
     esRef.current?.close();
