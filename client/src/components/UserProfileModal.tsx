@@ -126,20 +126,33 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
 
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-2 mb-4">
+            {/* نجوم — مشوّشة دائماً، القيمة لا تأتي من السيرفر */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
               </div>
-              <p className="text-white font-black text-base blur-sm select-none">{profile.wallet ?? 0}</p>
+              <p
+                className="text-white font-black text-base select-none"
+                style={{ filter: 'blur(6px)', userSelect: 'none' }}
+              >
+                ●●●
+              </p>
               <p className="text-white/50 text-[10px] font-bold">نجوم</p>
             </div>
+            {/* نقاط — مشوّشة دائماً */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Zap className="w-3.5 h-3.5 text-purple-400" />
               </div>
-              <p className="text-white font-black text-base blur-sm select-none">{profile.credits ?? 0}</p>
+              <p
+                className="text-white font-black text-base select-none"
+                style={{ filter: 'blur(6px)', userSelect: 'none' }}
+              >
+                ●●●
+              </p>
               <p className="text-white/50 text-[10px] font-bold">نقاط</p>
             </div>
+            {/* مشاهدات — ظاهرة */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Users className="w-3.5 h-3.5 text-blue-400" />

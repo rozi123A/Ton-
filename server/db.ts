@@ -561,11 +561,10 @@ export async function getUserPublicProfile(userId: number) {
       country: users.country,
       isPremium: users.isPremium,
       isOnline: users.isOnline,
-      wallet: users.wallet,
-      credits: users.credits,
       profileViews: users.profileViews,
       createdAt: users.createdAt,
       role: users.role,
+      // wallet و credits لا تُرسل للعملاء — مخفية من السيرفر
     }).from(users).where(eq(users.id, userId)).limit(1);
     const profile = rows[0] ?? null;
     // الأدمن لا يمكن رؤية ملفه الشخصي من قِبل أي أحد
