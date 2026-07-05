@@ -492,7 +492,8 @@ export default function ChatRoom() {
   // ── controls ───────────────────────────────────────────────────────────────
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const toggleCamera = async () => {
-    if (!(user as any)?.isPremium) {
+    const isAdmin = (user as any)?.role === 'admin';
+    if (!(user as any)?.isPremium && !isAdmin) {
       sessionStorage.setItem('chat_auto_start', 'true');
       setLocation('/store?from=chat');
       return;
@@ -1171,18 +1172,24 @@ export default function ChatRoom() {
               <span className="text-[10.5px] font-bold tracking-wide">المتجر</span>
             </button>
 
-            {/* Camera Switch — for Premium or Admin */}
-            <button
-              onClick={toggleCamera}
-              className="flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 bg-amber-500/15 text-yellow-300 hover:scale-[1.03] hover:bg-amber-500/22"
-            >
-              <div className="w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md relative bg-gradient-to-br from-yellow-400 to-amber-600 shadow-amber-900/40">
-                <SwitchCamera className="w-[18px] h-[18px] text-gray-900" />
-              </div>
-              <span className="text-[10.5px] font-bold tracking-wide leading-tight text-center">
-                {facingMode === 'user' ? 'خلفية' : 'أمامية'}
-              </span>
-            </button>
+            {/* Camera Switch — Premium or Admin only */}
+            {(() => {
+              const canSwitch = (user as any)?.isPremium || (user as any)?.role === 'admin';
+              return (
+                <button
+                  onClick={toggleCamera}
+                  className={`flex flex-col items-center gap-2 pt-3 pb-2.5 rounded-[18px] transition-all duration-200 active:scale-95 ${canSwitch ? 'bg-amber-500/15 text-yellow-300 hover:scale-[1.03] hover:bg-amber-500/22' : 'bg-white/[0.04] text-white/35'}`}
+                >
+                  <div className={`w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md relative ${canSwitch ? 'bg-gradient-to-br from-yellow-400 to-amber-600 shadow-amber-900/40' : 'bg-gradient-to-br from-slate-600 to-slate-700'}`}>
+                    <SwitchCamera className={`w-[18px] h-[18px] ${canSwitch ? 'text-gray-900' : 'text-white/40'}`} />
+                    {!canSwitch && <Lock className="w-2.5 h-2.5 text-white/50 absolute top-1 right-1" />}
+                  </div>
+                  <span className="text-[10.5px] font-bold tracking-wide leading-tight text-center">
+                    {canSwitch ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
+                  </span>
+                </button>
+              );
+            })()}
 
             {/* Gift */}
             <button
