@@ -3,12 +3,11 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import {
-  Camera, Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
-  Upload, User, Calendar, Zap, Crown, ImageIcon, ChevronDown, ChevronUp,
-  Shield, Award, TrendingUp
+  Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
+  User, Calendar, Zap, Crown, Camera,
+  Award, TrendingUp, Shield
 } from "lucide-react";
 
-// ── Image compression (Canvas API) ───────────────────────────────────────────
 async function compressImage(file: File, maxPx = 400): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -19,9 +18,7 @@ async function compressImage(file: File, maxPx = 400): Promise<string> {
         const canvas = document.createElement("canvas");
         canvas.width  = Math.round(img.width  * scale);
         canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext("2d")!;
-        // Draw circular crop
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL("image/jpeg", 0.82));
       };
       img.onerror = reject;
@@ -31,11 +28,6 @@ async function compressImage(file: File, maxPx = 400): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
-
-const AVATAR_SEEDS = [
-  "Sara","Ahmed","Fatima","Mohammed","Layla","Ali",
-  "Noor","Omar","Hana","Yusuf","Aisha","Khalid",
-];
 
 const CREDIT_PACKAGES = [
   { credits: 200, price: "1$", popular: false },
@@ -54,9 +46,7 @@ export default function Profile() {
   const [avatar, setAvatar] = useState(u?.avatar || "");
   const [gender, setGender] = useState<"male"|"female"|"other">(u?.gender || "other");
   const [saved,  setSaved]  = useState(false);
-  const [showBuy,     setShowBuy]     = useState(false);
-  const [showAvatars, setShowAvatars] = useState(false);
-  const [uploading,   setUploading]   = useState(false);
+  const [showBuy, setShowBuy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -74,36 +64,28 @@ export default function Profile() {
   const walletQuery  = trpc.gifts.getWallet.useQuery(undefined,  { enabled: isAuthenticated });
   const balanceQuery = trpc.gifts.getBalance.useQuery(undefined, { enabled: isAuthenticated });
 
-  // ── Photo upload from phone ───────────────────────────────────────────────
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { alert("الصورة كبيرة جداً. اختر صورة أقل من 10 ميغا"); return; }
-    setUploading(true);
     try {
       const compressed = await compressImage(file);
       setAvatar(compressed);
-    } catch { alert("حدث خطأ أثناء ضغط الصورة. جرب صورة أخرى."); }
-    setUploading(false);
+    } catch { /* ignore */ }
     e.target.value = "";
   };
 
-  // ── Profile completion score ──────────────────────────────────────────────
-  const isCustomAvatar = avatar && !avatar.includes("dicebear");
   const completionItems = [
-    { done: !!name.trim(),   label: "الاسم" },
-    { done: age >= 13,       label: "العمر" },
+    { done: !!name.trim(),      label: "الاسم" },
+    { done: age >= 13,          label: "العمر" },
     { done: gender !== "other", label: "الجنس" },
-    { done: !!bio.trim(),    label: "نبذة شخصية" },
-    { done: !!isCustomAvatar, label: "صورة شخصية حقيقية" },
+    { done: !!bio.trim(),       label: "نبذة شخصية" },
+    { done: !!avatar,           label: "صورة شخصية" },
   ];
   const completionPct = Math.round((completionItems.filter(i => i.done).length / completionItems.length) * 100);
 
   const memberSince = u?.createdAt
     ? new Date(u.createdAt).toLocaleDateString("ar-SA", { year: "numeric", month: "long" })
     : null;
-
-  const currentAvatar = avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || "user")}`;
 
   if (loading) {
     return (
@@ -119,13 +101,7 @@ export default function Profile() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir="rtl">
 
       {/* Hidden file input */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
 
       {/* Header */}
       <header className="sticky top-0 z-10 bg-black/30 backdrop-blur-md border-b border-white/10">
@@ -150,9 +126,8 @@ export default function Profile() {
 
       <div className="container mx-auto px-4 py-6 max-w-lg space-y-4">
 
-        {/* ── Hero card: avatar + stats ─────────────────────────────────── */}
+        {/* ── Hero card ─────────────────────────────────────────────────── */}
         <section className="bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 overflow-hidden">
-          {/* Cover gradient */}
           <div className="h-24 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 relative">
             {u?.isPremium && (
               <div className="absolute top-3 left-3 flex items-center gap-1 bg-yellow-400 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-full shadow">
@@ -162,21 +137,30 @@ export default function Profile() {
           </div>
 
           <div className="px-6 pb-6">
-            {/* Avatar + upload button */}
             <div className="flex items-end gap-4 -mt-12 mb-4">
-              <div className="relative flex-shrink-0">
-                <img
-                  src={currentAvatar}
-                  alt="صورتك"
-                  className="w-24 h-24 rounded-2xl border-4 border-white/20 shadow-xl object-cover bg-slate-700"
-                  onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=default`; }}
-                />
-                {isCustomAvatar && (
-                  <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
-                    <Shield className="w-3 h-3 text-white" />
+              {/* Clickable avatar — no label, just tap */}
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-slate-900 shadow-xl flex-shrink-0 focus:outline-none active:scale-95 transition-transform"
+              >
+                {avatar ? (
+                  <img src={avatar} alt="صورتك" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-500/60 to-pink-500/60 flex items-center justify-center">
+                    <User className="w-10 h-10 text-white/70" />
                   </div>
                 )}
-              </div>
+                {/* Camera overlay */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
+                {/* Small camera badge */}
+                <div className="absolute bottom-1 right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center shadow border-2 border-slate-900">
+                  <Camera className="w-3 h-3 text-white" />
+                </div>
+              </button>
+
               <div className="flex-1 pt-14">
                 <p className="text-white font-bold text-lg leading-tight">{name || "مستخدم"}</p>
                 {memberSince && (
@@ -185,49 +169,10 @@ export default function Profile() {
                   </p>
                 )}
               </div>
+              {u?.isPremium && (
+                <Shield className="w-5 h-5 text-green-400 mb-1" />
+              )}
             </div>
-
-            {/* Upload buttons */}
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all disabled:opacity-60"
-              >
-                {uploading ? (
-                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> جاري الرفع...</>
-                ) : (
-                  <><Upload className="w-4 h-4" /> رفع صورة من الهاتف</>
-                )}
-              </button>
-              <button
-                onClick={() => setShowAvatars(v => !v)}
-                className="flex items-center justify-center gap-1.5 px-3 py-3 bg-white/10 border border-white/20 text-white/70 rounded-xl text-sm transition-all active:scale-95"
-              >
-                <ImageIcon className="w-4 h-4" />
-                {showAvatars ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-
-            {/* Collapsible avatar grid */}
-            {showAvatars && (
-              <div className="mb-4 p-3 bg-white/5 rounded-2xl border border-white/10">
-                <p className="text-white/50 text-xs mb-2 text-center">اختر أفاتار رمزي</p>
-                <div className="grid grid-cols-6 gap-2">
-                  {AVATAR_SEEDS.map(seed => {
-                    const url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
-                    const active = avatar === url;
-                    return (
-                      <button key={seed} onClick={() => setAvatar(url)}
-                        className={`w-10 h-10 rounded-full overflow-hidden border-2 transition-all ${active ? "border-purple-400 scale-110 shadow-md" : "border-white/20 hover:border-purple-300"}`}
-                      >
-                        <img src={url} alt={seed} className="w-full h-full bg-white" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Stats row */}
             <div className="grid grid-cols-3 gap-3">
@@ -333,8 +278,8 @@ export default function Profile() {
           </div>
 
           <button
-            onClick={() => saveProfile.mutate({ name, age, gender, bio, avatar: currentAvatar })}
-            disabled={saveProfile.isPending || uploading}
+            onClick={() => saveProfile.mutate({ name, age, gender, bio, avatar: avatar || undefined })}
+            disabled={saveProfile.isPending}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60 shadow-lg"
           >
             {saved ? (
