@@ -378,6 +378,13 @@ async function startServer() {
 
   app.get("/ping", (_req, res) => res.json({ ok: true, ts: Date.now() }));
 
+  // Version endpoint — returns server start time so clients can detect new deploys
+  const SERVER_VERSION = Date.now().toString();
+  app.get("/api/version", (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.json({ version: SERVER_VERSION });
+  });
+
   if (process.env.NODE_ENV !== "development") {
     const selfUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "");
     if (selfUrl) {

@@ -8,6 +8,28 @@ import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
 
+// ── Auto-reload on new deploy ────────────────────────────────────────────────
+// Fetches /api/version (never cached) and compares with the value stored in
+// localStorage. When a new server starts (new deploy), the version changes and
+// the page reloads once to load fresh assets — works even when index.html is
+// served from browser cache.
+(async () => {
+  try {
+    const res = await fetch("/api/version", { cache: "no-store" });
+    if (!res.ok) return;
+    const { version } = await res.json();
+    const stored = localStorage.getItem("_app_build_v");
+    if (stored && stored !== version) {
+      // New deploy detected — reload to pick up fresh JS/CSS
+      localStorage.setItem("_app_build_v", version);
+      window.location.reload();
+      return;
+    }
+    localStorage.setItem("_app_build_v", version);
+  } catch { /* offline or server error — skip silently */ }
+})();
+// ────────────────────────────────────────────────────────────────────────────
+
 const queryClient = new QueryClient();
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
