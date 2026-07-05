@@ -1,4 +1,4 @@
-import { ShieldCheck, Lock, UserCheck, Lightbulb } from "lucide-react";
+import { Shield, Lock, UserCheck, Lightbulb } from "lucide-react";
 
 /**
  * Security Section Component
@@ -19,7 +19,7 @@ const securityPoints: SecurityPoint[] = [
     description: "لا نطلب أي معلومات شخصية للتسجيل، ولا نسجل أو نخزن مكالمات الفيديو أو الصوت أو الدردشات النصية. الاتصال مباشر (P2P) بين جهازك وجهاز شريكك.",
   },
   {
-    icon: <ShieldCheck className="w-8 h-8" />,
+    icon: <Shield className="w-8 h-8" />,
     title: "إجراءات الأمان",
     description: "جميع الاتصالات مشفرة بالكامل، ونستخدم أنظمة ذكاء اصطناعي للتحقق من هوية المستخدمين. نوفر أدوات للإبلاغ عن أي سلوك مسيء.",
   },

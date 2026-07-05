@@ -119,7 +119,7 @@ export default function Profile() {
               onClick={() => setLocation("/admin")}
               className="flex items-center gap-1 bg-red-600/80 border border-red-500/60 text-white text-xs px-3 py-1.5 rounded-full font-bold"
             >
-              <ShieldCheck className="w-3.5 h-3.5" /> أدمن
+              <Shield className="w-3.5 h-3.5" /> أدمن
             </button>
           )}
           <button

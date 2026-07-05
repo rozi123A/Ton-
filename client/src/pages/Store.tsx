@@ -1,4 +1,4 @@
-import { ShoppingBag, Star, Camera, ShieldCheck, Zap, Sparkles, ArrowRight, Crown } from "lucide-react";
+import { ShoppingBag, Star, Camera, Shield, Zap, Sparkles, ArrowRight, Crown } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,7 @@ export default function Store() {
     { title: "فلاتر Premium",         icon: <Sparkles    className="w-5 h-5 text-purple-500" /> },
     { title: "شارة ذهبية VIP",        icon: <Star        className="w-5 h-5 text-yellow-500" /> },
     { title: "100 نقطة مجانية/شهر",   icon: <Zap         className="w-5 h-5 text-orange-500" /> },
-    { title: "فلتر الجنس والدولة",    icon: <ShieldCheck className="w-5 h-5 text-green-500"  /> },
+    { title: "فلتر الجنس والدولة",    icon: <Shield className="w-5 h-5 text-green-500"  /> },
     { title: "أولوية المطابقة",       icon: <ArrowRight  className="w-5 h-5 text-indigo-500" /> },
   ];
 

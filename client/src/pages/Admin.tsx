@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
-import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, Shield, Eye, EyeOff } from 'lucide-react';
 
 const ADMIN_SESSION_KEY = 'admin_mode';
 
@@ -222,7 +222,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           backgroundColor: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)',
           borderRadius: '12px', padding: '10px 14px', marginBottom: '20px',
         }}>
-          <ShieldCheck style={{ width: '18px', height: '18px', color: '#a78bfa' }} />
+          <Shield style={{ width: '18px', height: '18px', color: '#a78bfa' }} />
           <span style={{ color: '#c4b5fd', fontSize: '13px', fontWeight: 700 }}>دخلت كمدير — صلاحيات كاملة</span>
         </div>
 
