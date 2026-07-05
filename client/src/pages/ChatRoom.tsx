@@ -502,26 +502,42 @@ export default function ChatRoom() {
       return;
     }
     if (!localStreamRef.current) return;
-    
+
     const newMode = facingMode === 'user' ? 'environment' : 'user';
     try {
-      // طلب الفيديو فقط — الاحتفاظ بمسار الصوت الموجود لتجنب أي مشكلة في الإذن
-      let newVideoStream: MediaStream;
+      // الطريقة الأكثر موثوقية: الحصول على قائمة الكاميرات الحقيقية بـ deviceId
+      let videoConstraint: MediaTrackConstraints = {};
+
       try {
-        newVideoStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: { exact: newMode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+
+        if (videoDevices.length > 1) {
+          // الحصول على deviceId الكاميرا الحالية
+          const currentTrack = localStreamRef.current.getVideoTracks()[0];
+          const currentDeviceId = currentTrack?.getSettings?.()?.deviceId ?? '';
+
+          // التبديل للكاميرا التالية في القائمة (يعمل على كل الأجهزة)
+          const currentIndex = videoDevices.findIndex(d => d.deviceId === currentDeviceId);
+          const nextIndex = (currentIndex + 1) % videoDevices.length;
+          videoConstraint = { deviceId: { exact: videoDevices[nextIndex].deviceId } };
+        } else if (videoDevices.length === 1) {
+          // جهاز كمبيوتر أو جهاز بكاميرا واحدة فقط
+          videoConstraint = { deviceId: { exact: videoDevices[0].deviceId } };
+        } else {
+          // fallback: استخدام facingMode
+          videoConstraint = { facingMode: newMode };
+        }
       } catch {
-        newVideoStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: newMode },
-          audio: false
-        });
+        // إذا فشل enumerateDevices نستخدم facingMode كـ fallback
+        videoConstraint = { facingMode: newMode };
       }
+
+      // طلب الفيديو فقط — الاحتفاظ بمسار الصوت الموجود
+      const newVideoStream = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraint,
+        audio: false,
+      });
 
       const newVideoTrack = newVideoStream.getVideoTracks()[0];
 
@@ -529,26 +545,22 @@ export default function ChatRoom() {
       if (pcRef.current) {
         const senders = pcRef.current.getSenders();
         const videoSender = senders.find(s => s.track?.kind === 'video');
-        if (videoSender) {
-          await videoSender.replaceTrack(newVideoTrack);
-        }
+        if (videoSender) await videoSender.replaceTrack(newVideoTrack);
       }
 
-      // إيقاف مسارات الفيديو القديمة فقط — الاحتفاظ بمسارات الصوت
+      // إيقاف مسار الفيديو القديم فقط — الاحتفاظ بمسارات الصوت
       localStreamRef.current.getVideoTracks().forEach(t => t.stop());
 
-      // بناء stream جديد: فيديو جديد + صوت قديم
+      // دمج الفيديو الجديد مع الصوت القديم
       const audioTracks = localStreamRef.current.getAudioTracks();
       const combinedStream = new MediaStream([newVideoTrack, ...audioTracks]);
 
       localStreamRef.current = combinedStream;
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = combinedStream;
-      }
-      
+      if (localVideoRef.current) localVideoRef.current.srcObject = combinedStream;
+
       setFacingMode(newMode);
       setIsVideoOn(true);
-      toast.success(newMode === 'user' ? "تم التبديل للكاميرا الأمامية ✅" : "تم التبديل للكاميرا الخلفية ✅");
+      toast.success(newMode === 'user' ? "📷 تم التبديل للكاميرا الأمامية" : "📷 تم التبديل للكاميرا الخلفية");
     } catch (e) {
       console.error("Failed to switch camera:", e);
       const isAdminFail = (user as any)?.role === 'admin';
@@ -556,7 +568,7 @@ export default function ChatRoom() {
         sessionStorage.setItem('chat_auto_start', 'true');
         setLocation('/store?from=chat');
       } else {
-        toast.error("تعذّر الوصول للكاميرا — تأكد من منح الإذن في المتصفح");
+        toast.error("فشل تبديل الكاميرا");
       }
     }
   };
