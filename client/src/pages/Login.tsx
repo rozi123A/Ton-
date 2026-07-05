@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocation } from 'wouter';
-import { Heart, Video, Camera, Check } from 'lucide-react';
+import { Heart, Video, Camera, Check, Upload, ImageIcon } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { detectBrowserCountry } from '@/lib/detectCountry';
@@ -14,6 +14,27 @@ const AVATAR_SEEDS = [
 
 function generateAvatarUrl(seed: string) {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
+}
+
+async function compressImage(file: File, maxPx = 400): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(maxPx / img.width, maxPx / img.height, 1);
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = reject;
+      img.src = e.target!.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function Login() {
@@ -28,6 +49,22 @@ export default function Login() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError('الصورة كبيرة جداً، اختر صورة أقل من 10 ميغا'); return; }
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      setCustomImageUrl(compressed);
+      setShowAvatarPicker(false);
+    } catch { setError('حدث خطأ أثناء معالجة الصورة'); }
+    setUploading(false);
+    e.target.value = '';
+  };
 
   const guestLoginMutation = trpc.users.guestLogin.useMutation();
 
@@ -116,6 +153,9 @@ export default function Login() {
               <div className="bg-red-500/20 border border-red-500/50 text-white text-sm p-3 rounded-xl">{error}</div>
             )}
 
+            {/* Hidden file input */}
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+
             {/* اختيار الصورة الشخصية */}
             <div className="flex flex-col items-center gap-2">
               <div className="relative">
@@ -132,6 +172,11 @@ export default function Login() {
                 >
                   <Camera className="w-4 h-4 text-white" />
                 </button>
+                {customImageUrl && !customImageUrl.includes('dicebear') && (
+                  <div className="absolute -top-1 -left-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
+                    <Check className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
               </div>
               <p className="text-white/60 text-xs">اضغط على الكاميرا لاختيار صورتك</p>
             </div>
@@ -139,7 +184,28 @@ export default function Login() {
             {/* قائمة اختيار الصورة */}
             {showAvatarPicker && (
               <div className="bg-white/10 rounded-2xl p-4 border border-white/20">
-                <p className="text-white text-sm font-semibold mb-3 text-center">اختر صورة شخصية</p>
+                <p className="text-white text-sm font-semibold mb-3 text-center">اختر صورتك الشخصية</p>
+
+                {/* Upload from phone — primary option */}
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full flex items-center justify-center gap-2 py-3 mb-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold text-sm shadow-md active:scale-95 transition-all disabled:opacity-60"
+                >
+                  {uploading ? (
+                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> جاري المعالجة...</>
+                  ) : (
+                    <><Upload className="w-4 h-4" /> ارفع صورة من هاتفك</>
+                  )}
+                </button>
+
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex-1 h-px bg-white/20" />
+                  <span className="text-white/40 text-xs">أو اختر أفاتار رمزي</span>
+                  <div className="flex-1 h-px bg-white/20" />
+                </div>
+
                 <div className="grid grid-cols-4 gap-2 mb-3 max-h-40 overflow-y-auto">
                   {AVATAR_SEEDS.map((seed) => {
                     const url = generateAvatarUrl(seed);
@@ -161,20 +227,10 @@ export default function Login() {
                     );
                   })}
                 </div>
-                <div className="border-t border-white/20 pt-3">
-                  <p className="text-white/70 text-xs mb-2">او ادخل رابط صورة:</p>
-                  <Input
-                    type="url"
-                    placeholder="https://example.com/photo.jpg"
-                    value={customImageUrl}
-                    onChange={(e) => setCustomImageUrl(e.target.value)}
-                    className="bg-white/20 border-white/30 text-white placeholder:text-white/40 rounded-xl text-xs"
-                  />
-                </div>
                 <button
                   type="button"
                   onClick={() => setShowAvatarPicker(false)}
-                  className="mt-3 w-full bg-white/20 hover:bg-white/30 text-white text-sm py-2 rounded-xl transition-colors"
+                  className="w-full bg-white/20 hover:bg-white/30 text-white text-sm py-2 rounded-xl transition-colors"
                 >
                   تم الاختيار
                 </button>
