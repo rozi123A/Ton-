@@ -228,12 +228,12 @@ export default function ChatRoom() {
 
   useEffect(() => { if (balanceQuery.data) setCredits(balanceQuery.data.credits); }, [balanceQuery.data]);
 
-  // Auto-fill country for premium users from their saved profile
+  // Auto-fill country for all users from their detected profile country
   useEffect(() => {
-    if ((user as any)?.isPremium && myCountry) {
+    if (myCountry) {
       setFilterCountry(myCountry);
     }
-  }, [(user as any)?.isPremium, myCountry]);
+  }, [myCountry]);
 
   // ── signaling ──────────────────────────────────────────────────────────────
   const signal = useCallback(async (type: string, data?: unknown, text?: string) => {
@@ -399,8 +399,9 @@ export default function ChatRoom() {
 
   // ── start session (called after filter screen) ────────────────────────────
   const startSession = useCallback(async (fg: string, fc: string) => {
-    // Star Radar logic: Check stars before starting
-    if (fg !== 'any' || fc !== 'any') {
+    // Star Radar logic: free for "any" gender + own/any country; paid otherwise
+    const isPaidRadar = fg !== 'any' || (fc !== 'any' && fc !== myCountry);
+    if (isPaidRadar) {
       if (!(user as any)?.isPremium) {
         const stars = walletQuery.data?.wallet || 0;
         if (stars < 5) {
@@ -554,8 +555,9 @@ export default function ChatRoom() {
     const match = pendingMatchRef.current;
     if (!match) return;
 
-    // Star Radar Deduction on Accept
-    if ((filterGender !== 'any' || filterCountry !== 'any') && !(user as any)?.isPremium) {
+    // Star Radar Deduction on Accept (free for own/any country + any gender)
+    const isPaidRadar = filterGender !== 'any' || (filterCountry !== 'any' && filterCountry !== myCountry);
+    if (isPaidRadar && !(user as any)?.isPremium) {
       try {
         console.log("[StarRadar] Attempting to deduct 5 stars...");
         await deductRadarStars.mutateAsync({ amount: 5 });
@@ -666,6 +668,10 @@ export default function ChatRoom() {
                   <span className="text-[10px] bg-green-500/20 border border-green-500/40 text-green-300 px-2 py-0.5 rounded-full font-bold">
                     مفعّل ✓
                   </span>
+                ) : filterCountry !== 'any' && filterCountry === myCountry ? (
+                  <span className="text-[10px] bg-green-500/20 border border-green-500/40 text-green-300 px-2 py-0.5 rounded-full font-bold">
+                    مجاني ✓
+                  </span>
                 ) : (
                   <span className="text-[10px] bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                     <Zap className="w-2.5 h-2.5" /> Star Radar
@@ -689,7 +695,7 @@ export default function ChatRoom() {
                 })}
               </select>
               
-              {!(user as any)?.isPremium && filterCountry !== 'any' && (
+              {!(user as any)?.isPremium && filterCountry !== 'any' && filterCountry !== myCountry && (
                 <p className="text-yellow-400 text-[11px] mt-1.5 flex items-center gap-1">
                   <Zap className="w-3 h-3" /> استخدام الرادار سيكلفك 5 نجوم
                 </p>
@@ -727,7 +733,7 @@ export default function ChatRoom() {
               className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:from-purple-700 hover:via-fuchsia-700 hover:to-pink-600 text-white font-bold py-4 rounded-2xl shadow-2xl shadow-purple-900/50 transform hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 text-lg tracking-wide"
             >
               <Video className="w-5 h-5" />
-              {filterCountry === 'any' && filterGender === 'any' ? 'ابدأ البحث الآن' : 'تفعيل رادار النجوم 🚀'}
+              {(filterGender === 'any' && (filterCountry === 'any' || filterCountry === myCountry)) ? 'ابدأ البحث الآن' : 'تفعيل رادار النجوم 🚀'}
             </button>
 
             <button
