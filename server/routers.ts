@@ -186,8 +186,11 @@ export const appRouter = router({
         receiverName: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const current = await getUserCredits(ctx.user.id);
-        if (current < input.cost) throw new Error('رصيدك غير كافٍ لإرسال هذه الهدية');
+        const isAdmin = (ctx.user as any).role === 'admin';
+        if (!isAdmin) {
+          const current = await getUserCredits(ctx.user.id);
+          if (current < input.cost) throw new Error('رصيدك غير كافٍ لإرسال هذه الهدية');
+        }
         
         const receiverId = input.receiverId || 0;
         await saveGift(ctx.user.id, receiverId, input.giftType, input.cost);
@@ -272,10 +275,11 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    /** Deduct stars for using Star Radar (paid filter) */
+    /** Deduct stars for using Star Radar (paid filter — skipped for admin) */
     deductRadarStars: protectedProcedure
       .input(z.object({ amount: z.number().min(1).max(50) }))
       .mutation(async ({ ctx, input }) => {
+        if ((ctx.user as any).role === 'admin') return { success: true };
         const { deductStars } = await import("./db");
         const success = await deductStars(ctx.user.id, input.amount);
         if (!success) throw new Error("رصيد نجوم غير كافٍ لاستخدام الرادار");
