@@ -7,7 +7,7 @@ import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { detectBrowserCountry } from '@/lib/detectCountry';
 
-async function compressImage(file: File, maxPx = 800): Promise<string> {
+async function compressImage(file: File, maxPx = 1200): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -18,7 +18,7 @@ async function compressImage(file: File, maxPx = 800): Promise<string> {
         canvas.width  = Math.round(img.width  * scale);
         canvas.height = Math.round(img.height * scale);
         canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', 0.95));
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
       };
       img.onerror = reject;
       img.src = e.target!.result as string;

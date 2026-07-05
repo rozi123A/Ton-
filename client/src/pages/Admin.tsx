@@ -180,7 +180,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', width: '100%', backgroundColor: '#030712', color: 'white' }}>
+    <div style={{ minHeight: '100vh', width: '100%', backgroundColor: '#030712', color: 'white', position: 'relative', overflowX: 'hidden' }}>
       <div style={{ padding: '16px', maxWidth: '672px', margin: '0 auto' }}>
 
         {/* Header */}
