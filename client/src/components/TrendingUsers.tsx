@@ -1,7 +1,8 @@
 import { Heart, UserCheck, Loader2 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import UserProfileModal from "@/components/UserProfileModal";
 
 /** Convert ISO country code → emoji flag */
 function countryFlag(code: string | null | undefined): string {
@@ -41,7 +42,7 @@ type DisplayUser = {
   country: string | null;
 };
 
-function UserCard({ user }: { user: DisplayUser }) {
+function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: (id: number) => void }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const viewedRef = useRef(false);
   const recordView = trpc.users.recordView.useMutation();
@@ -76,7 +77,11 @@ function UserCard({ user }: { user: DisplayUser }) {
     >
       <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-pink-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       <div className="relative p-6 flex flex-col items-center text-center">
-        <div className="relative mb-4">
+        <div
+          className={`relative mb-4 ${user.id > 0 ? 'cursor-pointer' : ''}`}
+          onClick={() => user.id > 0 && onViewProfile?.(user.id)}
+          title={user.id > 0 ? "عرض الملف الشخصي" : undefined}
+        >
           <img
             src={user.avatar}
             alt={user.name}
@@ -89,7 +94,12 @@ function UserCard({ user }: { user: DisplayUser }) {
           <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-lg ${user.online ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>
 
-        <h3 className="font-bold text-lg text-gray-900 mb-1">{user.name}</h3>
+        <h3
+          className={`font-bold text-lg text-gray-900 mb-1 ${user.id > 0 ? 'cursor-pointer hover:text-purple-600 transition-colors' : ''}`}
+          onClick={() => user.id > 0 && onViewProfile?.(user.id)}
+        >
+          {user.name}
+        </h3>
 
         {/* Real country flag + name under the username */}
         {flag && countryName ? (
@@ -130,6 +140,7 @@ function UserCard({ user }: { user: DisplayUser }) {
 export default function TrendingUsers() {
   const { user: currentUser } = useAuth();
   const utils = trpc.useUtils();
+  const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);
 
   const { data: realUsers, isPending } = trpc.users.getRecent.useQuery(20, {
     staleTime: 30_000,
@@ -188,7 +199,7 @@ export default function TrendingUsers() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {displayUsers.map((user) => (
-              <UserCard key={user.id} user={user} />
+              <UserCard key={user.id} user={user} onViewProfile={setViewProfileUserId} />
             ))}
           </div>
         )}
@@ -201,6 +212,13 @@ export default function TrendingUsers() {
           </div>
         )}
       </div>
+
+      {viewProfileUserId && (
+        <UserProfileModal
+          userId={viewProfileUserId}
+          onClose={() => setViewProfileUserId(null)}
+        />
+      )}
     </section>
   );
 }
