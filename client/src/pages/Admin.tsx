@@ -68,7 +68,8 @@ export default function Admin() {
   const maxCount = Math.max(...(countryStats?.map(s => s.count) ?? [1]), 1);
 
   return (
-    <div className="min-h-screen text-white p-4 max-w-2xl mx-auto" style={{ backgroundColor: '#030712' }}>
+    <div style={{ minHeight: '100vh', width: '100%', backgroundColor: '#030712', color: 'white' }}>
+    <div style={{ padding: '16px', maxWidth: '672px', margin: '0 auto' }}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6 pt-4">
         <button onClick={() => setLocation('/')} style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -183,6 +184,7 @@ export default function Admin() {
       <p className="text-center text-[11px] mt-4 pb-4" style={{ color: 'rgba(255,255,255,0.2)' }}>
         يتحدث تلقائياً كل 30 ثانية
       </p>
+    </div>
     </div>
   );
 }
