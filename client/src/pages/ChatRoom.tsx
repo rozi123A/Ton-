@@ -504,36 +504,42 @@ export default function ChatRoom() {
     if (!localStreamRef.current) return;
 
     const newMode = facingMode === 'user' ? 'environment' : 'user';
+    // حفظ الصوت قبل أي شيء
+    const audioTracks = localStreamRef.current.getAudioTracks();
+
     try {
-      // الطريقة الأكثر موثوقية: الحصول على قائمة الكاميرات الحقيقية بـ deviceId
-      let videoConstraint: MediaTrackConstraints = {};
+      // الخطوة 1: إيقاف الكاميرا القديمة أولاً
+      // (الهاتف لا يسمح بفتح كاميرتين في نفس الوقت)
+      localStreamRef.current.getVideoTracks().forEach(t => t.stop());
+
+      // الخطوة 2: تحديد الكاميرا المطلوبة
+      let videoConstraint: MediaTrackConstraints = { facingMode: newMode };
 
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
 
         if (videoDevices.length > 1) {
-          // الحصول على deviceId الكاميرا الحالية
-          const currentTrack = localStreamRef.current.getVideoTracks()[0];
-          const currentDeviceId = currentTrack?.getSettings?.()?.deviceId ?? '';
-
-          // التبديل للكاميرا التالية في القائمة (يعمل على كل الأجهزة)
-          const currentIndex = videoDevices.findIndex(d => d.deviceId === currentDeviceId);
-          const nextIndex = (currentIndex + 1) % videoDevices.length;
-          videoConstraint = { deviceId: { exact: videoDevices[nextIndex].deviceId } };
-        } else if (videoDevices.length === 1) {
-          // جهاز كمبيوتر أو جهاز بكاميرا واحدة فقط
-          videoConstraint = { deviceId: { exact: videoDevices[0].deviceId } };
-        } else {
-          // fallback: استخدام facingMode
-          videoConstraint = { facingMode: newMode };
+          // ابحث عن الكاميرا المطلوبة حسب الاسم أولاً
+          const target = videoDevices.find(d => {
+            const lbl = d.label.toLowerCase();
+            return newMode === 'environment'
+              ? lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment')
+              : lbl.includes('front') || lbl.includes('user') || lbl.includes('face');
+          });
+          if (target) {
+            videoConstraint = { deviceId: { exact: target.deviceId } };
+          } else {
+            // لم نجد بالاسم — خذ الأولى للأمامية والأخيرة للخلفية
+            const idx = newMode === 'environment' ? videoDevices.length - 1 : 0;
+            videoConstraint = { deviceId: { exact: videoDevices[idx].deviceId } };
+          }
         }
       } catch {
-        // إذا فشل enumerateDevices نستخدم facingMode كـ fallback
-        videoConstraint = { facingMode: newMode };
+        // enumerateDevices فشل — نكتفي بـ facingMode
       }
 
-      // طلب الفيديو فقط — الاحتفاظ بمسار الصوت الموجود
+      // الخطوة 3: فتح الكاميرا الجديدة بعد إغلاق القديمة
       const newVideoStream = await navigator.mediaDevices.getUserMedia({
         video: videoConstraint,
         audio: false,
@@ -541,34 +547,39 @@ export default function ChatRoom() {
 
       const newVideoTrack = newVideoStream.getVideoTracks()[0];
 
-      // استبدال مسار الفيديو في WebRTC دون لمس الصوت
+      // الخطوة 4: استبدال المسار في WebRTC
       if (pcRef.current) {
         const senders = pcRef.current.getSenders();
         const videoSender = senders.find(s => s.track?.kind === 'video');
         if (videoSender) await videoSender.replaceTrack(newVideoTrack);
       }
 
-      // إيقاف مسار الفيديو القديم فقط — الاحتفاظ بمسارات الصوت
-      localStreamRef.current.getVideoTracks().forEach(t => t.stop());
-
-      // دمج الفيديو الجديد مع الصوت القديم
-      const audioTracks = localStreamRef.current.getAudioTracks();
+      // الخطوة 5: دمج الفيديو الجديد مع الصوت المحفوظ
       const combinedStream = new MediaStream([newVideoTrack, ...audioTracks]);
-
       localStreamRef.current = combinedStream;
       if (localVideoRef.current) localVideoRef.current.srcObject = combinedStream;
 
       setFacingMode(newMode);
       setIsVideoOn(true);
-      toast.success(newMode === 'user' ? "📷 تم التبديل للكاميرا الأمامية" : "📷 تم التبديل للكاميرا الخلفية");
+      toast.success(newMode === 'user' ? "📷 الكاميرا الأمامية" : "📷 الكاميرا الخلفية");
     } catch (e) {
       console.error("Failed to switch camera:", e);
+      // حاول استعادة الكاميرا الأمامية إذا فشل التبديل
+      try {
+        const fallback = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        const combinedStream = new MediaStream([fallback.getVideoTracks()[0], ...audioTracks]);
+        localStreamRef.current = combinedStream;
+        if (localVideoRef.current) localVideoRef.current.srcObject = combinedStream;
+        setFacingMode('user');
+        setIsVideoOn(true);
+      } catch { /* الكاميرا غير متاحة */ }
+
       const isAdminFail = (user as any)?.role === 'admin';
       if (!isAdminFail) {
         sessionStorage.setItem('chat_auto_start', 'true');
         setLocation('/store?from=chat');
       } else {
-        toast.error("فشل تبديل الكاميرا");
+        toast.error("الجهاز لا يدعم تبديل الكاميرا أثناء المكالمة");
       }
     }
   };
