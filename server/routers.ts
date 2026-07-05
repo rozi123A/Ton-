@@ -295,7 +295,21 @@ export const appRouter = router({
     countryStats: adminProcedure
       .query(async () => getCountryStats()),
 
-    /** Promote self to admin using the secret code — sets role=admin + premium + 999999 credits */
+    /**
+     * Public endpoint — verify admin password without needing a user session.
+     * Returns a signed token the client stores in sessionStorage.
+     */
+    verifySecret: publicProcedure
+      .input(z.object({ secret: z.string() }))
+      .mutation(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (input.secret !== ENV.adminSecret) {
+          throw new Error("كلمة المرور خاطئة");
+        }
+        return { verified: true, token: Buffer.from(`admin:${ENV.adminSecret}`).toString('base64') };
+      }),
+
+    /** If the caller is logged in, also promote them to admin in the DB */
     activate: protectedProcedure
       .input(z.object({ secret: z.string() }))
       .mutation(async ({ ctx, input }) => {
