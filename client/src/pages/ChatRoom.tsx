@@ -413,7 +413,8 @@ export default function ChatRoom() {
   const startSession = useCallback(async (fg: string, fc: string) => {
     // Star Radar logic: free for "any" gender + own/any country; paid otherwise
     const isPaidRadar = fg !== 'any' || (fc !== 'any' && fc !== myCountry);
-    if (isPaidRadar && !(user as any)?.isPremium) {
+    const isAdminUser = (user as any)?.role === 'admin';
+    if (isPaidRadar && !(user as any)?.isPremium && !isAdminUser) {
       const stars = walletQuery.data?.wallet || 0;
       if (stars < 5) {
         toast.error(`رصيد نجومك ${stars} نجمة فقط. تحتاج 5 نجوم لاستخدام الرادار. يرجى الشحن أولاً.`);
@@ -544,8 +545,13 @@ export default function ChatRoom() {
       toast.success(newMode === 'user' ? "تم التبديل للكاميرا الأمامية" : "تم التبديل للكاميرا الخلفية");
     } catch (e) {
       console.error("Failed to switch camera:", e);
-      sessionStorage.setItem('chat_auto_start', 'true');
-      setLocation('/store?from=chat');
+      const isAdminCatch = (user as any)?.role === 'admin';
+      if (!isAdminCatch) {
+        sessionStorage.setItem('chat_auto_start', 'true');
+        setLocation('/store?from=chat');
+      } else {
+        toast.error("فشل تبديل الكاميرا، تأكد من أن جهازك يدعم كاميرا خلفية");
+      }
     }
   };
   const toggleMic   = () => { localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !isMicOn; }); setIsMicOn(v => !v); };
@@ -640,7 +646,7 @@ export default function ChatRoom() {
             <div>
               <label className="block text-white font-semibold mb-3 text-sm flex items-center gap-2">
                 الجنس المطلوب
-                {!(user as any)?.isPremium && filterGender !== 'any' && (
+                {!(user as any)?.isPremium && (user as any)?.role !== 'admin' && filterGender !== 'any' && (
                   <span className="text-[10px] bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                     <Zap className="w-2.5 h-2.5" /> 5 نجوم
                   </span>
@@ -672,7 +678,7 @@ export default function ChatRoom() {
             <div>
               <label className="block text-white font-semibold mb-3 text-sm flex items-center gap-2">
                 الدولة
-                {(user as any)?.isPremium ? (
+                {(user as any)?.isPremium || (user as any)?.role === 'admin' ? (
                   <span className="text-[10px] bg-green-500/20 border border-green-500/40 text-green-300 px-2 py-0.5 rounded-full font-bold">
                     مفعّل ✓
                   </span>
@@ -703,7 +709,7 @@ export default function ChatRoom() {
                 })}
               </select>
               
-              {!(user as any)?.isPremium && filterCountry !== 'any' && filterCountry !== myCountry && (
+              {!(user as any)?.isPremium && (user as any)?.role !== 'admin' && filterCountry !== 'any' && filterCountry !== myCountry && (
                 <p className="text-yellow-400 text-[11px] mt-1.5 flex items-center gap-1">
                   <Zap className="w-3 h-3" /> استخدام الرادار سيكلفك 5 نجوم
                 </p>
@@ -1374,7 +1380,7 @@ export default function ChatRoom() {
       )}
 
       {showFaceFilters && (
-        <FaceFiltersPanel onClose={() => setShowFaceFilters(false)} isPremium={(user as any)?.isPremium} onSelectFilter={setSelectedFilter} />
+        <FaceFiltersPanel onClose={() => setShowFaceFilters(false)} isPremium={(user as any)?.isPremium || (user as any)?.role === 'admin'} onSelectFilter={setSelectedFilter} />
       )}
 
       {showFriends && (
