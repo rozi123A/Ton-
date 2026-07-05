@@ -492,7 +492,9 @@ export default function ChatRoom() {
   // ── controls ───────────────────────────────────────────────────────────────
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const toggleCamera = async () => {
-    const isAdmin = (user as any)?.role === 'admin';
+    const isAdmin =
+      (user as any)?.role === 'admin' ||
+      sessionStorage.getItem('admin_mode') !== null;
     if (!(user as any)?.isPremium && !isAdmin) {
       sessionStorage.setItem('chat_auto_start', 'true');
       setLocation('/store?from=chat');
