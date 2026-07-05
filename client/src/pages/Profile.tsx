@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import {
   Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
   User, Calendar, Zap, Crown, Camera,
-  Award, TrendingUp, Shield, Lock, ShieldCheck
+  Award, TrendingUp, Shield
 } from "lucide-react";
 
 async function compressImage(file: File, maxPx = 800): Promise<string> {
@@ -48,46 +48,6 @@ export default function Profile() {
   const [saved,  setSaved]  = useState(false);
   const [showBuy, setShowBuy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  // ── Hidden admin unlock ───────────────────────────────────────────────────
-  const [tapCount,      setTapCount]      = useState(0);
-  const [showAdminBox,  setShowAdminBox]  = useState(false);
-  const [adminCode,     setAdminCode]     = useState("");
-  const [adminMsg,      setAdminMsg]      = useState("");
-  const [adminSuccess,  setAdminSuccess]  = useState(false);
-  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const utils = trpc.useUtils();
-  const activateMutation = trpc.admin.activate.useMutation({
-    onSuccess: async () => {
-      setAdminSuccess(true);
-      setAdminMsg("✅ تم التفعيل! جاري التحديث...");
-      // Invalidate cache so role/isPremium are refreshed immediately
-      await utils.auth.me.invalidate();
-      // Reload page after short delay so all context picks up the new role
-      setTimeout(() => window.location.reload(), 1200);
-    },
-    onError: (e) => setAdminMsg(e.message),
-  });
-
-  const handleAwardTap = () => {
-    if (u?.role === 'admin') return; // already admin
-    const next = tapCount + 1;
-    setTapCount(next);
-    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
-    tapTimerRef.current = setTimeout(() => setTapCount(0), 2000);
-    if (next >= 7) {
-      setShowAdminBox(true);
-      setTapCount(0);
-    }
-  };
-
-  const handleAdminActivate = () => {
-    if (!adminCode.trim()) return;
-    setAdminMsg("");
-    activateMutation.mutate({ secret: adminCode.trim() });
-  };
-  // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (u?.name)   setName(u.name);
@@ -232,11 +192,7 @@ export default function Profile() {
                 </div>
                 <p className="text-white/50 text-xs">نقاط</p>
               </div>
-              {/* اضغط 7 مرات لفتح لوحة الأدمن */}
-              <div
-                className="bg-white/5 rounded-xl p-3 text-center border border-white/10 select-none cursor-pointer"
-                onClick={handleAwardTap}
-              >
+              <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Award className="w-3.5 h-3.5 text-green-400" />
                   <span className="text-green-400 font-bold text-lg">{completionPct}%</span>
@@ -246,44 +202,6 @@ export default function Profile() {
             </div>
           </div>
         </section>
-
-        {/* ── Hidden admin unlock box ────────────────────────────────────── */}
-        {showAdminBox && u?.role !== 'admin' && (
-          <section style={{ backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: '16px', border: '1px solid rgba(239,68,68,0.3)', padding: '16px' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Lock className="w-4 h-4 text-red-400" />
-              <span className="text-white font-semibold text-sm">تفعيل صلاحيات الأدمن</span>
-            </div>
-            {adminSuccess ? (
-              <div className="flex items-center gap-2 text-green-400 font-bold text-sm">
-                <ShieldCheck className="w-4 h-4" /> {adminMsg}
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-2">
-                  <input
-                    type="password"
-                    value={adminCode}
-                    onChange={e => setAdminCode(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleAdminActivate()}
-                    placeholder="أدخل الكود السري"
-                    className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-red-400 transition-colors text-sm"
-                  />
-                  <button
-                    onClick={handleAdminActivate}
-                    disabled={activateMutation.isPending}
-                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm transition-colors disabled:opacity-60"
-                  >
-                    {activateMutation.isPending ? "..." : "تفعيل"}
-                  </button>
-                </div>
-                {adminMsg && (
-                  <p className="text-red-400 text-xs mt-2">{adminMsg}</p>
-                )}
-              </>
-            )}
-          </section>
-        )}
 
         {/* ── Profile completion ────────────────────────────────────────── */}
         {completionPct < 100 && (
