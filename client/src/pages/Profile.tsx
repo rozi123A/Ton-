@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import {
   Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
   User, Calendar, Zap, Crown, Camera,
-  Award, TrendingUp, Shield
+  Award, TrendingUp, Shield, Lock, ShieldCheck
 } from "lucide-react";
 
 async function compressImage(file: File, maxPx = 800): Promise<string> {
@@ -48,6 +48,41 @@ export default function Profile() {
   const [saved,  setSaved]  = useState(false);
   const [showBuy, setShowBuy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // ── Hidden admin unlock ───────────────────────────────────────────────────
+  const [tapCount,      setTapCount]      = useState(0);
+  const [showAdminBox,  setShowAdminBox]  = useState(false);
+  const [adminCode,     setAdminCode]     = useState("");
+  const [adminMsg,      setAdminMsg]      = useState("");
+  const [adminSuccess,  setAdminSuccess]  = useState(false);
+  const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const activateMutation = trpc.admin.activate.useMutation({
+    onSuccess: () => {
+      setAdminSuccess(true);
+      setAdminMsg("تم تفعيل صلاحيات الأدمن بنجاح! أعد تحميل الصفحة.");
+    },
+    onError: (e) => setAdminMsg(e.message),
+  });
+
+  const handleAwardTap = () => {
+    if (u?.role === 'admin') return; // already admin
+    const next = tapCount + 1;
+    setTapCount(next);
+    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    tapTimerRef.current = setTimeout(() => setTapCount(0), 2000);
+    if (next >= 7) {
+      setShowAdminBox(true);
+      setTapCount(0);
+    }
+  };
+
+  const handleAdminActivate = () => {
+    if (!adminCode.trim()) return;
+    setAdminMsg("");
+    activateMutation.mutate({ secret: adminCode.trim() });
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (u?.name)   setName(u.name);
@@ -100,7 +135,6 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir="rtl">
 
-      {/* Hidden file input */}
       <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
 
       {/* Header */}
@@ -114,6 +148,14 @@ export default function Profile() {
             <span className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 text-xs px-3 py-1 rounded-full font-bold">
               <Crown className="w-3.5 h-3.5" /> VIP
             </span>
+          )}
+          {u?.role === 'admin' && (
+            <button
+              onClick={() => setLocation("/admin")}
+              className="flex items-center gap-1 bg-red-600/80 border border-red-500/60 text-white text-xs px-3 py-1.5 rounded-full font-bold"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" /> أدمن
+            </button>
           )}
           <button
             onClick={() => setLocation("/chat")}
@@ -138,7 +180,6 @@ export default function Profile() {
 
           <div className="px-6 pb-6">
             <div className="flex items-end gap-4 -mt-12 mb-4">
-              {/* Clickable avatar — no label, just tap */}
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
@@ -151,11 +192,9 @@ export default function Profile() {
                     <User className="w-10 h-10 text-white/70" />
                   </div>
                 )}
-                {/* Camera overlay */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Camera className="w-6 h-6 text-white" />
                 </div>
-                {/* Small camera badge */}
                 <div className="absolute bottom-1 right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center shadow border-2 border-slate-900">
                   <Camera className="w-3 h-3 text-white" />
                 </div>
@@ -169,12 +208,10 @@ export default function Profile() {
                   </p>
                 )}
               </div>
-              {u?.isPremium && (
-                <Shield className="w-5 h-5 text-green-400 mb-1" />
-              )}
+              {u?.isPremium && <Shield className="w-5 h-5 text-green-400 mb-1" />}
             </div>
 
-            {/* Stats row */}
+            {/* Stats row — tap اكتمال 7 times to reveal admin box */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
                 <div className="flex items-center justify-center gap-1 mb-1">
@@ -190,7 +227,11 @@ export default function Profile() {
                 </div>
                 <p className="text-white/50 text-xs">نقاط</p>
               </div>
-              <div className="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+              {/* اضغط 7 مرات لفتح لوحة الأدمن */}
+              <div
+                className="bg-white/5 rounded-xl p-3 text-center border border-white/10 select-none cursor-pointer"
+                onClick={handleAwardTap}
+              >
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Award className="w-3.5 h-3.5 text-green-400" />
                   <span className="text-green-400 font-bold text-lg">{completionPct}%</span>
@@ -200,6 +241,44 @@ export default function Profile() {
             </div>
           </div>
         </section>
+
+        {/* ── Hidden admin unlock box ────────────────────────────────────── */}
+        {showAdminBox && u?.role !== 'admin' && (
+          <section style={{ backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: '16px', border: '1px solid rgba(239,68,68,0.3)', padding: '16px' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Lock className="w-4 h-4 text-red-400" />
+              <span className="text-white font-semibold text-sm">تفعيل صلاحيات الأدمن</span>
+            </div>
+            {adminSuccess ? (
+              <div className="flex items-center gap-2 text-green-400 font-bold text-sm">
+                <ShieldCheck className="w-4 h-4" /> {adminMsg}
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={adminCode}
+                    onChange={e => setAdminCode(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAdminActivate()}
+                    placeholder="أدخل الكود السري"
+                    className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-red-400 transition-colors text-sm"
+                  />
+                  <button
+                    onClick={handleAdminActivate}
+                    disabled={activateMutation.isPending}
+                    className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm transition-colors disabled:opacity-60"
+                  >
+                    {activateMutation.isPending ? "..." : "تفعيل"}
+                  </button>
+                </div>
+                {adminMsg && (
+                  <p className="text-red-400 text-xs mt-2">{adminMsg}</p>
+                )}
+              </>
+            )}
+          </section>
+        )}
 
         {/* ── Profile completion ────────────────────────────────────────── */}
         {completionPct < 100 && (
@@ -212,23 +291,17 @@ export default function Profile() {
               <span className="text-purple-300 font-bold text-sm">{completionPct}%</span>
             </div>
             <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden', marginBottom: '12px' }}>
-              <div
-                style={{ height: '100%', background: 'linear-gradient(to right, #9333ea, #ec4899)', borderRadius: '99px', width: `${completionPct}%`, transition: 'width 0.5s' }}
-              />
+              <div style={{ height: '100%', background: 'linear-gradient(to right, #9333ea, #ec4899)', borderRadius: '99px', width: `${completionPct}%`, transition: 'width 0.5s' }} />
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {completionItems.map(item => (
-                <span key={item.label}
-                  style={{
-                    fontSize: '12px',
-                    padding: '4px 10px',
-                    borderRadius: '99px',
-                    border: item.done ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.15)',
-                    backgroundColor: item.done ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)',
-                    color: item.done ? '#86efac' : 'rgba(255,255,255,0.35)',
-                    display: 'flex', alignItems: 'center', gap: '4px'
-                  }}
-                >
+                <span key={item.label} style={{
+                  fontSize: '12px', padding: '4px 10px', borderRadius: '99px',
+                  border: item.done ? '1px solid rgba(74,222,128,0.4)' : '1px solid rgba(255,255,255,0.15)',
+                  backgroundColor: item.done ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)',
+                  color: item.done ? '#86efac' : 'rgba(255,255,255,0.35)',
+                  display: 'flex', alignItems: 'center', gap: '4px'
+                }}>
                   {item.done ? "✓" : "○"} {item.label}
                 </span>
               ))}
@@ -262,9 +335,7 @@ export default function Profile() {
               {([{ v: "male", l: "ذكر" }, { v: "female", l: "أنثى" }, { v: "other", l: "آخر" }] as const).map(({ v, l }) => (
                 <button key={v} onClick={() => setGender(v)}
                   className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${
-                    gender === v
-                      ? "bg-purple-600 text-white border-purple-600"
-                      : "border-white/20 text-white/60 hover:border-purple-400 bg-white/5"
+                    gender === v ? "bg-purple-600 text-white border-purple-600" : "border-white/20 text-white/60 hover:border-purple-400 bg-white/5"
                   }`}
                 >
                   {l}
@@ -287,9 +358,7 @@ export default function Profile() {
           >
             {saved ? (
               <><CheckCircle className="w-4 h-4" /> تم الحفظ!</>
-            ) : saveProfile.isPending ? (
-              "جاري الحفظ..."
-            ) : (
+            ) : saveProfile.isPending ? "جاري الحفظ..." : (
               <><Save className="w-4 h-4" /> حفظ التغييرات</>
             )}
           </button>
@@ -306,9 +375,7 @@ export default function Profile() {
               <span className="font-bold text-yellow-300 text-sm">{walletQuery.data?.wallet ?? 0}</span>
             </div>
           </div>
-          <p className="text-white/40 text-sm mb-4">
-            استخدم نجومك لتفعيل رادار النجوم وإرسال هدايا افتراضية.
-          </p>
+          <p className="text-white/40 text-sm mb-4">استخدم نجومك لتفعيل رادار النجوم وإرسال هدايا افتراضية.</p>
 
           <button onClick={() => setShowBuy(v => !v)}
             className="w-full border-2 border-dashed border-purple-500/50 rounded-xl py-3 text-purple-300 font-semibold hover:bg-purple-500/10 transition-colors flex items-center justify-center gap-2"
@@ -323,15 +390,9 @@ export default function Profile() {
                 🔒 سيتم تفعيل الدفع قريباً
               </div>
               {CREDIT_PACKAGES.map(pkg => (
-                <div key={pkg.credits}
-                  className={`relative flex items-center justify-between p-4 rounded-xl border ${
-                    pkg.popular ? "border-purple-500/60 bg-purple-500/10" : "border-white/15 bg-white/5"
-                  }`}
-                >
+                <div key={pkg.credits} className={`relative flex items-center justify-between p-4 rounded-xl border ${pkg.popular ? "border-purple-500/60 bg-purple-500/10" : "border-white/15 bg-white/5"}`}>
                   {pkg.popular && (
-                    <span className="absolute -top-2.5 right-4 bg-purple-600 text-white text-xs px-2.5 py-0.5 rounded-full">
-                      الأكثر شيوعاً
-                    </span>
+                    <span className="absolute -top-2.5 right-4 bg-purple-600 text-white text-xs px-2.5 py-0.5 rounded-full">الأكثر شيوعاً</span>
                   )}
                   <div className="flex items-center gap-2">
                     <Star className="w-5 h-5 text-yellow-400" />
@@ -339,9 +400,7 @@ export default function Profile() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-purple-300">{pkg.price}</span>
-                    <button disabled className="bg-white/10 text-white/30 text-sm px-3 py-1.5 rounded-lg cursor-not-allowed">
-                      قريباً
-                    </button>
+                    <button disabled className="bg-white/10 text-white/30 text-sm px-3 py-1.5 rounded-lg cursor-not-allowed">قريباً</button>
                   </div>
                 </div>
               ))}
