@@ -57,10 +57,15 @@ export default function Profile() {
   const [adminSuccess,  setAdminSuccess]  = useState(false);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const utils = trpc.useUtils();
   const activateMutation = trpc.admin.activate.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setAdminSuccess(true);
-      setAdminMsg("تم تفعيل صلاحيات الأدمن بنجاح! أعد تحميل الصفحة.");
+      setAdminMsg("✅ تم التفعيل! جاري التحديث...");
+      // Invalidate cache so role/isPremium are refreshed immediately
+      await utils.auth.me.invalidate();
+      // Reload page after short delay so all context picks up the new role
+      setTimeout(() => window.location.reload(), 1200);
     },
     onError: (e) => setAdminMsg(e.message),
   });
