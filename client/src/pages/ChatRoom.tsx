@@ -14,6 +14,7 @@ import TranslationPanel from '@/components/TranslationPanel';
 import FaceFiltersPanel from '@/components/FaceFiltersPanel';
 import FriendsPanel from '@/components/FriendsPanel';
 import DirectMessagePanel from '@/components/DirectMessagePanel';
+import UserProfileModal from '@/components/UserProfileModal';
 import PremiumMessageBubble from "@/components/PremiumMessageBubble";
 import { playMessageSound, playFriendSound, playRingSound } from '@/lib/notificationSound';
 import { toast } from 'sonner';
@@ -126,6 +127,7 @@ export default function ChatRoom() {
   const [showTranslation, setShowTranslation] = useState(false);
   const [showFaceFilters, setShowFaceFilters] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
+  const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);
   const [dmTarget, setDmTarget] = useState<{ id: number; name: string; avatar: string } | null>(null);
   const [selectedFilter, setSelectedFilter] = useState('none');
   const [showDailyBonus, setShowDailyBonus] = useState(false);
@@ -1002,14 +1004,23 @@ export default function ChatRoom() {
               <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ minHeight: 220 }}>
                 {status === 'matched' ? (
                   <>
-                    <div className="relative mb-3">
+                    <div
+                      className="relative mb-3 cursor-pointer"
+                      onClick={() => { const uid = (window as any).currentPeerUserId; if (uid) setViewProfileUserId(uid); }}
+                      title="عرض الملف الشخصي"
+                    >
                       {peerAvatar
-                        ? <img src={peerAvatar} alt={peerName} className="w-24 h-24 rounded-full border-4 border-white/30 bg-white object-cover" />
+                        ? <img src={peerAvatar} alt={peerName} className="w-24 h-24 rounded-full border-4 border-purple-400/60 bg-white object-cover hover:border-purple-400 transition-colors shadow-xl" />
                         : <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl">👤</div>}
                       <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-md" />
                     </div>
-                    <p className="text-white font-semibold text-lg">{peerName}</p>
-                    <p className="text-white/50 text-sm mt-1">الكاميرا مطفاة</p>
+                    <button
+                      className="text-white font-semibold text-lg hover:text-purple-300 transition-colors"
+                      onClick={() => { const uid = (window as any).currentPeerUserId; if (uid) setViewProfileUserId(uid); }}
+                    >
+                      {peerName}
+                    </button>
+                    <p className="text-white/50 text-sm mt-1">اضغط لعرض الملف الشخصي</p>
                   </>
                 ) : status === 'idle' ? (
                   <div className="text-center px-4">
@@ -1420,6 +1431,7 @@ export default function ChatRoom() {
             avatar: f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.id}`,
             status: f.isOnline ? 'online' : 'offline',
             lastSeen: f.lastSeen ? new Date(f.lastSeen).toLocaleString('ar') : '',
+            userId: f.id,
           }))}
           onClose={() => setShowFriends(false)}
           onStartChat={(friend) => { setDmTarget({ id: Number(friend.id), name: friend.name, avatar: friend.avatar }); setShowFriends(false); }}
@@ -1428,6 +1440,7 @@ export default function ChatRoom() {
           currentPeerId={status === 'matched' ? 'peer_current' : undefined}
           myPeerId={myId}
           onFriendAccepted={() => refetchFriends()}
+          onViewProfile={(uid) => { setShowFriends(false); setViewProfileUserId(uid); }}
           onSendFriendRequest={() => {
             const peerUserId = (window as any).currentPeerUserId;
             signal('friend-request', { 
@@ -1439,6 +1452,13 @@ export default function ChatRoom() {
               sendFriendRequestMutation.mutate({ receiverId: peerUserId });
             }
           }}
+        />
+      )}
+
+      {viewProfileUserId && (
+        <UserProfileModal
+          userId={viewProfileUserId}
+          onClose={() => setViewProfileUserId(null)}
         />
       )}
 

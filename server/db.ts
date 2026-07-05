@@ -547,6 +547,52 @@ export async function upgradeToPremium(userId: number): Promise<void> {
 
 // ── Social System Functions ──────────────────────────────────────────────────
 
+export async function getUserPublicProfile(userId: number) {
+  const dbConn = await getDb();
+  if (!dbConn) return null;
+  try {
+    const rows = await dbConn.select({
+      id: users.id,
+      name: users.name,
+      age: users.age,
+      gender: users.gender,
+      avatar: users.avatar,
+      bio: users.bio,
+      country: users.country,
+      isPremium: users.isPremium,
+      isOnline: users.isOnline,
+      wallet: users.wallet,
+      credits: users.credits,
+      profileViews: users.profileViews,
+      createdAt: users.createdAt,
+    }).from(users).where(eq(users.id, userId)).limit(1);
+    return rows[0] ?? null;
+  } catch (err) {
+    console.error('[Database] getUserPublicProfile failed:', err);
+    return null;
+  }
+}
+
+export async function getFriendStatus(userId: number, targetId: number): Promise<'none' | 'pending' | 'friends'> {
+  const dbConn = await getDb();
+  if (!dbConn || userId <= 0 || targetId <= 0) return 'none';
+  try {
+    // check friends table
+    const fr = await dbConn.select().from(friends)
+      .where(sql`("userId1" = ${userId} AND "userId2" = ${targetId}) OR ("userId1" = ${targetId} AND "userId2" = ${userId})`)
+      .limit(1);
+    if (fr.length > 0) return 'friends';
+    // check pending requests
+    const req = await dbConn.select().from(friendRequests)
+      .where(sql`(("senderId" = ${userId} AND "receiverId" = ${targetId}) OR ("senderId" = ${targetId} AND "receiverId" = ${userId})) AND status = 'pending'`)
+      .limit(1);
+    if (req.length > 0) return 'pending';
+    return 'none';
+  } catch {
+    return 'none';
+  }
+}
+
 export async function createFriendRequest(senderId: number, receiverId: number) {
   const db = await getDb();
   if (!db) return;

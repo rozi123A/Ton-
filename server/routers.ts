@@ -8,6 +8,7 @@ import {
   getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
   getCountryStats, getNewRegistrations,
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
+  getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
   getUnreadMessageCount, markMessagesRead,
   getDb,
@@ -104,6 +105,13 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const views = await incrementProfileViews(input);
         return { views };
+      }),
+
+    getPublicProfile: publicProcedure
+      .input(z.number().min(1))
+      .query(async ({ input }) => {
+        const profile = await getUserPublicProfile(input);
+        return profile;
       }),
 
     claimDailyBonus: protectedProcedure
@@ -365,6 +373,13 @@ export const appRouter = router({
 
     getIncomingRequests: protectedProcedure
       .query(async ({ ctx }) => getIncomingFriendRequests(ctx.user.id)),
+
+    getFriendStatus: protectedProcedure
+      .input(z.number().min(1))
+      .query(async ({ ctx, input }) => {
+        const status = await getFriendStatus(ctx.user.id, input);
+        return { status };
+      }),
   }),
 
   notifications: router({

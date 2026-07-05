@@ -1,4 +1,4 @@
-import { Heart, X, MessageCircle, Video, UserPlus, Check, Clock, Bell } from 'lucide-react';
+import { Heart, X, MessageCircle, Video, UserPlus, Check, Clock, Bell, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
@@ -9,6 +9,7 @@ interface Friend {
   avatar: string;
   status: 'online' | 'offline';
   lastSeen: string;
+  userId?: number;
 }
 
 interface FriendsPanelProps {
@@ -21,6 +22,7 @@ interface FriendsPanelProps {
   myPeerId?: string;
   onSendFriendRequest?: (peerId: string) => void;
   onFriendAccepted?: () => void;
+  onViewProfile?: (userId: number) => void;
 }
 
 export default function FriendsPanel({
@@ -33,6 +35,7 @@ export default function FriendsPanel({
   myPeerId,
   onSendFriendRequest,
   onFriendAccepted,
+  onViewProfile,
 }: FriendsPanelProps) {
   const [requestSent, setRequestSent] = useState(false);
   const [activeTab, setActiveTab] = useState<'friends' | 'add' | 'requests'>('friends');
@@ -219,27 +222,33 @@ export default function FriendsPanel({
                   {onlineFriends.map(friend => (
                     <div key={friend.id} className="p-3 hover:bg-white/5 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
+                        <div className="relative cursor-pointer" onClick={() => friend.userId && onViewProfile?.(friend.userId)}>
                           <img
                             src={friend.avatar}
                             alt={friend.name}
-                            className="w-10 h-10 rounded-full border-2 border-white/20 object-cover"
+                            className="w-10 h-10 rounded-full border-2 border-white/20 object-cover hover:border-purple-400 transition-colors"
                           />
                           <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900" />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => friend.userId && onViewProfile?.(friend.userId)}>
                           <p className="text-white font-semibold text-sm truncate">{friend.name}</p>
                           <p className="text-green-400 text-xs">متصل الآن</p>
                         </div>
                         <div className="flex gap-1">
+                          {friend.userId && onViewProfile && (
+                            <button
+                              onClick={() => onViewProfile(friend.userId!)}
+                              className="p-1.5 bg-white/10 hover:bg-purple-600 rounded-lg text-white/60 hover:text-white transition-colors"
+                              title="عرض الملف الشخصي"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => onStartChat(friend)}
                             className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
                           >
                             <MessageCircle className="w-4 h-4" />
-                          </button>
-                          <button className="p-1.5 bg-purple-600 hover:bg-purple-700 rounded-lg text-white transition-colors">
-                            <Video className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -259,27 +268,38 @@ export default function FriendsPanel({
                   {offlineFriends.map(friend => (
                     <div key={friend.id} className="p-3 hover:bg-white/5 transition-colors opacity-60">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
+                        <div className="relative cursor-pointer" onClick={() => friend.userId && onViewProfile?.(friend.userId)}>
                           <img
                             src={friend.avatar}
                             alt={friend.name}
-                            className="w-10 h-10 rounded-full border-2 border-white/20 object-cover"
+                            className="w-10 h-10 rounded-full border-2 border-white/20 object-cover hover:border-purple-400 transition-colors"
                           />
                           <span className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900" />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => friend.userId && onViewProfile?.(friend.userId)}>
                           <p className="text-white font-semibold text-sm truncate">{friend.name}</p>
                           <p className="text-white/40 text-xs flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             آخر ظهور: {friend.lastSeen}
                           </p>
                         </div>
-                        <button
-                          onClick={() => onStartChat(friend)}
-                          className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                        </button>
+                        <div className="flex gap-1">
+                          {friend.userId && onViewProfile && (
+                            <button
+                              onClick={() => onViewProfile(friend.userId!)}
+                              className="p-1.5 bg-white/10 hover:bg-purple-600 rounded-lg text-white/60 hover:text-white transition-colors"
+                              title="عرض الملف الشخصي"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onStartChat(friend)}
+                            className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
