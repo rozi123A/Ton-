@@ -457,7 +457,8 @@ export default function ChatRoom() {
   }, [startTimer]);
 
   // ── SSE event handler ──────────────────────────────────────────────────────
-  const handleEvent = useCallback(async (msg: any) => {
+    const handleEvent = useCallback(async (msg: any) => {
+    console.log(`[SSE Event] Received: ${msg.type}`, msg);
     switch (msg.type) {
       case 'waiting':
         setPendingMatch(null);
@@ -645,16 +646,38 @@ export default function ChatRoom() {
 
     const connect = () => {
       if (destroyedRef.current) return;
+      console.log(`[SSE] Connecting to /api/signal/connect with params: ${params.toString()}`);
       const es = new EventSource(`/api/signal/connect?${params}`);
       esRef.current = es;
-      es.onmessage = (e) => { try { handleEvent(JSON.parse(e.data)); } catch { /* ignore */ } };
-      es.onerror = () => {
+      
+      let pingTimeout: ReturnType<typeof setTimeout>;
+      const resetPingTimeout = () => {
+        clearTimeout(pingTimeout);
+        pingTimeout = setTimeout(() => {
+          console.warn("[SSE] No ping received for 45s, reconnecting...");
+          es.close();
+          connect();
+        }, 45000);
+      };
+      
+      es.onmessage = (e) => { 
+        resetPingTimeout();
+        if (e.data === ': ping') return;
+        console.log(`[SSE Raw Data] ${e.data}`);
+        try { handleEvent(JSON.parse(e.data)); } catch (err) { console.error("[SSE Parse Error]", err); } 
+      };
+      
+      es.onerror = (err) => {
+        console.error("[SSE Error]", err);
+        clearTimeout(pingTimeout);
         es.close();
         if (!destroyedRef.current) {
           console.log("[SSE] Connection lost, reconnecting in 3s...");
           setTimeout(connect, 3000);
         }
       };
+      
+      resetPingTimeout();
     };
     connect();
   }, [myId, myName, myAvatar, myGender, myCountry, handleEvent, user, walletQuery, deductRadarStars, setLocation]);

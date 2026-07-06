@@ -132,15 +132,29 @@ function isCompatible(a: PeerInfo, b: PeerInfo): boolean {
 
 function matchPeers() {
   const waiting = waitingQueue.filter(id => peers.has(id));
+  console.log(`[Matching] Checking queue. Length: ${waiting.length}. Peers: ${waiting.join(', ')}`);
+  
   for (let i = 0; i < waiting.length; i++) {
     for (let j = i + 1; j < waiting.length; j++) {
       const id1 = waiting[i];
       const id2 = waiting[j];
       const p1 = peers.get(id1);
       const p2 = peers.get(id2);
-      if (!p1 || !p2) continue;
-      if (!isCompatible(p1, p2)) continue;
-      if (wereRecentlyRejected(id1, id2)) continue;
+      
+      if (!p1 || !p2) {
+        console.log(`[Matching] Peer missing: p1=${!!p1}, p2=${!!p2}`);
+        continue;
+      }
+      
+      const compatible = isCompatible(p1, p2);
+      const rejected = wereRecentlyRejected(id1, id2);
+      
+      console.log(`[Matching] Comparing ${id1} (${p1.name}) & ${id2} (${p2.name}): Compatible=${compatible}, Rejected=${rejected}`);
+      
+      if (!compatible) continue;
+      if (rejected) continue;
+
+      console.log(`[Matching] FOUND MATCH: ${id1} <-> ${id2}`);
 
       const qi1 = waitingQueue.indexOf(id1);
       if (qi1 !== -1) waitingQueue.splice(qi1, 1);
@@ -149,8 +163,11 @@ function matchPeers() {
 
       p1.partnerId = id2;
       p2.partnerId = id1;
+      
+      console.log(`[Matching] Sending "matched" events to both peers`);
       sseEvent(p1.res, { type: "matched", role: "caller", peer: { name: p2.name, avatar: p2.avatar, userId: p2.userId } });
       sseEvent(p2.res, { type: "matched", role: "callee", peer: { name: p1.name, avatar: p1.avatar, userId: p1.userId } });
+      
       matchPeers();
       return;
     }
@@ -160,23 +177,32 @@ function matchPeers() {
 function removePeer(peerId: string) {
   const peer = peers.get(peerId);
   if (!peer) return;
-  if (peer.partnerId) {
-    const partner = peers.get(peer.partnerId);
+  
+  const partnerId = peer.partnerId;
+  if (partnerId) {
+    const partner = peers.get(partnerId);
     if (partner) {
+      console.log(`[RemovePeer] Peer ${peerId} leaving. Partner ${partnerId} being reset to waiting.`);
       lastPeers.set(peer.name,    { partnerName: partner.name, partnerAvatar: partner.avatar, ts: Date.now() });
       lastPeers.set(partner.name, { partnerName: peer.name,    partnerAvatar: peer.avatar,    ts: Date.now() });
+      
       partner.partnerId = null;
       sseEvent(partner.res, { type: "peer-left" });
-      if (!waitingQueue.includes(peer.partnerId)) {
-        waitingQueue.push(peer.partnerId);
-        sseEvent(partner.res, { type: "waiting" });
-        matchPeers();
+      
+      // Ensure partner is put back in waiting queue
+      if (!waitingQueue.includes(partnerId)) {
+        waitingQueue.push(partnerId);
       }
+      sseEvent(partner.res, { type: "waiting" });
     }
   }
+  
   const qi = waitingQueue.indexOf(peerId);
   if (qi !== -1) waitingQueue.splice(qi, 1);
   peers.delete(peerId);
+  
+  // Try to match remaining peers
+  matchPeers();
 }
 
 function registerSignalingRoutes(app: express.Express) {
