@@ -141,7 +141,7 @@ function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: 
 
 export default function TrendingUsers() {
   const { t: translate } = useTranslation();
-  const t = translate;
+  const t = (key: string) => translate(key);
   const { user: currentUser } = useAuth();
   const utils = trpc.useUtils();
   const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);

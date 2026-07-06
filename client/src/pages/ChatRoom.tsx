@@ -8,6 +8,7 @@ import {
   Users, UserRound, Heart, ChevronLeft, Globe, Wand2, Play, Square
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { trpc } from '@/lib/trpc';
 import GiftPanel, { GIFTS, type GiftItem } from '@/components/GiftPanel';
 import TranslationPanel from '@/components/TranslationPanel';
@@ -88,10 +89,12 @@ interface PendingMatch { name: string; avatar: string; userId?: number; role: 'c
 function makePeerId() { return `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
 
 export default function ChatRoom() {
+  const { t: translate, isRTL } = useTranslation();
+  const t = (key: string) => translate(key);
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
 
-  const myName    = (user as any)?.name    || 'انت';
+  const myName    = (user as any)?.name    || (isRTL ? 'أنت' : 'You');
   const myAvatar  = (user as any)?.avatar  || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName)}`;
   const myGender  = (user as any)?.gender  || 'other';
   const myCountry = (user as any)?.country || null;
