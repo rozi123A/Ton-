@@ -1,4 +1,5 @@
-import { Menu, X, LogOut, Video, UserCircle, Star } from "lucide-react";
+import { Menu, X, LogOut, Video, UserCircle, Star, Languages } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -9,6 +10,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading, logout } = useAuth();
+  const { language, setLanguage, t } = useTranslation();
 
   const { data: notifData } = trpc.notifications.get.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -36,10 +38,10 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <a href="#features" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">الميزات</a>
-          <button onClick={() => setLocation('/store')} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">المتجر</button>
-          <a href="#faq"      className="text-gray-700 hover:text-purple-600 font-medium transition-colors">الأسئلة الشائعة</a>
-          <a href="#security" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">الأمان</a>
+          <a href="#features" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.features')}</a>
+          <button onClick={() => setLocation('/store')} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.store')}</button>
+          <a href="#faq"      className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.faq')}</a>
+          <a href="#security" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.security')}</a>
         </nav>
 
         {/* CTA — desktop */}
@@ -78,8 +80,15 @@ export default function Header() {
                 className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-2 px-5 rounded-full hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
               >
                 <Video className="w-4 h-4" />
-                ابدأ الدردشة
+                {t('nav.chat')}
               </button>
+
+              {/* Language Switcher Desktop */}
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200">
+                <button onClick={() => setLanguage('ar')} className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all ${language === 'ar' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>عربي</button>
+                <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all ${language === 'en' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>EN</button>
+                <button onClick={() => setLanguage('fr')} className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all ${language === 'fr' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>FR</button>
+              </div>
 
               <button onClick={handleLogout} title="تسجيل الخروج"
                 className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
@@ -89,13 +98,19 @@ export default function Header() {
             </>
           ) : (
             <>
+              {/* Language Switcher Desktop (Unauthed) */}
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200 mr-2">
+                <button onClick={() => setLanguage('ar')} className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all ${language === 'ar' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>عربي</button>
+                <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all ${language === 'en' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>EN</button>
+                <button onClick={() => setLanguage('fr')} className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all ${language === 'fr' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>FR</button>
+              </div>
               <button onClick={handleLogin} className="text-purple-600 font-semibold hover:text-purple-700 transition-colors">
-                تسجيل الدخول
+                {t('nav.login')}
               </button>
               <button onClick={handleLogin}
                 className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-2 px-6 rounded-full hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-md hover:shadow-lg"
               >
-                ابدأ الآن
+                {t('nav.start')}
               </button>
             </>
           )}
@@ -126,10 +141,20 @@ export default function Header() {
       {/* Mobile menu */}
       {isMenuOpen && (
         <div className="md:hidden bg-white border-t border-gray-200 py-4 px-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-          <a href="#features" className="block text-gray-700 hover:text-purple-600 font-medium py-2">الميزات</a>
-          <button onClick={() => { setIsMenuOpen(false); setLocation('/store'); }} className="block text-right w-full text-gray-700 hover:text-purple-600 font-medium py-2">المتجر</button>
-          <a href="#faq"      className="block text-gray-700 hover:text-purple-600 font-medium py-2">الأسئلة الشائعة</a>
-          <a href="#security" className="block text-gray-700 hover:text-purple-600 font-medium py-2">الأمان</a>
+          <a href="#features" className="block text-gray-700 hover:text-purple-600 font-medium py-2">{t('nav.features')}</a>
+          <button onClick={() => { setIsMenuOpen(false); setLocation('/store'); }} className={`block ${language === 'ar' ? 'text-right' : 'text-left'} w-full text-gray-700 hover:text-purple-600 font-medium py-2`}>{t('nav.store')}</button>
+          <a href="#faq"      className="block text-gray-700 hover:text-purple-600 font-medium py-2">{t('nav.faq')}</a>
+          <a href="#security" className="block text-gray-700 hover:text-purple-600 font-medium py-2">{t('nav.security')}</a>
+          
+          {/* Language Switcher Mobile */}
+          <div className="flex items-center gap-2 pt-2">
+            <Languages className="w-4 h-4 text-gray-400" />
+            <div className="flex gap-2">
+              <button onClick={() => setLanguage('ar')} className={`px-3 py-1 rounded-lg text-xs font-bold ${language === 'ar' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}>العربية</button>
+              <button onClick={() => setLanguage('en')} className={`px-3 py-1 rounded-lg text-xs font-bold ${language === 'en' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}>English</button>
+              <button onClick={() => setLanguage('fr')} className={`px-3 py-1 rounded-lg text-xs font-bold ${language === 'fr' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Français</button>
+            </div>
+          </div>
 
           <div className="flex flex-col gap-2.5 pt-4 border-t border-gray-100">
             {isAuthenticated && user ? (
