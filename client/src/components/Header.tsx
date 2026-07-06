@@ -11,7 +11,7 @@ export default function Header() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading, logout } = useAuth();
   const { language, setLanguage, t: translate } = useTranslation();
-  const t = translate;
+  const t = (key: string) => translate(key);
 
   const { data: notifData } = trpc.notifications.get.useQuery(undefined, {
     enabled: isAuthenticated,

@@ -8,7 +8,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
  */
 
 export default function Footer() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation(); const t = (key: string) => translate(key);
   return (
     <footer className="bg-gradient-to-b from-gray-900 to-black text-white py-16">
       <div className="container mx-auto px-4">

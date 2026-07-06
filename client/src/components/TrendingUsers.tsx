@@ -44,7 +44,7 @@ type DisplayUser = {
 };
 
 function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: (id: number) => void }) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation(); const t = (key: string) => translate(key);
   const cardRef = useRef<HTMLDivElement>(null);
   const viewedRef = useRef(false);
   const recordView = trpc.users.recordView.useMutation();
