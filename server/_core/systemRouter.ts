@@ -26,4 +26,12 @@ export const systemRouter = router({
         success: delivered,
       } as const;
     }),
+
+  getPaymentConfig: publicProcedure.query(async () => {
+    const { ENV } = await import("./env");
+    return {
+      binancePayId: ENV.binancePayId,
+      usdtTrc20Address: ENV.usdtTrc20Address,
+    };
+  }),
 });

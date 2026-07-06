@@ -1,4 +1,4 @@
-import { ShoppingBag, Star, Camera, Shield, Zap, Sparkles, ArrowRight, Crown } from "lucide-react";
+import { ShoppingBag, Star, Camera, Shield, Zap, Sparkles, ArrowRight, Crown, Copy, CheckCircle2, Wallet } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -8,15 +8,27 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function Store() {
   const [location, setLocation] = useLocation();
   const { user, refresh: mutateAuth } = useAuth();
   const [payMethod, setPayMethod] = useState<'money' | 'credits'>('money');
+  
+  // Payment Modal State
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{ type: 'vip' | 'stars', amount: number, price: string } | null>(null);
+  const [cryptoMethod, setCryptoMethod] = useState<'binance_pay' | 'usdt_trc20'>('binance_pay');
+  const [txId, setTxId] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const queryParams = new URLSearchParams(window.location.search);
   const fromChat = queryParams.get('from') === 'chat';
+
+  const { data: payConfig } = trpc.system.getPaymentConfig.useQuery();
 
   const handleBack = () => {
     if (fromChat) {
@@ -28,12 +40,13 @@ export default function Store() {
   };
 
   /* ── mutations ─────────────────────────────────────────────────── */
-  const upgradeMutation = trpc.gifts.upgrade.useMutation({
+  const submitPaymentMutation = trpc.gifts.submitPaymentRequest.useMutation({
     onSuccess: () => {
-      toast.success("تم تفعيل اشتراك Premium بنجاح! استمتع بالميزات الحصرية.");
-      mutateAuth();
+      toast.success("تم إرسال طلبك بنجاح! سيتم تفعيل الميزة بعد مراجعة الإدارة (خلال 5-30 دقيقة).");
+      setShowPayModal(false);
+      setTxId('');
     },
-    onError: (e) => toast.error(`فشل الاشتراك: ${e.message}`),
+    onError: (e) => toast.error(`فشل إرسال الطلب: ${e.message}`),
   });
 
   const upgradeWithCreditsMutation = trpc.gifts.upgradeWithCredits.useMutation({
@@ -42,14 +55,6 @@ export default function Store() {
       mutateAuth();
     },
     onError: (e) => toast.error(e.message),
-  });
-
-  const buyStarsMutation = trpc.gifts.buyCredits.useMutation({
-    onSuccess: () => {
-      toast.success("تمت عملية الشراء بنجاح! تم إضافة النجوم إلى محفظتك.");
-      mutateAuth();
-    },
-    onError: (e) => toast.error(`فشل الشراء: ${e.message}`),
   });
 
   /* ── data ──────────────────────────────────────────────────────── */
@@ -74,9 +79,37 @@ export default function Store() {
     { title: "أولوية المطابقة",       icon: <ArrowRight  className="w-5 h-5 text-indigo-500" /> },
   ];
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("تم النسخ بنجاح");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handlePayClick = (item: { type: 'vip' | 'stars', amount: number, price: string }) => {
+    setSelectedItem(item);
+    setShowPayModal(true);
+  };
+
+  const handleSubmitPayment = () => {
+    if (!txId.trim()) {
+      toast.error("يرجى إدخال رقم المعاملة (TXID)");
+      return;
+    }
+    if (!selectedItem) return;
+
+    submitPaymentMutation.mutate({
+      amount: selectedItem.price,
+      method: cryptoMethod,
+      transactionId: txId,
+      itemType: selectedItem.type,
+      itemAmount: selectedItem.type === 'stars' ? selectedItem.amount : undefined
+    });
+  };
+
   /* ── render ────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
       <Header />
 
       <main className="flex-grow container mx-auto px-4 py-10">
@@ -87,7 +120,7 @@ export default function Store() {
             onClick={handleBack}
             className="group flex items-center gap-3 px-5 py-2.5 bg-gradient-to-b from-yellow-300 to-yellow-500 text-gray-900 font-bold rounded-2xl shadow-[0_4px_0_0_#a16207] active:shadow-none active:translate-y-1 transition-all hover:brightness-110"
           >
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4 rotate-180" />
             {fromChat ? 'العودة للدردشة' : 'الصفحة الرئيسية'}
           </button>
         </div>
@@ -102,7 +135,7 @@ export default function Store() {
             متجر ConnectLive
           </h1>
           <p className="text-gray-500 text-sm max-w-xl mx-auto">
-            ارتقِ بتجربتك مع ميزات Premium — اشترِ بالمال أو بنقاطك المتراكمة.
+            ارتقِ بتجربتك مع ميزات Premium — اشترِ عبر Binance Pay أو USDT.
           </p>
         </div>
 
@@ -111,7 +144,7 @@ export default function Store() {
           <div className="relative overflow-hidden rounded-3xl border-2 border-purple-400 shadow-2xl shadow-purple-200 bg-white">
 
             {/* VIP badge */}
-            <div className="absolute top-0 right-0 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white px-5 py-1.5 rounded-bl-2xl font-black text-sm flex items-center gap-1">
+            <div className="absolute top-0 left-0 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white px-5 py-1.5 rounded-br-2xl font-black text-sm flex items-center gap-1">
               <Crown className="w-3.5 h-3.5" /> VIP
             </div>
 
@@ -153,7 +186,7 @@ export default function Store() {
                           : 'text-gray-400 hover:text-gray-600'
                       }`}
                     >
-                      💳 دفع بالمال
+                      💰 دفع رقمي (Binance)
                     </button>
                     <button
                       onClick={() => setPayMethod('credits')}
@@ -175,14 +208,10 @@ export default function Store() {
                         <span className="text-gray-400 text-sm">/شهرياً</span>
                       </div>
                       <Button
-                        onClick={() => upgradeMutation.mutate()}
-                        disabled={upgradeMutation.isPending}
+                        onClick={() => handlePayClick({ type: 'vip', amount: 0, price: '$9.99' })}
                         className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:brightness-110 text-white font-black py-6 text-base rounded-2xl shadow-lg shadow-purple-300/40 transition-all gap-2"
                       >
-                        {upgradeMutation.isPending
-                          ? <><Sparkles className="w-5 h-5 animate-spin" /> جاري التفعيل...</>
-                          : <><Sparkles className="w-5 h-5" /> اشترك الآن — $9.99</>
-                        }
+                        <Sparkles className="w-5 h-5" /> اشترك الآن عبر Binance/USDT
                       </Button>
                     </div>
                   )}
@@ -206,7 +235,7 @@ export default function Store() {
                           />
                         </div>
                         {!canAfford && (
-                          <p className="text-xs text-gray-400 mt-1.5">
+                          <p className="text-xs text-gray-400 mt-1.5 text-right">
                             تحتاج <span className="font-bold text-yellow-600">{PREMIUM_COST - userCredits} نقطة إضافية</span> — تجمّعها من المكافأة اليومية والهدايا.
                           </p>
                         )}
@@ -228,10 +257,6 @@ export default function Store() {
                             : <><Zap className="w-5 h-5" /> رصيد غير كافٍ ({userCredits}/{PREMIUM_COST})</>
                         }
                       </Button>
-
-                      <p className="text-center text-xs text-gray-400">
-                        جمّع النقاط يومياً من 🎁 المكافأة اليومية أو اشترِ نجوماً وحوّلها.
-                      </p>
                     </div>
                   )}
                 </>
@@ -257,7 +282,7 @@ export default function Store() {
             {starPackages.map((pkg, i) => (
               <Card key={i} className={`relative overflow-hidden border-2 transition-all hover:scale-[1.02] hover:shadow-lg ${pkg.popular ? 'border-yellow-400 shadow-md' : 'border-gray-200'}`}>
                 {pkg.popular && (
-                  <div className="absolute top-0 left-0 bg-yellow-400 text-gray-900 px-3 py-1 rounded-br-xl font-black text-[10px] uppercase">
+                  <div className="absolute top-0 right-0 bg-yellow-400 text-gray-900 px-3 py-1 rounded-bl-xl font-black text-[10px] uppercase">
                     الأكثر توفيراً ⭐
                   </div>
                 )}
@@ -274,26 +299,127 @@ export default function Store() {
                 </CardContent>
                 <CardFooter className="pt-0">
                   <Button
-                    onClick={() => buyStarsMutation.mutate(pkg.amount)}
-                    disabled={buyStarsMutation.isPending}
-                    className={`w-full font-bold rounded-xl ${pkg.popular ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-900' : 'bg-gray-900 hover:bg-gray-800 text-white'}`}
+                    onClick={() => handlePayClick({ type: 'stars', amount: pkg.amount, price: pkg.price })}
+                    className={`w-full font-bold rounded-xl ${pkg.popular ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-900' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                   >
-                    شراء الآن
+                    شحن الآن
                   </Button>
                 </CardFooter>
               </Card>
             ))}
           </div>
-
-          {/* Tip */}
-          <div className="mt-6 text-center bg-blue-50 border border-blue-100 rounded-2xl p-4">
-            <p className="text-blue-700 text-sm font-medium">
-              💡 <strong>نصيحة:</strong> كل 2 نجمة = 1 نقطة عند التحويل. جمّع 500 نقطة واشترك في Premium مجاناً!
-            </p>
-          </div>
         </div>
 
+        {/* ══ Payment Modal ═════════════════════════════════════════ */}
+        <Dialog open={showPayModal} onOpenChange={setShowPayModal}>
+          <DialogContent className="sm:max-w-[450px] rounded-3xl overflow-hidden p-0 border-none shadow-2xl" dir="rtl">
+            <div className="bg-gradient-to-br from-purple-600 to-fuchsia-700 p-6 text-white">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-black flex items-center gap-2">
+                  <Wallet className="w-6 h-6" />
+                  إتمام الدفع الرقمي
+                </DialogTitle>
+                <DialogDescription className="text-purple-100 text-sm mt-1">
+                  اختر وسيلة الدفع المفضلة لديك وقم بالتحويل.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <div className="p-6 space-y-6 bg-white">
+              {/* Summary */}
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">المنتج</p>
+                  <p className="text-gray-900 font-black">
+                    {selectedItem?.type === 'vip' ? 'اشتراك Premium VIP' : `${selectedItem?.amount} نجمة`}
+                  </p>
+                </div>
+                <div className="text-left">
+                  <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">المبلغ</p>
+                  <p className="text-purple-600 font-black text-xl">{selectedItem?.price}</p>
+                </div>
+              </div>
+
+              {/* Method Toggle */}
+              <div className="flex gap-3 p-1 bg-gray-100 rounded-2xl">
+                <button
+                  onClick={() => setCryptoMethod('binance_pay')}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                    cryptoMethod === 'binance_pay' ? 'bg-white shadow text-yellow-600' : 'text-gray-400'
+                  }`}
+                >
+                  <span className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-[10px] text-white font-black">B</span>
+                  Binance Pay
+                </button>
+                <button
+                  onClick={() => setCryptoMethod('usdt_trc20')}
+                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                    cryptoMethod === 'usdt_trc20' ? 'bg-white shadow text-green-600' : 'text-gray-400'
+                  }`}
+                >
+                  <span className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-[10px] text-white font-black">T</span>
+                  USDT (TRC20)
+                </button>
+              </div>
+
+              {/* Wallet Info */}
+              <div className="space-y-4">
+                <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4">
+                  <Label className="text-yellow-800 text-xs font-bold mb-2 block">
+                    {cryptoMethod === 'binance_pay' ? 'Binance Pay ID' : 'عنوان محفظة USDT (TRC20)'}
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 bg-white border border-yellow-200 rounded-xl px-3 py-2 text-sm font-mono text-gray-700 break-all">
+                      {cryptoMethod === 'binance_pay' ? payConfig?.binancePayId : payConfig?.usdtTrc20Address}
+                    </code>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="rounded-xl border-yellow-200 text-yellow-600 shrink-0"
+                      onClick={() => copyToClipboard(cryptoMethod === 'binance_pay' ? payConfig?.binancePayId || '' : payConfig?.usdtTrc20Address || '')}
+                    >
+                      {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-yellow-700/60 mt-2 leading-relaxed">
+                    * يرجى تحويل المبلغ الموضح أعلاه بدقة لضمان سرعة التفعيل.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="txid" className="text-gray-700 font-bold text-sm pr-1">رقم المعاملة (TXID / Order ID)</Label>
+                  <Input
+                    id="txid"
+                    placeholder="أدخل رقم المعاملة هنا للتأكيد..."
+                    value={txId}
+                    onChange={(e) => setTxId(e.target.value)}
+                    className="rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="p-6 bg-gray-50 flex-col gap-3 sm:flex-col">
+              <Button
+                onClick={handleSubmitPayment}
+                disabled={submitPaymentMutation.isPending || !txId}
+                className="w-full bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:brightness-110 text-white font-black py-6 rounded-2xl shadow-lg transition-all"
+              >
+                {submitPaymentMutation.isPending ? "جاري الإرسال..." : "تأكيد عملية الدفع"}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setShowPayModal(false)}
+                className="w-full text-gray-400 hover:text-gray-600 font-bold"
+              >
+                إلغاء
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </main>
+
       <Footer />
     </div>
   );

@@ -113,3 +113,22 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("isRead").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+/**
+ * Payment system: manual requests for VIP/Stars via Binance/USDT
+ */
+export const paymentRequests = pgTable("payment_requests", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  amount: varchar("amount", { length: 50 }).notNull(),
+  method: varchar("method", { length: 50 }).notNull(), // binance_pay, usdt_trc20
+  transactionId: text("transactionId").notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, approved, rejected
+  itemType: varchar("itemType", { length: 50 }).notNull(), // vip, stars
+  itemAmount: integer("itemAmount"), // amount of stars if itemType is stars
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type PaymentRequest = typeof paymentRequests.$inferSelect;
+export type InsertPaymentRequest = typeof paymentRequests.$inferInsert;

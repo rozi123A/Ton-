@@ -8,4 +8,6 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  binancePayId: process.env.BINANCE_PAY_ID ?? "لم يتم الضبط",
+  usdtTrc20Address: process.env.USDT_TRC20_ADDRESS ?? "لم يتم الضبط",
 };

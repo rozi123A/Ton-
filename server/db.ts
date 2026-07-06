@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull, ne, or, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications } from '../drizzle/schema';
+import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
 /** Strip query params unsupported by postgres.js (e.g. channel_binding from Neon) */
@@ -140,6 +140,18 @@ export async function ensureSchema(): Promise<void> {
        "fromAvatar" TEXT,
        "isRead"    BOOLEAN NOT NULL DEFAULT false,
        "createdAt" TIMESTAMP NOT NULL DEFAULT now()
+     )`,
+    `CREATE TABLE IF NOT EXISTS payment_requests (
+       id              SERIAL PRIMARY KEY,
+       "userId"        INTEGER NOT NULL,
+       amount          VARCHAR(50) NOT NULL,
+       method          VARCHAR(50) NOT NULL,
+       "transactionId" TEXT NOT NULL,
+       status          VARCHAR(20) NOT NULL DEFAULT 'pending',
+       "itemType"      VARCHAR(50) NOT NULL,
+       "itemAmount"    INTEGER,
+       "createdAt"     TIMESTAMP NOT NULL DEFAULT now(),
+       "updatedAt"     TIMESTAMP NOT NULL DEFAULT now()
      )`,
   ];
 
@@ -655,11 +667,91 @@ export async function getFriends(userId: number) {
     const userFriends = await db.select().from(friends).where(or(eq(friends.userId1, userId), eq(friends.userId2, userId)));
     const friendIds = userFriends.map(f => f.userId1 === userId ? f.userId2 : f.userId1);
     if (friendIds.length === 0) return [];
-    return await db.select().from(users).where(sql`id IN (${sql.join(friendIds, sql`, `)})`);
+    return await db.select().from(users).where(sql`${users.id} IN (${sql.join(friendIds, sql`, `)})`);
   } catch (err) {
     console.error('[Database] getFriends failed:', err);
     return [];
   }
+}
+
+// ── Payment Requests ──────────────────────────────────────────────────────────
+
+export async function createPaymentRequest(data: {
+  userId: number;
+  amount: string;
+  method: string;
+  transactionId: string;
+  itemType: string;
+  itemAmount?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(paymentRequests).values({
+    ...data,
+    status: 'pending',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+}
+
+export async function getPendingPaymentRequests() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select({
+    id: paymentRequests.id,
+    userId: paymentRequests.userId,
+    userName: users.name,
+    amount: paymentRequests.amount,
+    method: paymentRequests.method,
+    transactionId: paymentRequests.transactionId,
+    status: paymentRequests.status,
+    itemType: paymentRequests.itemType,
+    itemAmount: paymentRequests.itemAmount,
+    createdAt: paymentRequests.createdAt,
+  })
+  .from(paymentRequests)
+  .leftJoin(users, eq(paymentRequests.userId, users.id))
+  .where(eq(paymentRequests.status, 'pending'))
+  .orderBy(desc(paymentRequests.createdAt));
+}
+
+export async function updatePaymentRequestStatus(requestId: number, status: 'approved' | 'rejected') {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const request = await db.select().from(paymentRequests).where(eq(paymentRequests.id, requestId)).limit(1);
+  if (!request[0]) throw new Error("Payment request not found");
+  
+  await db.transaction(async (tx) => {
+    await tx.update(paymentRequests)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(paymentRequests.id, requestId));
+      
+    if (status === 'approved') {
+      const { userId, itemType, itemAmount } = request[0];
+      if (itemType === 'vip') {
+        await tx.update(users).set({ isPremium: true }).where(eq(users.id, userId));
+        await createNotification(userId, {
+          type: 'system',
+          title: '🎉 تم تفعيل VIP!',
+          message: 'تمت الموافقة على طلب الدفع الخاص بك. استمتع بميزات Premium الآن!',
+        });
+      } else if (itemType === 'stars' && itemAmount) {
+        await tx.update(users).set({ wallet: sql`${users.wallet} + ${itemAmount}` }).where(eq(users.id, userId));
+        await createNotification(userId, {
+          type: 'system',
+          title: '⭐ تم شحن النجوم!',
+          message: `تمت الموافقة على طلبك وإضافة ${itemAmount} نجمة إلى محفظتك.`,
+        });
+      }
+    } else {
+      await createNotification(request[0].userId, {
+        type: 'system',
+        title: '❌ تم رفض طلب الدفع',
+        message: 'للأسف تم رفض طلب الدفع الخاص بك. يرجى التأكد من رقم المعاملة والمحاولة مرة أخرى.',
+      });
+    }
+  });
 }
 
 // ── Notification System Functions ────────────────────────────────────────────

@@ -186,6 +186,42 @@ export const appRouter = router({
       return { credits };
     }),
 
+    /** Submit a manual payment request (Binance/USDT) */
+    submitPaymentRequest: protectedProcedure
+      .input(z.object({
+        amount: z.string(),
+        method: z.string(),
+        transactionId: z.string(),
+        itemType: z.string(),
+        itemAmount: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { createPaymentRequest } = await import("./db");
+        await createPaymentRequest({
+          userId: ctx.user.id,
+          ...input
+        });
+        return { success: true };
+      }),
+
+    /** Get pending payment requests (Admin only) */
+    getPendingPayments: adminProcedure.query(async () => {
+      const { getPendingPaymentRequests } = await import("./db");
+      return await getPendingPaymentRequests();
+    }),
+
+    /** Approve or reject a payment request (Admin only) */
+    handlePaymentRequest: adminProcedure
+      .input(z.object({
+        requestId: z.number(),
+        status: z.enum(['approved', 'rejected'])
+      }))
+      .mutation(async ({ input }) => {
+        const { updatePaymentRequestStatus } = await import("./db");
+        await updatePaymentRequestStatus(input.requestId, input.status);
+        return { success: true };
+      }),
+
     /** Deduct credits and record the gift (relay to peer via signal is done client-side) */
     spend: protectedProcedure
       .input(z.object({
