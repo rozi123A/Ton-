@@ -1242,12 +1242,43 @@ export default function ChatRoom() {
                     <p className="text-white/50 text-sm mt-1">اضغط لعرض الملف الشخصي</p>
                   </>
                 ) : status === 'idle' ? (
-                  <div className="text-center px-4">
-                    <div className="w-16 h-16 rounded-full bg-green-500/20 border-2 border-green-500/50 flex items-center justify-center mx-auto mb-3">
-                      <Play className="w-7 h-7 text-green-400 fill-green-400" />
+                  /* ── Idle: promotional looping video ── */
+                  <>
+                    {/* Looping background promo video */}
+                    <video
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      className="absolute inset-0 w-full h-full object-cover"
+                      style={{ opacity: 0.55 }}
+                      onError={(e) => { (e.target as HTMLVideoElement).style.display = 'none'; }}
+                    >
+                      <source src="https://assets.mixkit.co/videos/preview/mixkit-young-woman-talking-on-video-call-4664-large.mp4" type="video/mp4" />
+                      <source src="https://assets.mixkit.co/videos/preview/mixkit-man-having-a-video-call-in-a-room-4700-large.mp4" type="video/mp4" />
+                    </video>
+
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/30 pointer-events-none" />
+
+                    {/* CTA content */}
+                    <div className="relative z-10 text-center px-4 flex flex-col items-center gap-2">
+                      {/* Animated ring + play icon */}
+                      <div className="relative mb-1">
+                        <span className="absolute inset-0 rounded-full bg-green-400/40 animate-ping" />
+                        <div className="relative w-16 h-16 rounded-full bg-green-500/30 border-2 border-green-400 flex items-center justify-center backdrop-blur-sm shadow-lg shadow-green-500/30">
+                          <Play className="w-7 h-7 text-green-400 fill-green-400 ml-0.5" />
+                        </div>
+                      </div>
+
+                      <p className="text-white font-bold text-base drop-shadow-lg leading-snug">
+                        اضغط <span className="text-green-400">ابدأ مباشرة</span> للبدء
+                      </p>
+                      <p className="text-white/65 text-xs drop-shadow">
+                        🟢 آلاف المستخدمين يتحدثون الآن
+                      </p>
                     </div>
-                    <p className="text-white/60 text-sm">اضغط <span className="text-green-400 font-bold">ابدأ مباشرة</span> للبدء</p>
-                  </div>
+                  </>
                 ) : (
                   <div className="text-center">
                     <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-3" />
