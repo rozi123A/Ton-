@@ -2,12 +2,19 @@ import { Menu, X, LogOut, Video, UserCircle, Star } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import NotificationBell from "@/components/NotificationBell";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading, logout } = useAuth();
+
+  const { data: notifData } = trpc.notifications.get.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  });
+  const unreadNotifCount = notifData ? notifData.filter(n => !n.isRead).length : 0;
 
   const handleStartChat = () => setLocation("/chat");
   const handleLogin    = () => setLocation("/login");
@@ -94,9 +101,25 @@ export default function Header() {
           )}
         </div>
 
-        {/* Hamburger */}
-        <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-          {isMenuOpen ? <X className="w-6 h-6 text-gray-900" /> : <Menu className="w-6 h-6 text-gray-900" />}
+        {/* Hamburger — with notification badge */}
+        <button className="md:hidden relative p-1" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          {isMenuOpen ? (
+            <X className="w-6 h-6 text-gray-900" />
+          ) : (
+            <>
+              <Menu className="w-6 h-6 text-gray-900" />
+              {unreadNotifCount > 0 && !isMenuOpen && (
+                <>
+                  {/* Ping animation ring */}
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 opacity-75 animate-ping" />
+                  {/* Solid badge with count */}
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white shadow-lg">
+                    {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                  </span>
+                </>
+              )}
+            </>
+          )}
         </button>
       </div>
 
