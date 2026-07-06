@@ -239,12 +239,15 @@ export default function ChatRoom() {
 
   useEffect(() => { if (balanceQuery.data) setCredits(balanceQuery.data.credits); }, [balanceQuery.data]);
 
-  // Auto-fill country for all users from their detected profile country
+  // We no longer auto-fill country filter to avoid locking users into same-country matching by default.
+  // This ensures "ابدأ مباشرة" (Quick Start) works globally unless user explicitly chooses a country.
+  /* 
   useEffect(() => {
     if (myCountry) {
       setFilterCountry(myCountry);
     }
-  }, [myCountry]);
+  }, [myCountry]); 
+  */
 
   // ── signaling ──────────────────────────────────────────────────────────────
   const signal = useCallback(async (type: string, data?: unknown, text?: string) => {
@@ -1444,11 +1447,8 @@ export default function ChatRoom() {
                     if (isMatched)        { handleNext(); }
                     else if (isSearching) { stopSession(); }
                     else                  { 
-                      if (filterCountry !== 'any' || filterGender !== 'any') {
-                        startSession(filterGender, filterCountry);
-                      } else {
-                        startSession('any', 'any');
-                      }
+                      // Force global matching on quick start to ensure users find each other
+                      startSession('any', 'any');
                     }
                   }}
                   className={`flex items-center justify-center gap-2.5 py-3.5 rounded-[18px] font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 shadow-lg ${
