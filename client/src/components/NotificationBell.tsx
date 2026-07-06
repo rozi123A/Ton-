@@ -93,6 +93,37 @@ export default function NotificationBell() {
     onSuccess: () => refetchNotifs()
   });
 
+  // Auto-open once per session when there are unread notifications
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRef.current) return;
+    const unreadCount = notifs.filter(n => !n.read).length;
+    if (unreadCount === 0) return;
+
+    const sessionKey = `notif_auto_shown_${userId}`;
+    if (sessionStorage.getItem(sessionKey)) return;
+
+    autoOpenedRef.current = true;
+    sessionStorage.setItem(sessionKey, '1');
+
+    // Delay so the page renders first
+    const openTimer = setTimeout(() => {
+      setOpen(true);
+      // Auto-close after 8 seconds if user doesn't interact
+      const closeTimer = setTimeout(() => {
+        setOpen(prev => {
+          if (prev) markReadMutation.mutate();
+          return false;
+        });
+      }, 8000);
+      // Store close timer so manual close can cancel it
+      (openTimer as unknown as { _closeTimer: ReturnType<typeof setTimeout> })._closeTimer = closeTimer;
+    }, 1200);
+
+    return () => clearTimeout(openTimer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifs, userId]);
+
   const addNotif = useCallback((raw: Omit<AppNotif, 'id' | 'read'>) => {
     const notif: AppNotif = { ...raw, id: `${raw.ts}-${Math.random()}`, read: false };
     setNotifs(prev => {
