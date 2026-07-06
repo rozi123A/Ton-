@@ -4,6 +4,7 @@ import { createServer } from "http";
 import net from "net";
 import fs from "fs";
 import path from "path";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
@@ -36,9 +37,62 @@ const NOTIF_TTL = 5 * 60 * 1000;
 interface AdminWatcher { res: Response; targetPeerId: string; }
 const adminWatchers = new Map<string, AdminWatcher>(); // watcherId → watcher
 
-// ── Recording storage ────────────────────────────────────────────────────────
+// ── Recording storage (Backblaze B2) ─────────────────────────────────────────
 const REC_DIR = path.join('/tmp', 'ton-recs');
 try { fs.mkdirSync(REC_DIR, { recursive: true }); } catch {}
+
+const B2_BUCKET   = process.env.B2_BUCKET   || '';
+const B2_ENDPOINT = process.env.B2_ENDPOINT  || ''; // e.g. s3.us-east-005.backblazeb2.com
+
+let b2: S3Client | null = null;
+if (B2_BUCKET && B2_ENDPOINT && process.env.B2_KEY_ID && process.env.B2_APP_KEY) {
+  const region = B2_ENDPOINT.split('.').slice(1, 3).join('-') || 'us-east-005';
+  b2 = new S3Client({
+    endpoint: `https://${B2_ENDPOINT}`,
+    region,
+    credentials: { accessKeyId: process.env.B2_KEY_ID!, secretAccessKey: process.env.B2_APP_KEY! },
+    forcePathStyle: true,
+  });
+  console.log('[B2] Backblaze storage enabled — bucket:', B2_BUCKET);
+} else {
+  console.warn('[B2] Backblaze env vars missing — recordings saved to /tmp only (ephemeral)');
+}
+
+async function b2Upload(key: string, body: Buffer, type = 'application/octet-stream') {
+  if (!b2 || !B2_BUCKET) return;
+  await b2.send(new PutObjectCommand({ Bucket: B2_BUCKET, Key: key, Body: body, ContentType: type }));
+}
+
+async function b2Download(key: string): Promise<Buffer | null> {
+  if (!b2 || !B2_BUCKET) return null;
+  try {
+    const r = await b2.send(new GetObjectCommand({ Bucket: B2_BUCKET, Key: key }));
+    const chunks: Uint8Array[] = [];
+    for await (const c of r.Body as AsyncIterable<Uint8Array>) chunks.push(c);
+    return Buffer.concat(chunks);
+  } catch { return null; }
+}
+
+async function b2Delete(key: string) {
+  if (!b2 || !B2_BUCKET) return;
+  try { await b2.send(new DeleteObjectCommand({ Bucket: B2_BUCKET, Key: key })); } catch {}
+}
+
+async function b2ListRecordings(): Promise<any[]> {
+  if (!b2 || !B2_BUCKET) return [];
+  try {
+    const r = await b2.send(new ListObjectsV2Command({ Bucket: B2_BUCKET, Prefix: 'recordings/' }));
+    const jsonFiles = (r.Contents || []).filter(o => o.Key?.endsWith('.meta.json'));
+    const metas: any[] = [];
+    for (const obj of jsonFiles) {
+      const data = await b2Download(obj.Key!);
+      if (data) {
+        try { metas.push(JSON.parse(data.toString('utf8'))); } catch {}
+      }
+    }
+    return metas.sort((a, b) => (b.startTime || 0) - (a.startTime || 0));
+  } catch (e) { console.error('[B2 list]', e); return []; }
+}
 
 // Track recently-rejected pairs to avoid immediate re-match after rejection
 const rejectedPairs = new Map<string, number>(); // "id1:id2" -> timestamp
@@ -289,11 +343,10 @@ function registerSignalingRoutes(app: express.Express) {
 // ── Recording Routes ──────────────────────────────────────────────────────────
 
 function registerRecordingRoutes(app: express.Express) {
-  // Receive a video chunk from the peer's browser
-  app.post('/api/record/chunk', express.raw({ type: '*/*', limit: '20mb' }), (req: Request, res: Response) => {
+  // Receive a video chunk — chunks assembled in /tmp, then uploaded to B2 on final
+  app.post('/api/record/chunk', express.raw({ type: '*/*', limit: '20mb' }), async (req: Request, res: Response) => {
     const { sessionId, isFinal, name1, name2, peerId } = req.query as Record<string, string>;
     if (!sessionId || !peerId) { res.json({ ok: false }); return; }
-    // Only allow if peerId is currently active (prevents spam)
     if (!peers.has(peerId) && isFinal !== 'true') { res.json({ ok: false, reason: 'peer not active' }); return; }
 
     const chunk = req.body as Buffer;
@@ -311,53 +364,88 @@ function registerRecordingRoutes(app: express.Express) {
       if (!meta.startTime) {
         meta = { sessionId, startTime: Date.now(), name1: name1 || '?', name2: name2 || '?' };
       }
-      if (isFinal === 'true') meta.endTime = Date.now();
-      fs.writeFileSync(metaPath, JSON.stringify(meta));
-    } catch (e) {
-      console.error('[record]', e);
-    }
+      if (isFinal === 'true') {
+        meta.endTime = Date.now();
+        meta.size = fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
+        fs.writeFileSync(metaPath, JSON.stringify(meta));
+
+        // Upload to Backblaze B2 permanently
+        if (b2) {
+          try {
+            const videoBuffer = fs.readFileSync(filePath);
+            const metaBuffer  = Buffer.from(JSON.stringify(meta));
+            await b2Upload(`recordings/${sessionId}.webm`, videoBuffer, 'video/webm');
+            await b2Upload(`recordings/${sessionId}.meta.json`, metaBuffer, 'application/json');
+            // Clean up /tmp after successful upload
+            try { fs.unlinkSync(filePath); } catch {}
+            try { fs.unlinkSync(metaPath); } catch {}
+            console.log(`[B2] Uploaded recording ${sessionId} (${Math.round((meta.size as number)/1024)}KB)`);
+          } catch (e) {
+            console.error('[B2] Upload failed — recording stays in /tmp', e);
+          }
+        }
+      } else {
+        fs.writeFileSync(metaPath, JSON.stringify(meta));
+      }
+    } catch (e) { console.error('[record]', e); }
     res.json({ ok: true });
   });
 
-  // List recordings
-  app.get('/api/admin/recordings', (req: Request, res: Response) => {
+  // List recordings — from B2 if configured, else from /tmp
+  app.get('/api/admin/recordings', async (req: Request, res: Response) => {
     const token = req.query.token as string;
     if (!validateAdminToken(token)) { res.status(403).json({ error: 'forbidden' }); return; }
     try {
-      const files = fs.readdirSync(REC_DIR).filter((f: string) => f.endsWith('.json'));
-      const recs = files.map((f: string) => {
-        try {
-          const meta = JSON.parse(fs.readFileSync(path.join(REC_DIR, f), 'utf8'));
-          const webm = path.join(REC_DIR, f.replace('.json', '.webm'));
-          const size = fs.existsSync(webm) ? fs.statSync(webm).size : 0;
-          return { ...meta, size };
-        } catch { return null; }
-      }).filter(Boolean).sort((a: any, b: any) => (b.startTime || 0) - (a.startTime || 0));
-      res.json({ recordings: recs });
+      if (b2) {
+        const recs = await b2ListRecordings();
+        res.json({ recordings: recs, source: 'b2' });
+      } else {
+        const files = fs.readdirSync(REC_DIR).filter((f: string) => f.endsWith('.json'));
+        const recs = files.map((f: string) => {
+          try {
+            const meta = JSON.parse(fs.readFileSync(path.join(REC_DIR, f), 'utf8'));
+            const webm = path.join(REC_DIR, f.replace('.json', '.webm'));
+            const size = fs.existsSync(webm) ? fs.statSync(webm).size : 0;
+            return { ...meta, size };
+          } catch { return null; }
+        }).filter(Boolean).sort((a: any, b: any) => (b.startTime || 0) - (a.startTime || 0));
+        res.json({ recordings: recs, source: 'tmp' });
+      }
     } catch { res.json({ recordings: [] }); }
   });
 
-  // Stream / download a recording
-  app.get('/api/admin/recording/:id', (req: Request, res: Response) => {
+  // Stream / download — from B2 if configured
+  app.get('/api/admin/recording/:id', async (req: Request, res: Response) => {
     const token = req.query.token as string;
     if (!validateAdminToken(token)) { res.status(403).send('forbidden'); return; }
     const id = req.params.id.replace(/[^a-zA-Z0-9_-]/g, '');
-    const filePath = path.join(REC_DIR, `${id}.webm`);
-    if (!fs.existsSync(filePath)) { res.status(404).send('not found'); return; }
-    const stat = fs.statSync(filePath);
     const isDownload = req.query.dl === '1';
-    res.setHeader('Content-Type', 'video/webm');
-    res.setHeader('Content-Length', stat.size);
-    if (isDownload) res.setHeader('Content-Disposition', `attachment; filename="${id}.webm"`);
-    else res.setHeader('Accept-Ranges', 'bytes');
-    fs.createReadStream(filePath).pipe(res);
+
+    if (b2) {
+      const data = await b2Download(`recordings/${id}.webm`);
+      if (!data) { res.status(404).send('not found'); return; }
+      res.setHeader('Content-Type', 'video/webm');
+      res.setHeader('Content-Length', data.length);
+      if (isDownload) res.setHeader('Content-Disposition', `attachment; filename="${id}.webm"`);
+      res.send(data);
+    } else {
+      const filePath = path.join(REC_DIR, `${id}.webm`);
+      if (!fs.existsSync(filePath)) { res.status(404).send('not found'); return; }
+      const stat = fs.statSync(filePath);
+      res.setHeader('Content-Type', 'video/webm');
+      res.setHeader('Content-Length', stat.size);
+      if (isDownload) res.setHeader('Content-Disposition', `attachment; filename="${id}.webm"`);
+      fs.createReadStream(filePath).pipe(res);
+    }
   });
 
-  // Delete a recording
-  app.delete('/api/admin/recording/:id', (req: Request, res: Response) => {
+  // Delete — from B2 + /tmp
+  app.delete('/api/admin/recording/:id', async (req: Request, res: Response) => {
     const token = req.query.token as string;
     if (!validateAdminToken(token)) { res.status(403).json({ error: 'forbidden' }); return; }
     const id = req.params.id.replace(/[^a-zA-Z0-9_-]/g, '');
+    await b2Delete(`recordings/${id}.webm`);
+    await b2Delete(`recordings/${id}.meta.json`);
     try { fs.unlinkSync(path.join(REC_DIR, `${id}.webm`)); } catch {}
     try { fs.unlinkSync(path.join(REC_DIR, `${id}.json`)); } catch {}
     res.json({ ok: true });
