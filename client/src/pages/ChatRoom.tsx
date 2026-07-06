@@ -1094,120 +1094,123 @@ export default function ChatRoom() {
       )}
 
       {/* Header */}
-      <div className="grid grid-cols-3 items-center mb-3 gap-1">
-        {/* Left: Profile */}
-        <button onClick={() => setLocation('/profile')}
-          className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors min-w-0">
-          <div className="relative flex-shrink-0">
-            <img src={myAvatar} alt={myName} className="w-8 h-8 rounded-full border-2 border-white/30 object-cover bg-white shadow-lg" />
-            {(user as any)?.isPremium && (
-              <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-0.5 border-2 border-gray-900 shadow">
-                <Star className="w-2 h-2 text-gray-900 fill-gray-900" />
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col items-start min-w-0">
-            <span className="text-xs font-bold truncate max-w-[60px] flex items-center gap-0.5">
-              {myName}
-              {(user as any)?.isPremium && <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
-            </span>
-            <span className="text-[9px] opacity-50">ملفي</span>
-          </div>
-        </button>
-
-        {/* Center: Title */}
-        <div className="text-center min-w-0">
-          <h1 className="text-base font-bold text-white leading-tight">غرفة الدردشة</h1>
-          <p className={`text-[10px] mt-0.5 font-semibold ${status === 'matched' ? 'text-green-400' : 'text-yellow-300 animate-pulse'}`}>
-            {status === 'matched' ? `${peerName} · ${statusLabel}` : statusLabel}
-          </p>
-          {(filterGender !== 'any' || filterCountry !== 'any') && (
-            <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
-              {filterGender !== 'any' && (
-                <span className="bg-purple-600/70 text-white text-[9px] px-1.5 py-0.5 rounded-full">
-                  {filterGender === 'male' ? 'ذكر' : 'أنثى'}
-                </span>
-              )}
-              {filterCountry !== 'any' && (
-                <span className="bg-pink-600/70 text-white text-[9px] px-1.5 py-0.5 rounded-full">
-                  {COUNTRIES.find(c => c.code === filterCountry)?.name.split(' ')[0] || filterCountry}
-                </span>
+      <div className="flex flex-col gap-3 mb-4 px-2">
+        {/* Top Row: Profile + Title + Wallet (Flexbox with proper spacing) */}
+        <div className="flex items-flex-start justify-between gap-3">
+          {/* Left: Profile */}
+          <button onClick={() => setLocation('/profile')}
+            className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors flex-shrink-0">
+            <div className="relative flex-shrink-0">
+              <img src={myAvatar} alt={myName} className="w-8 h-8 rounded-full border-2 border-white/30 object-cover bg-white shadow-lg" />
+              {(user as any)?.isPremium && (
+                <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-0.5 border-2 border-gray-900 shadow">
+                  <Star className="w-2 h-2 text-gray-900 fill-gray-900" />
+                </div>
               )}
             </div>
-          )}
-        </div>
+            <div className="flex flex-col items-start flex-shrink-0">
+              <span className="text-xs font-bold truncate max-w-[60px] flex items-center gap-0.5">
+                {myName}
+                {(user as any)?.isPremium && <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
+              </span>
+              <span className="text-[9px] opacity-50">ملفي</span>
+            </div>
+          </button>
 
-        {/* Right: Wallet & Credits */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-
-          {/* Row 1: Star wallet + Credits */}
-          <div className="flex items-center gap-2">
-            {/* Star Wallet */}
-            <button
-              onClick={() => {
-                const stars = walletQuery.data?.wallet || 0;
-                if (stars < 10) {
-                  toast("محفظة النجوم 🌟", {
-                    description: `رصيدك الحالي ${stars} نجوم. اشحن النجوم لاستخدام الرادار أو أرسل هدايا مميزة.`,
-                    action: { label: "شحن", onClick: () => setLocation('/store') }
-                  });
-                  return;
-                }
-                setShowConvertModal(true);
-              }}
-              className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2 py-1 rounded-full shadow-sm hover:bg-purple-500/30 transition-colors"
-            >
-              <Star className="w-3 h-3 text-purple-400 fill-purple-400" />
-              <span className="text-purple-300 text-[11px] font-black">{walletQuery.data?.wallet || 0}</span>
-              <span className="text-purple-500 text-[9px]">⭐</span>
-            </button>
-
-            {/* Credits */}
-            <button
-              onClick={() => setLocation('/store')}
-              className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 px-2 py-1 rounded-full shadow-sm hover:bg-yellow-500/30 transition-colors"
-            >
-              <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-              <span className="text-yellow-300 text-[11px] font-black">{credits}</span>
-            </button>
+          {/* Center: Title - Centered and takes available space */}
+          <div className="text-center flex-1 px-2 py-1">
+            <h1 className="text-base font-bold text-white leading-tight">غرفة الدردشة</h1>
+            <p className={`text-[10px] mt-1 font-semibold ${status === 'matched' ? 'text-green-400' : 'text-yellow-300 animate-pulse'}`}>
+              {status === 'matched' ? `${peerName} · ${statusLabel}` : statusLabel}
+            </p>
           </div>
 
-          {/* Row 2: Daily Bonus compact card */}
-          {showDailyBonus && (
-            <button
-              onClick={() => claimBonus.mutate()}
-              disabled={claimBonus.isPending}
-              className="relative flex items-center gap-2 px-3 py-0 h-[42px] w-[115px] rounded-2xl
-                         bg-gradient-to-r from-orange-500/80 to-amber-400/80
-                         backdrop-blur-md border border-orange-300/25
-                         shadow-sm shadow-orange-900/20
-                         active:scale-[0.97] hover:brightness-110
-                         transition-all duration-150 overflow-hidden flex-shrink-0"
-            >
-              {/* Glassmorphism sheen */}
-              <span className="absolute inset-0 bg-gradient-to-br from-white/15 to-transparent pointer-events-none rounded-2xl" />
+          {/* Right: Wallet & Credits */}
+          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+            {/* Row 1: Star wallet + Credits */}
+            <div className="flex items-center gap-2">
+              {/* Star Wallet */}
+              <button
+                onClick={() => {
+                  const stars = walletQuery.data?.wallet || 0;
+                  if (stars < 10) {
+                    toast("محفظة النجوم 🌟", {
+                      description: `رصيدك الحالي ${stars} نجوم. اشحن النجوم لاستخدام الرادار أو أرسل هدايا مميزة.`,
+                      action: { label: "شحن", onClick: () => setLocation('/store') }
+                    });
+                    return;
+                  }
+                  setShowConvertModal(true);
+                }}
+                className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2 py-1 rounded-full shadow-sm hover:bg-purple-500/30 transition-colors"
+              >
+                <Star className="w-3 h-3 text-purple-400 fill-purple-400" />
+                <span className="text-purple-300 text-[11px] font-black">{walletQuery.data?.wallet || 0}</span>
+                <span className="text-purple-500 text-[9px]">⭐</span>
+              </button>
 
-              {/* Gift icon with glow */}
-              <span
-                className="text-[20px] leading-none flex-shrink-0 relative z-10"
-                style={{ filter: 'drop-shadow(0 0 5px rgba(255,200,50,0.7))' }}
-              >🎁</span>
+              {/* Credits */}
+              <button
+                onClick={() => setLocation('/store')}
+                className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 px-2 py-1 rounded-full shadow-sm hover:bg-yellow-500/30 transition-colors"
+              >
+                <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                <span className="text-yellow-300 text-[11px] font-black">{credits}</span>
+              </button>
+            </div>
 
-              {/* Text */}
-              <div className="flex flex-col leading-tight relative z-10">
-                <span className="text-white font-black text-[11px] tracking-wide">مكافأة</span>
-                <span className="text-white/65 text-[9px]">اضغط للاستلام</span>
-              </div>
+            {/* Row 2: Daily Bonus compact card */}
+            {showDailyBonus && (
+              <button
+                onClick={() => claimBonus.mutate()}
+                disabled={claimBonus.isPending}
+                className="relative flex items-center gap-2 px-3 py-0 h-[42px] w-[115px] rounded-2xl
+                           bg-gradient-to-r from-orange-500/80 to-amber-400/80
+                           backdrop-blur-md border border-orange-300/25
+                           shadow-sm shadow-orange-900/20
+                           active:scale-[0.97] hover:brightness-110
+                           transition-all duration-150 overflow-hidden flex-shrink-0"
+              >
+                {/* Glassmorphism sheen */}
+                <span className="absolute inset-0 bg-gradient-to-br from-white/15 to-transparent pointer-events-none rounded-2xl" />
 
-              {/* Red pulse dot */}
-              <span className="absolute top-1.5 left-1.5 flex h-2 w-2 z-20">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-70" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-              </span>
-            </button>
-          )}
+                {/* Gift icon with glow */}
+                <span
+                  className="text-[20px] leading-none flex-shrink-0 relative z-10"
+                  style={{ filter: 'drop-shadow(0 0 5px rgba(255,200,50,0.7))' }}
+                >🎁</span>
 
+                {/* Text */}
+                <div className="flex flex-col leading-tight relative z-10">
+                  <span className="text-white font-black text-[11px] tracking-wide">مكافأة</span>
+                  <span className="text-white/65 text-[9px]">اضغط للاستلام</span>
+                </div>
+
+                {/* Red pulse dot */}
+                <span className="absolute top-1.5 left-1.5 flex h-2 w-2 z-20">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-70" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                </span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Filter Tags Row - Centered below title */}
+        {(filterGender !== 'any' || filterCountry !== 'any') && (
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            {filterGender !== 'any' && (
+              <span className="bg-purple-600/70 text-white text-[9px] px-2 py-1 rounded-full">
+                {filterGender === 'male' ? 'ذكر' : 'أنثى'}
+              </span>
+            )}
+            {filterCountry !== 'any' && (
+              <span className="bg-pink-600/70 text-white text-[9px] px-2 py-1 rounded-full">
+                {COUNTRIES.find(c => c.code === filterCountry)?.name.split(' ')[0] || filterCountry}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row gap-3 flex-1 min-h-0">
