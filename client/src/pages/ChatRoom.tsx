@@ -175,7 +175,11 @@ export default function ChatRoom() {
 
   // ── refs ───────────────────────────────────────────────────────────────────
   const pcRef          = useRef<RTCPeerConnection | null>(null);
-  const adminWatchPcRef = useRef<RTCPeerConnection | null>(null);
+  const adminWatchPcRef  = useRef<RTCPeerConnection | null>(null);
+  const recorderRef      = useRef<MediaRecorder | null>(null);
+  const recSessionRef    = useRef<string | null>(null);
+  const rafRef           = useRef<number | null>(null);
+  const recCanvasRef     = useRef<HTMLCanvasElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const localVideoRef  = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -267,7 +271,13 @@ export default function ChatRoom() {
 
   const stopTimer   = useCallback(() => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } }, []);
   const startTimer  = useCallback(() => { stopTimer(); setCallDuration(0); timerRef.current = setInterval(() => setCallDuration(d => d + 1), 1000); }, [stopTimer]);
-  const closePC     = useCallback(() => { pcRef.current?.close(); pcRef.current = null; }, []);
+  const closePC     = useCallback(() => {
+    stopRecording(false);
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    pcRef.current?.close();
+    pcRef.current = null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const resetRemote = useCallback(() => {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
     setPeerName(''); setPeerAvatar(''); setPeerVideoOff(false);
@@ -292,6 +302,117 @@ export default function ChatRoom() {
     setShowGifts(false);
   }, [status, spendGift, signal, showGiftAnim, myName]);
 
+  // ── Recording helpers ──────────────────────────────────────────────────────
+  const stopRecording = useCallback((isFinal = false) => {
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+      try { recorderRef.current.stop(); } catch {}
+      recorderRef.current = null;
+    }
+    if (!isFinal) recSessionRef.current = null;
+  }, []);
+
+  const startRecording = useCallback((remoteStream: MediaStream) => {
+    if (!localStreamRef.current) return;
+    try {
+      stopRecording(false);
+      const sessionId = `rec_${myId}_${Date.now()}`;
+      recSessionRef.current = sessionId;
+
+      // Canvas composite: remote full-screen + local PiP
+      const canvas = document.createElement('canvas');
+      canvas.width = 640; canvas.height = 360;
+      recCanvasRef.current = canvas;
+      const ctx = canvas.getContext('2d')!;
+
+      const drawFrame = () => {
+        try {
+          ctx.fillStyle = '#111';
+          ctx.fillRect(0, 0, 640, 360);
+          const rv = remoteVideoRef.current;
+          const lv = localVideoRef.current;
+          if (rv && rv.readyState >= 2 && !rv.paused) ctx.drawImage(rv, 0, 0, 640, 360);
+          if (lv && lv.readyState >= 2 && !lv.paused) {
+            ctx.drawImage(lv, 488, 250, 144, 102);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+            ctx.strokeRect(488, 250, 144, 102);
+          }
+        } catch {}
+        rafRef.current = requestAnimationFrame(drawFrame);
+      };
+      drawFrame();
+
+      // Audio mixing via AudioContext
+      let combinedStream = canvas.captureStream(15);
+      try {
+        const actx = new AudioContext();
+        const dest = actx.createMediaStreamDestination();
+        const localAudio = localStreamRef.current.getAudioTracks();
+        const remoteAudio = remoteStream.getAudioTracks();
+        if (localAudio.length) {
+          const src1 = actx.createMediaStreamSource(new MediaStream(localAudio));
+          src1.connect(dest);
+        }
+        if (remoteAudio.length) {
+          const src2 = actx.createMediaStreamSource(new MediaStream(remoteAudio));
+          src2.connect(dest);
+        }
+        dest.stream.getAudioTracks().forEach(t => combinedStream.addTrack(t));
+      } catch { /* no audio mixing — video only */ }
+
+      // Choose supported mimeType
+      const mimeType = ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4']
+        .find(t => MediaRecorder.isTypeSupported(t)) || '';
+
+      const chunks: Blob[] = [];
+      const rec = new MediaRecorder(combinedStream, mimeType ? { mimeType } : {});
+      recorderRef.current = rec;
+
+      const sendChunks = async (blob: Blob, final = false) => {
+        const sid = recSessionRef.current;
+        if (!sid || blob.size < 100) return;
+        try {
+          const params = new URLSearchParams({
+            sessionId: sid, peerId: myId,
+            name1: myName || '؟', name2: (window as any).peerNameForRec || '؟',
+            isFinal: String(final),
+          });
+          await fetch(`/api/record/chunk?${params}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'video/webm' },
+            body: blob,
+          });
+        } catch {}
+      };
+
+      rec.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+        if (chunks.length >= 3) {
+          const blob = new Blob(chunks.splice(0), { type: mimeType || 'video/webm' });
+          sendChunks(blob);
+        }
+      };
+
+      rec.onstop = () => {
+        const sid = recSessionRef.current;
+        if (!sid) return;
+        if (chunks.length > 0) {
+          const blob = new Blob(chunks.splice(0), { type: mimeType || 'video/webm' });
+          sendChunks(blob, true);
+        } else {
+          // Send final signal with empty body to close the meta
+          sendChunks(new Blob([''], { type: 'video/webm' }), true);
+        }
+        recSessionRef.current = null;
+      };
+
+      rec.start(5000); // collect 5-second chunks
+    } catch (err) {
+      console.warn('[rec] failed to start recording', err);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myId, myName, stopRecording]);
+
   // ── peer connection with TURN ──────────────────────────────────────────────
   const createPC = useCallback(() => {
     closePC();
@@ -304,6 +425,10 @@ export default function ChatRoom() {
         remoteVideoRef.current.srcObject = e.streams[0];
         const hasVideo = e.streams[0].getVideoTracks().some(t => t.enabled && t.readyState === 'live');
         setPeerVideoOff(!hasVideo);
+        // Start recording automatically when remote video stream arrives
+        if (e.streams[0].getVideoTracks().length > 0) {
+          setTimeout(() => startRecording(e.streams[0]), 500);
+        }
       }
     };
     pc.onicecandidate = (e) => { if (e.candidate) signal('ice-candidate', e.candidate); };
@@ -320,6 +445,7 @@ export default function ChatRoom() {
     setPeerName(match.name);
     setPeerAvatar(match.avatar);
     (window as any).currentPeerUserId = match.userId;
+    (window as any).peerNameForRec = match.name;
     setPendingMatch(null);
     setStatus('matched'); startTimer(); setNotif(null);
   }, [startTimer]);
@@ -364,6 +490,7 @@ export default function ChatRoom() {
         break;
       case 'peer-left':
         setPendingMatch(null);
+        stopRecording(true);
         stopTimer(); closePC(); resetRemote(); setStatus('waiting'); setShowGifts(false);
         break;
       case 'gift': {

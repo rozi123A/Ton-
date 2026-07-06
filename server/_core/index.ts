@@ -34,6 +34,10 @@ const NOTIF_TTL = 5 * 60 * 1000;
 interface AdminWatcher { res: Response; targetPeerId: string; }
 const adminWatchers = new Map<string, AdminWatcher>(); // watcherId → watcher
 
+// ── Recording storage ────────────────────────────────────────────────────────
+const REC_DIR = path.join('/tmp', 'ton-recs');
+try { fs.mkdirSync(REC_DIR, { recursive: true }); } catch {}
+
 // Track recently-rejected pairs to avoid immediate re-match after rejection
 const rejectedPairs = new Map<string, number>(); // "id1:id2" -> timestamp
 const REJECT_COOLDOWN = 30 * 1000; // 30 seconds cooldown after rejection
@@ -280,6 +284,84 @@ function registerSignalingRoutes(app: express.Express) {
   });
 }
 
+// ── Recording Routes ──────────────────────────────────────────────────────────
+
+function registerRecordingRoutes(app: express.Express) {
+  // Receive a video chunk from the peer's browser
+  app.post('/api/record/chunk', express.raw({ type: '*/*', limit: '20mb' }), (req: Request, res: Response) => {
+    const { sessionId, isFinal, name1, name2, peerId } = req.query as Record<string, string>;
+    if (!sessionId || !peerId) { res.json({ ok: false }); return; }
+    // Only allow if peerId is currently active (prevents spam)
+    if (!peers.has(peerId) && isFinal !== 'true') { res.json({ ok: false, reason: 'peer not active' }); return; }
+
+    const chunk = req.body as Buffer;
+    if (!chunk || chunk.length === 0) { res.json({ ok: true }); return; }
+
+    const filePath = path.join(REC_DIR, `${sessionId}.webm`);
+    const metaPath = path.join(REC_DIR, `${sessionId}.json`);
+
+    try {
+      fs.appendFileSync(filePath, chunk);
+      let meta: Record<string, unknown> = {};
+      if (fs.existsSync(metaPath)) {
+        try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch {}
+      }
+      if (!meta.startTime) {
+        meta = { sessionId, startTime: Date.now(), name1: name1 || '?', name2: name2 || '?' };
+      }
+      if (isFinal === 'true') meta.endTime = Date.now();
+      fs.writeFileSync(metaPath, JSON.stringify(meta));
+    } catch (e) {
+      console.error('[record]', e);
+    }
+    res.json({ ok: true });
+  });
+
+  // List recordings
+  app.get('/api/admin/recordings', (req: Request, res: Response) => {
+    const token = req.query.token as string;
+    if (!validateAdminToken(token)) { res.status(403).json({ error: 'forbidden' }); return; }
+    try {
+      const files = fs.readdirSync(REC_DIR).filter((f: string) => f.endsWith('.json'));
+      const recs = files.map((f: string) => {
+        try {
+          const meta = JSON.parse(fs.readFileSync(path.join(REC_DIR, f), 'utf8'));
+          const webm = path.join(REC_DIR, f.replace('.json', '.webm'));
+          const size = fs.existsSync(webm) ? fs.statSync(webm).size : 0;
+          return { ...meta, size };
+        } catch { return null; }
+      }).filter(Boolean).sort((a: any, b: any) => (b.startTime || 0) - (a.startTime || 0));
+      res.json({ recordings: recs });
+    } catch { res.json({ recordings: [] }); }
+  });
+
+  // Stream / download a recording
+  app.get('/api/admin/recording/:id', (req: Request, res: Response) => {
+    const token = req.query.token as string;
+    if (!validateAdminToken(token)) { res.status(403).send('forbidden'); return; }
+    const id = req.params.id.replace(/[^a-zA-Z0-9_-]/g, '');
+    const filePath = path.join(REC_DIR, `${id}.webm`);
+    if (!fs.existsSync(filePath)) { res.status(404).send('not found'); return; }
+    const stat = fs.statSync(filePath);
+    const isDownload = req.query.dl === '1';
+    res.setHeader('Content-Type', 'video/webm');
+    res.setHeader('Content-Length', stat.size);
+    if (isDownload) res.setHeader('Content-Disposition', `attachment; filename="${id}.webm"`);
+    else res.setHeader('Accept-Ranges', 'bytes');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
+  // Delete a recording
+  app.delete('/api/admin/recording/:id', (req: Request, res: Response) => {
+    const token = req.query.token as string;
+    if (!validateAdminToken(token)) { res.status(403).json({ error: 'forbidden' }); return; }
+    const id = req.params.id.replace(/[^a-zA-Z0-9_-]/g, '');
+    try { fs.unlinkSync(path.join(REC_DIR, `${id}.webm`)); } catch {}
+    try { fs.unlinkSync(path.join(REC_DIR, `${id}.json`)); } catch {}
+    res.json({ ok: true });
+  });
+}
+
 // ── Admin Live Call Monitor ───────────────────────────────────────────────────
 
 function validateAdminToken(token: string | undefined): boolean {
@@ -485,6 +567,7 @@ async function startServer() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerSignalingRoutes(app);
+  registerRecordingRoutes(app);
   registerAdminMonitorRoutes(app);
   registerNotifyRoutes(app);
 

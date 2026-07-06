@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
-import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, Shield, Eye, EyeOff, Video, Radio, X, MonitorPlay } from 'lucide-react';
+import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, Shield, Eye, EyeOff, Video, Radio, X, MonitorPlay, Trash2, Play, Download } from 'lucide-react';
 
 const ADMIN_SESSION_KEY = 'admin_mode';
 
@@ -267,6 +267,175 @@ function CallWatcher({ call, token, onClose }: { call: ActiveCall; token: string
   );
 }
 
+
+/* ══════════════════════════════════════════════════════════
+   Recordings Tab
+══════════════════════════════════════════════════════════ */
+interface RecMeta {
+  sessionId: string;
+  startTime: number;
+  endTime?: number;
+  name1: string;
+  name2: string;
+  size: number;
+}
+
+function fmt(ms: number) {
+  const s = Math.round(ms / 1000);
+  const m = Math.floor(s / 60), ss = s % 60;
+  return m > 0 ? `${m}د ${ss}ث` : `${ss}ث`;
+}
+function fmtSize(b: number) {
+  if (b > 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} MB`;
+  return `${Math.round(b / 1024)} KB`;
+}
+function fmtDate(ts: number) {
+  return new Date(ts).toLocaleString('ar-EG', { hour12: true, year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function RecordingsTab({ token }: { token: string }) {
+  const [recs, setRecs] = useState<RecMeta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState<RecMeta | null>(null);
+
+  const fetchRecs = async () => {
+    try {
+      const r = await fetch(`/api/admin/recordings?token=${encodeURIComponent(token)}`);
+      const d = await r.json();
+      setRecs(d.recordings || []);
+    } catch {}
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchRecs();
+    const id = setInterval(fetchRecs, 10000);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const deleteRec = async (id: string) => {
+    if (!confirm('حذف هذا التسجيل نهائياً؟')) return;
+    await fetch(`/api/admin/recording/${id}?token=${encodeURIComponent(token)}`, { method: 'DELETE' });
+    setRecs(prev => prev.filter(r => r.sessionId !== id));
+    if (playing?.sessionId === id) setPlaying(null);
+  };
+
+  return (
+    <div>
+      {/* Stats row */}
+      <div style={{ display:'flex', gap:'10px', marginBottom:'16px' }}>
+        <div style={{ flex:1, backgroundColor:'#1e1b4b', border:'1px solid #3730a3', borderRadius:'14px', padding:'12px', textAlign:'center' }}>
+          <Video style={{ width:'18px', height:'18px', color:'#818cf8', margin:'0 auto 4px', display:'block' }} />
+          <p style={{ margin:0, fontSize:'26px', fontWeight:900, color:'white' }}>{recs.length}</p>
+          <p style={{ margin:0, fontSize:'11px', color:'#818cf8' }}>تسجيلات محفوظة</p>
+        </div>
+        <div style={{ flex:1, backgroundColor:'#052e16', border:'1px solid #166534', borderRadius:'14px', padding:'12px', textAlign:'center' }}>
+          <Download style={{ width:'18px', height:'18px', color:'#4ade80', margin:'0 auto 4px', display:'block' }} />
+          <p style={{ margin:0, fontSize:'22px', fontWeight:900, color:'white' }}>
+            {fmtSize(recs.reduce((a,r) => a + (r.size||0), 0))}
+          </p>
+          <p style={{ margin:0, fontSize:'11px', color:'#4ade80' }}>إجمالي الحجم</p>
+        </div>
+      </div>
+
+      {/* Video player modal */}
+      {playing && (
+        <div style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.92)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
+          <div style={{ backgroundColor:'#0f172a', borderRadius:'20px', border:'1px solid #1e293b', width:'100%', maxWidth:'500px', overflow:'hidden' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', borderBottom:'1px solid #1e293b', background:'linear-gradient(135deg,#1e1b4b,#312e81)' }}>
+              <div>
+                <p style={{ margin:0, fontSize:'14px', fontWeight:700, color:'white' }}>{playing.name1} ↔ {playing.name2}</p>
+                <p style={{ margin:0, fontSize:'11px', color:'#818cf8' }}>{fmtDate(playing.startTime)} · {fmtSize(playing.size)}</p>
+              </div>
+              <button onClick={() => setPlaying(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'white', padding:'4px' }}>
+                <X style={{ width:'18px', height:'18px' }} />
+              </button>
+            </div>
+            <video
+              key={playing.sessionId}
+              src={`/api/admin/recording/${playing.sessionId}?token=${encodeURIComponent(token)}`}
+              controls
+              autoPlay
+              style={{ width:'100%', backgroundColor:'#000', display:'block', maxHeight:'400px' }}
+            />
+            <div style={{ display:'flex', gap:'8px', padding:'10px 12px' }}>
+              <a
+                href={`/api/admin/recording/${playing.sessionId}?token=${encodeURIComponent(token)}&dl=1`}
+                download={`${playing.sessionId}.webm`}
+                style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', backgroundColor:'#1d4ed8', color:'white', borderRadius:'10px', padding:'8px', fontSize:'13px', fontWeight:700, textDecoration:'none' }}
+              >
+                <Download style={{ width:'14px', height:'14px' }} />
+                تحميل
+              </a>
+              <button
+                onClick={() => deleteRec(playing.sessionId)}
+                style={{ display:'flex', alignItems:'center', gap:'6px', backgroundColor:'#7f1d1d', color:'white', border:'none', borderRadius:'10px', padding:'8px 14px', cursor:'pointer', fontSize:'13px', fontWeight:700 }}
+              >
+                <Trash2 style={{ width:'14px', height:'14px' }} />
+                حذف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* List */}
+      <div style={{ backgroundColor:'#111827', border:'1px solid #374151', borderRadius:'16px', overflow:'hidden' }}>
+        <div style={{ padding:'12px 16px', borderBottom:'1px solid #1f2937', display:'flex', alignItems:'center', gap:'8px' }}>
+          <Video style={{ width:'16px', height:'16px', color:'#818cf8' }} />
+          <span style={{ color:'#e5e7eb', fontWeight:700, fontSize:'14px' }}>التسجيلات المحفوظة</span>
+          <button onClick={fetchRecs} style={{ marginRight:'auto', background:'none', border:'none', cursor:'pointer', color:'#6b7280', padding:'2px' }}>
+            <RefreshCw style={{ width:'14px', height:'14px' }} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ padding:'40px', textAlign:'center' }}>
+            <div style={{ width:'28px', height:'28px', border:'3px solid #7c3aed', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto' }} />
+          </div>
+        ) : recs.length === 0 ? (
+          <div style={{ padding:'48px', textAlign:'center', color:'#4b5563' }}>
+            <Video style={{ width:'40px', height:'40px', margin:'0 auto 12px', display:'block', opacity:0.3 }} />
+            <p style={{ margin:0, fontSize:'14px' }}>لا توجد تسجيلات بعد</p>
+            <p style={{ margin:0, fontSize:'11px', marginTop:'4px', color:'#374151' }}>تظهر هنا تلقائياً عند بدء أي مكالمة</p>
+          </div>
+        ) : recs.map((rec) => {
+          const dur = rec.endTime ? fmt(rec.endTime - rec.startTime) : 'جارٍ...';
+          return (
+            <div key={rec.sessionId} style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px 16px', borderBottom:'1px solid #1f2937' }}>
+              {/* Thumb */}
+              <div style={{ width:'48px', height:'48px', borderRadius:'12px', backgroundColor:'#1f2937', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Video style={{ width:'20px', height:'20px', color:'#818cf8' }} />
+              </div>
+              {/* Info */}
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ margin:0, fontSize:'13px', fontWeight:700, color:'white', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {rec.name1} <span style={{ color:'#6b7280' }}>↔</span> {rec.name2}
+                </p>
+                <p style={{ margin:0, fontSize:'11px', color:'#4b5563', marginTop:'2px' }}>
+                  {fmtDate(rec.startTime)} · {dur} · {fmtSize(rec.size)}
+                  {!rec.endTime && <span style={{ color:'#dc2626', marginRight:'4px' }}> ● جارٍ</span>}
+                </p>
+              </div>
+              {/* Actions */}
+              <div style={{ display:'flex', gap:'6px', flexShrink:0 }}>
+                <button onClick={() => setPlaying(rec)} style={{ display:'flex', alignItems:'center', gap:'4px', backgroundColor:'#4c1d95', color:'white', border:'none', borderRadius:'8px', padding:'6px 10px', cursor:'pointer', fontSize:'12px', fontWeight:700 }}>
+                  <Play style={{ width:'12px', height:'12px' }} />
+                  تشغيل
+                </button>
+                <button onClick={() => deleteRec(rec.sessionId)} style={{ display:'flex', alignItems:'center', backgroundColor:'#7f1d1d', color:'white', border:'none', borderRadius:'8px', padding:'6px 8px', cursor:'pointer' }}>
+                  <Trash2 style={{ width:'13px', height:'13px' }} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function LiveCallsTab({ token }: { token: string }) {
   const [calls, setCalls] = useState<ActiveCall[]>([]);
   const [stats, setStats] = useState({ online: 0, waiting: 0 });
@@ -347,7 +516,7 @@ function LiveCallsTab({ token }: { token: string }) {
 
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<'users'|'livecalls'>('users');
+  const [activeTab, setActiveTab] = useState<'users'|'livecalls'|'recordings'>('users');
   const adminToken = sessionStorage.getItem(ADMIN_SESSION_KEY) || '';
 
   const { data: registrations, isLoading: regLoading, refetch, isFetching } =
@@ -423,7 +592,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         <div style={{ display:'flex', gap:'6px', marginBottom:'20px', backgroundColor:'#111827', padding:'4px', borderRadius:'14px', border:'1px solid #374151' }}>
           {([
             { id:'users',     label:'المستخدمون',   icon:<Users style={{ width:'14px', height:'14px' }} />,  color:'#7c3aed' },
-            { id:'livecalls', label:'مكالمات حية',  icon:<Radio style={{ width:'14px', height:'14px' }} />,  color:'#be185d' },
+            { id:'livecalls',   label:'مكالمات حية',   icon:<Radio  style={{ width:'14px', height:'14px' }} />, color:'#be185d' },
+            { id:'recordings',  label:'التسجيلات',      icon:<Video  style={{ width:'14px', height:'14px' }} />, color:'#1d4ed8' },
           ] as const).map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex:1, padding:'9px', borderRadius:'10px', border:'none', cursor:'pointer', fontWeight:700, fontSize:'13px', backgroundColor: activeTab===tab.id ? tab.color : 'transparent', color: activeTab===tab.id ? 'white' : '#6b7280', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
               {tab.icon}{tab.label}
@@ -431,7 +601,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           ))}
         </div>
 
-        {activeTab === 'livecalls' ? <LiveCallsTab token={adminToken} /> : <>
+        {activeTab === 'livecalls' ? <LiveCallsTab token={adminToken} /> : activeTab === 'recordings' ? <RecordingsTab token={adminToken} /> : <>
 
         {/* Stats Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
