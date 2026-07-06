@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -314,7 +315,11 @@ export const appRouter = router({
         if (input.secret !== ENV.adminSecret) {
           throw new Error("كلمة المرور خاطئة");
         }
-        return { verified: true, token: Buffer.from(`admin:${ENV.adminSecret}`).toString('base64') };
+        const hmacToken = crypto
+          .createHmac('sha256', ENV.adminSecret)
+          .update('admin-session')
+          .digest('hex');
+        return { verified: true, token: hmacToken };
       }),
 
     /** If the caller is logged in, also promote them to admin in the DB */
