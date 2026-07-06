@@ -1,4 +1,5 @@
 import { Mail, Phone, MapPin, Video } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 /**
  * Footer Component
@@ -7,6 +8,7 @@ import { Mail, Phone, MapPin, Video } from "lucide-react";
  */
 
 export default function Footer() {
+  const { t } = useTranslation();
   return (
     <footer className="bg-gradient-to-b from-gray-900 to-black text-white py-16">
       <div className="container mx-auto px-4">
@@ -23,32 +25,27 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              منصة دردشة فيديو عشوائية حديثة تربط الأشخاص الحقيقيين من جميع أنحاء العالم.
+              {t('home.hero_desc')}
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-bold text-lg mb-4">روابط سريعة</h3>
+            <h3 className="font-bold text-lg mb-4">Links</h3>
             <ul className="space-y-2">
               <li>
                 <a href="#" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  الصفحة الرئيسية
+                  {t('nav.home') || 'Home'}
                 </a>
               </li>
               <li>
                 <a href="#features" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  الميزات
+                  {t('nav.features')}
                 </a>
               </li>
               <li>
                 <a href="#faq" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  الأسئلة الشائعة
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  المدونة
+                  {t('nav.faq')}
                 </a>
               </li>
             </ul>
@@ -56,31 +53,16 @@ export default function Footer() {
 
           {/* Legal Links */}
           <div>
-            <h3 className="font-bold text-lg mb-4">القانونية</h3>
+            <h3 className="font-bold text-lg mb-4">Legal</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  سياسة الخصوصية
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  شروط الخدمة
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  سياسة ملفات تعريف الارتباط
-                </a>
-              </li>
-              <li>
                 <a href="#security" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  مركز الأمان
+                  {t('nav.security')}
                 </a>
               </li>
               <li>
                 <button onClick={() => window.location.href = '/store'} className="text-gray-400 hover:text-purple-400 transition-colors">
-                  المتجر
+                  {t('nav.store')}
                 </button>
               </li>
             </ul>
@@ -88,7 +70,7 @@ export default function Footer() {
 
           {/* Contact Info */}
           <div>
-            <h3 className="font-bold text-lg mb-4">اتصل بنا</h3>
+            <h3 className="font-bold text-lg mb-4">Contact</h3>
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
                 <Mail className="w-5 h-5 text-purple-400 mt-1 flex-shrink-0" />
@@ -105,7 +87,7 @@ export default function Footer() {
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-purple-400 mt-1 flex-shrink-0" />
                 <span className="text-gray-400">
-                  العالم
+                  World
                 </span>
               </li>
             </ul>
@@ -119,7 +101,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between">
           {/* Copyright */}
           <p className="text-gray-400 text-sm text-center md:text-left">
-            © 2026 ConnectLive. جميع الحقوق محفوظة.
+            © 2026 ConnectLive. All rights reserved.
           </p>
 
           {/* Social Links */}

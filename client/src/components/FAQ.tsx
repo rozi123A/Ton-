@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 /**
@@ -56,15 +57,16 @@ const faqItems: FAQItem[] = [
 ];
 
 export default function FAQ() {
+  const { t } = useTranslation();
   return (
     <section id="faq" className="py-20 bg-gray-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 text-gray-900">
-            الأسئلة الشائعة حول <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">ConnectLive</span>
+            {t('nav.faq')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">ConnectLive</span>
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            نحن هنا للإجابة على جميع استفساراتك. إذا لم تجد إجابتك هنا، فلا تتردد في التواصل معنا.
+            {t('home.hero_desc')}
           </p>
         </div>
 

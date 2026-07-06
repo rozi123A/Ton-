@@ -1,4 +1,5 @@
 import { Shield, Lock, UserCheck, Lightbulb } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 /**
  * Security Section Component
@@ -36,16 +37,17 @@ const securityPoints: SecurityPoint[] = [
 ];
 
 export default function Security() {
+  const { t } = useTranslation();
   return (
     <section id="security" className="py-20 bg-white">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 text-gray-900">
-            مركز <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">الأمان</span> في ConnectLive
+            {t('nav.security')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">ConnectLive</span>
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            نلتزم بتوفير بيئة آمنة وموثوقة لجميع مستخدمينا. يتم بناء منصتنا على مبادئ الخصوصية والحماية.
+            {t('home.hero_desc')}
           </p>
         </div>
 
