@@ -67,15 +67,15 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header gradient banner */}
-        <div className="h-24 bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 relative">
+        <div className="h-28 bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 relative">
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 transition-colors"
+            className="absolute top-3 right-3 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 transition-colors z-10"
           >
             <X className="w-4 h-4" />
           </button>
           {profile.isPremium && (
-            <div className="absolute top-3 left-3 bg-yellow-400 text-gray-900 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+            <div className="absolute top-3 left-3 bg-yellow-400 text-gray-900 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
               <Star className="w-3 h-3 fill-gray-900" /> VIP
             </div>
           )}
@@ -83,8 +83,9 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
 
         {/* Avatar + basic info */}
         <div className="px-5 pb-5">
-          <div className="flex items-end gap-4 -mt-12 mb-4">
-            <div className="relative">
+          {/* Avatar positioning - moved down more with -mt-10 and adjusted layout */}
+          <div className="flex items-start gap-4 -mt-10 mb-4 relative z-20">
+            <div className="relative shrink-0">
               <img
                 src={profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.id}`}
                 alt={profile.name || ''}
@@ -94,7 +95,9 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
                 <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-gray-900" />
               )}
             </div>
-            <div className="pb-1 flex-1 min-w-0">
+            
+            {/* Info container - added pt-12 to push text below the gradient banner area */}
+            <div className="pt-11 flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-white font-black text-lg leading-tight truncate">{profile.name || 'مستخدم'}</h2>
                 {profile.isPremium && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
@@ -126,7 +129,7 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
 
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-2 mb-4">
-            {/* نجوم — مشوّشة دائماً، القيمة لا تأتي من السيرفر */}
+            {/* نجوم — مشوّشة دائماً */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
