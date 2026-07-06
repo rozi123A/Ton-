@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -27,6 +28,15 @@ function Router() {
 }
 
 function App() {
+  // ── Keep-alive: ping server every 10 min so Render.com never sleeps ──────
+  useEffect(() => {
+    const ping = () =>
+      fetch("/ping").catch(() => {/* ignore */});
+    ping(); // immediate ping on load
+    const id = setInterval(ping, 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
