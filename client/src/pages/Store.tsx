@@ -1,4 +1,4 @@
-import { ShoppingBag, Star, Camera, Shield, Zap, Sparkles, ArrowRight, Crown, Copy, CheckCircle2, Wallet } from "lucide-react";
+import { ShoppingBag, Star, Camera, Shield, Zap, Sparkles, ArrowRight, Crown, Copy, CheckCircle2, Wallet, Info } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -64,10 +64,11 @@ export default function Store() {
   const PREMIUM_COST = 500;
   const canAfford    = userCredits >= PREMIUM_COST;
 
+  // أسعار جديدة مخفضة
   const starPackages = [
-    { amount: 50,  price: "$1.99",  label: "باقة المبتدئين" },
-    { amount: 150, price: "$4.99",  label: "الباقة الاقتصادية", popular: true },
-    { amount: 500, price: "$12.99", label: "باقة المحترفين" },
+    { amount: 50,  price: "$0.99",  label: "باقة المبتدئين" },
+    { amount: 150, price: "$2.49",  label: "الباقة الاقتصادية", popular: true },
+    { amount: 500, price: "$6.99", label: "باقة المحترفين" },
   ];
 
   const premiumFeatures = [
@@ -204,11 +205,11 @@ export default function Store() {
                   {payMethod === 'money' && (
                     <div className="space-y-3">
                       <div className="flex items-baseline justify-center gap-1 mb-4">
-                        <span className="text-4xl font-black text-gray-900">$9.99</span>
+                        <span className="text-4xl font-black text-gray-900">$2.99</span>
                         <span className="text-gray-400 text-sm">/شهرياً</span>
                       </div>
                       <Button
-                        onClick={() => handlePayClick({ type: 'vip', amount: 0, price: '$9.99' })}
+                        onClick={() => handlePayClick({ type: 'vip', amount: 0, price: '$2.99' })}
                         className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:brightness-110 text-white font-black py-6 text-base rounded-2xl shadow-lg shadow-purple-300/40 transition-all gap-2"
                       >
                         <Sparkles className="w-5 h-5" /> اشترك الآن عبر Binance/USDT
@@ -290,17 +291,16 @@ export default function Store() {
                   <div className="mx-auto w-11 h-11 bg-yellow-50 rounded-full flex items-center justify-center mb-2 border border-yellow-200">
                     <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
                   </div>
-                  <CardTitle className="text-lg font-black">{pkg.amount} نجمة</CardTitle>
-                  <CardDescription className="text-xs">{pkg.label}</CardDescription>
+                  <CardTitle className="text-2xl font-black text-gray-900">{pkg.amount} نجمة</CardTitle>
+                  <CardDescription className="text-xs font-bold text-gray-400">{pkg.label}</CardDescription>
                 </CardHeader>
-                <CardContent className="text-center pb-3">
-                  <div className="text-3xl font-black text-gray-900">{pkg.price}</div>
-                  <p className="text-[11px] text-gray-400 mt-1">للرادار · الهدايا · التحويل</p>
+                <CardContent className="text-center pb-6">
+                  <div className="text-2xl font-black text-purple-600">{pkg.price}</div>
                 </CardContent>
-                <CardFooter className="pt-0">
+                <CardFooter>
                   <Button
                     onClick={() => handlePayClick({ type: 'stars', amount: pkg.amount, price: pkg.price })}
-                    className={`w-full font-bold rounded-xl ${pkg.popular ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-900' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
+                    className={`w-full font-bold rounded-xl py-5 ${pkg.popular ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-500' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                   >
                     شحن الآن
                   </Button>
@@ -309,118 +309,117 @@ export default function Store() {
             ))}
           </div>
         </div>
-
-        {/* ══ Payment Modal ═════════════════════════════════════════ */}
-        <Dialog open={showPayModal} onOpenChange={setShowPayModal}>
-          <DialogContent className="sm:max-w-[450px] rounded-3xl overflow-hidden p-0 border-none shadow-2xl" dir="rtl">
-            <div className="bg-gradient-to-br from-purple-600 to-fuchsia-700 p-6 text-white">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-black flex items-center gap-2">
-                  <Wallet className="w-6 h-6" />
-                  إتمام الدفع الرقمي
-                </DialogTitle>
-                <DialogDescription className="text-purple-100 text-sm mt-1">
-                  اختر وسيلة الدفع المفضلة لديك وقم بالتحويل.
-                </DialogDescription>
-              </DialogHeader>
-            </div>
-
-            <div className="p-6 space-y-6 bg-white">
-              {/* Summary */}
-              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">المنتج</p>
-                  <p className="text-gray-900 font-black">
-                    {selectedItem?.type === 'vip' ? 'اشتراك Premium VIP' : `${selectedItem?.amount} نجمة`}
-                  </p>
-                </div>
-                <div className="text-left">
-                  <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">المبلغ</p>
-                  <p className="text-purple-600 font-black text-xl">{selectedItem?.price}</p>
-                </div>
-              </div>
-
-              {/* Method Toggle */}
-              <div className="flex gap-3 p-1 bg-gray-100 rounded-2xl">
-                <button
-                  onClick={() => setCryptoMethod('binance_pay')}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                    cryptoMethod === 'binance_pay' ? 'bg-white shadow text-yellow-600' : 'text-gray-400'
-                  }`}
-                >
-                  <span className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-[10px] text-white font-black">B</span>
-                  Binance Pay
-                </button>
-                <button
-                  onClick={() => setCryptoMethod('usdt_trc20')}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                    cryptoMethod === 'usdt_trc20' ? 'bg-white shadow text-green-600' : 'text-gray-400'
-                  }`}
-                >
-                  <span className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-[10px] text-white font-black">T</span>
-                  USDT (TRC20)
-                </button>
-              </div>
-
-              {/* Wallet Info */}
-              <div className="space-y-4">
-                <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4">
-                  <Label className="text-yellow-800 text-xs font-bold mb-2 block">
-                    {cryptoMethod === 'binance_pay' ? 'Binance Pay ID' : 'عنوان محفظة USDT (TRC20)'}
-                  </Label>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-white border border-yellow-200 rounded-xl px-3 py-2 text-sm font-mono text-gray-700 break-all">
-                      {cryptoMethod === 'binance_pay' ? payConfig?.binancePayId : payConfig?.usdtTrc20Address}
-                    </code>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="rounded-xl border-yellow-200 text-yellow-600 shrink-0"
-                      onClick={() => copyToClipboard(cryptoMethod === 'binance_pay' ? payConfig?.binancePayId || '' : payConfig?.usdtTrc20Address || '')}
-                    >
-                      {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-yellow-700/60 mt-2 leading-relaxed">
-                    * يرجى تحويل المبلغ الموضح أعلاه بدقة لضمان سرعة التفعيل.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="txid" className="text-gray-700 font-bold text-sm pr-1">رقم المعاملة (TXID / Order ID)</Label>
-                  <Input
-                    id="txid"
-                    placeholder="أدخل رقم المعاملة هنا للتأكيد..."
-                    value={txId}
-                    onChange={(e) => setTxId(e.target.value)}
-                    className="rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="p-6 bg-gray-50 flex-col gap-3 sm:flex-col">
-              <Button
-                onClick={handleSubmitPayment}
-                disabled={submitPaymentMutation.isPending || !txId}
-                className="w-full bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:brightness-110 text-white font-black py-6 rounded-2xl shadow-lg transition-all"
-              >
-                {submitPaymentMutation.isPending ? "جاري الإرسال..." : "تأكيد عملية الدفع"}
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setShowPayModal(false)}
-                className="w-full text-gray-400 hover:text-gray-600 font-bold"
-              >
-                إلغاء
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
       </main>
 
       <Footer />
+
+      {/* ══ Payment Modal ══════════════════════════════════════════ */}
+      <Dialog open={showPayModal} onOpenChange={setShowPayModal}>
+        <DialogContent className="sm:max-w-[420px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl" dir="rtl">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black flex items-center gap-2">
+                <Wallet className="w-6 h-6 text-purple-400" />
+                تأكيد عملية الدفع
+              </DialogTitle>
+              <DialogDescription className="text-gray-400 text-sm mt-1">
+                اختر وسيلة الدفع المفضلة لديك وقم بالتحويل.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="p-6 bg-white space-y-6">
+            {/* Summary */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <div>
+                <p className="text-gray-400 text-[10px] font-bold uppercase mb-0.5">المنتج</p>
+                <p className="text-gray-900 font-black text-sm">
+                  {selectedItem?.type === 'vip' ? 'اشتراك Premium VIP' : `${selectedItem?.amount} نجمة`}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-gray-400 text-[10px] font-bold uppercase mb-0.5">المبلغ</p>
+                <p className="text-purple-600 font-black text-lg">{selectedItem?.price}</p>
+              </div>
+            </div>
+
+            {/* Crypto Tabs */}
+            <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl">
+              <button
+                onClick={() => setCryptoMethod('binance_pay')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  cryptoMethod === 'binance_pay' ? 'bg-white shadow text-gray-900' : 'text-gray-400'
+                }`}
+              >
+                <div className="w-4 h-4 rounded-full bg-yellow-400 flex items-center justify-center text-[8px] font-black text-gray-900">B</div>
+                Binance Pay
+              </button>
+              <button
+                onClick={() => setCryptoMethod('usdt_trc20')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  cryptoMethod === 'usdt_trc20' ? 'bg-white shadow text-gray-900' : 'text-gray-400'
+                }`}
+              >
+                <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-[8px] font-black text-white">T</div>
+                USDT (TRC20)
+              </button>
+            </div>
+
+            {/* Address Box */}
+            <div className="p-5 bg-yellow-50/50 border border-yellow-100 rounded-2xl text-center relative">
+              <p className="text-yellow-700 text-[10px] font-black uppercase mb-2">
+                {cryptoMethod === 'binance_pay' ? 'Binance Pay ID' : 'USDT TRC20 Address'}
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <code className="text-gray-900 font-black text-base tracking-wider">
+                  {cryptoMethod === 'binance_pay' 
+                    ? (payConfig?.binancePayId || '813764011') 
+                    : (payConfig?.usdtAddress || 'سيظهر العنوان هنا')}
+                </code>
+                <button 
+                  onClick={() => copyToClipboard(cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtAddress || ''))}
+                  className="p-2 hover:bg-yellow-100 rounded-lg transition-colors"
+                >
+                  <Copy className="w-4 h-4 text-yellow-600" />
+                </button>
+              </div>
+              <p className="mt-3 text-[10px] text-yellow-600 font-medium">
+                * يرجى تحويل المبلغ الموضح أعلاه بدقة لضمان سرعة التفعيل.
+              </p>
+            </div>
+
+            {/* TXID Input */}
+            <div className="space-y-3">
+              <Label className="text-gray-900 font-black text-sm flex items-center gap-2">
+                رقم المعاملة (TXID / Order ID)
+                <div className="group relative">
+                  <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                  <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    تجد هذا الرقم في تطبيق Binance بعد إتمام التحويل في تفاصيل العملية.
+                  </div>
+                </div>
+              </Label>
+              <Input
+                placeholder="أدخل رقم المعاملة هنا للتأكيد..."
+                value={txId}
+                onChange={(e) => setTxId(e.target.value)}
+                className="rounded-xl border-gray-200 py-6 text-center font-mono text-sm focus:ring-purple-500"
+              />
+              <p className="text-[10px] text-gray-400 text-center">
+                سيقوم الأدمن بمراجعة هذا الرقم وتفعيل طلبك خلال دقائق.
+              </p>
+            </div>
+
+            <Button
+              onClick={handleSubmitPayment}
+              disabled={submitPaymentMutation.isPending}
+              className="w-full bg-gray-900 hover:bg-black text-white font-black py-6 rounded-2xl text-base shadow-xl transition-all"
+            >
+              {submitPaymentMutation.isPending ? "جاري الإرسال..." : "تأكيد عملية الدفع"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
