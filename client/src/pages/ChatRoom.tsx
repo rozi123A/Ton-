@@ -1254,8 +1254,7 @@ export default function ChatRoom() {
                       style={{ opacity: 0.55 }}
                       onError={(e) => { (e.target as HTMLVideoElement).style.display = 'none'; }}
                     >
-                      <source src="https://assets.mixkit.co/videos/preview/mixkit-young-woman-talking-on-video-call-4664-large.mp4" type="video/mp4" />
-                      <source src="https://assets.mixkit.co/videos/preview/mixkit-man-having-a-video-call-in-a-room-4700-large.mp4" type="video/mp4" />
+                      <source src="/promo.mp4" type="video/mp4" />
                     </video>
 
                     {/* Gradient overlay */}
