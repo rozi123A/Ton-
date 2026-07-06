@@ -24,6 +24,9 @@ const ICE_CONFIG: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
     {
       urls: 'turn:openrelay.metered.ca:80',
       username: 'openrelayproject',
@@ -627,10 +630,20 @@ export default function ChatRoom() {
       Notification.requestPermission().catch(() => {});
     }
 
-    const es = new EventSource(`/api/signal/connect?${params}`);
-    esRef.current = es;
-    es.onmessage = (e) => { try { handleEvent(JSON.parse(e.data)); } catch { /* ignore */ } };
-    es.onerror   = () => { if (!destroyedRef.current) setStatus('ended'); };
+    const connect = () => {
+      if (destroyedRef.current) return;
+      const es = new EventSource(`/api/signal/connect?${params}`);
+      esRef.current = es;
+      es.onmessage = (e) => { try { handleEvent(JSON.parse(e.data)); } catch { /* ignore */ } };
+      es.onerror = () => {
+        es.close();
+        if (!destroyedRef.current) {
+          console.log("[SSE] Connection lost, reconnecting in 3s...");
+          setTimeout(connect, 3000);
+        }
+      };
+    };
+    connect();
   }, [myId, myName, myAvatar, myGender, myCountry, handleEvent, user, walletQuery, deductRadarStars, setLocation]);
 
   // ── cleanup on unmount ─────────────────────────────────────────────────────

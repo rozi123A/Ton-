@@ -243,7 +243,15 @@ function registerSignalingRoutes(app: express.Express) {
       }
     }
 
-    req.on("close", () => removePeer(peerId));
+    const keepAlive = setInterval(() => {
+      if (!res.writableEnded) res.write(": ping\n\n");
+      else clearInterval(keepAlive);
+    }, 20000);
+
+    req.on("close", () => {
+      removePeer(peerId);
+      clearInterval(keepAlive);
+    });
   });
 
   app.post("/api/signal/send", express.json(), (req: Request, res: Response) => {
