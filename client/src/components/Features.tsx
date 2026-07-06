@@ -1,4 +1,5 @@
 import { Shield, Zap, Users, Lock, Smartphone, Award } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 /**
  * Features Section Component
@@ -53,16 +54,17 @@ const features: Feature[] = [
 ];
 
 export default function Features() {
+  const { t } = useTranslation();
   return (
     <section id="features" className="py-20 bg-white">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 text-gray-900">
-            لماذا تختار <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">ConnectLive</span>؟
+            {t('home.why_choose') || 'Why choose'} <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">ConnectLive</span>?
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            منصة دردشة فيديو عشوائية حديثة تجمع بين التكنولوجيا المتطورة والتركيز على الخصوصية والأمان.
+            {t('home.hero_desc')}
           </p>
         </div>
 

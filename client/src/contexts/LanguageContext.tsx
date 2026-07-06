@@ -31,6 +31,9 @@ const translations: Record<Language, Record<string, string>> = {
     "home.stats_users": "مستخدم نشط",
     "home.stats_countries": "دولة",
     "home.stats_matches": "مطابقة يومية",
+    "home.active_users": "المستخدمون النشطون الآن",
+    "home.why_choose": "لماذا تختار",
+    "home.how_it_works": "شاهد كيفية العمل",
 
     // Chat Room
     "chat.title": "غرفة الدردشة",
@@ -62,6 +65,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.points": "نقاط",
     "profile.views": "مشاهدة",
     "profile.since": "منذ",
+    "profile.view_profile": "عرض الملف الشخصي",
     "profile.send_friend": "إرسال طلب صداقة",
     "profile.is_friend": "أصدقاء بالفعل",
     "profile.pending": "طلب الصداقة بانتظار الرد",
@@ -110,6 +114,9 @@ const translations: Record<Language, Record<string, string>> = {
     "home.stats_users": "Active Users",
     "home.stats_countries": "Countries",
     "home.stats_matches": "Daily Matches",
+    "home.active_users": "Active Users Now",
+    "home.why_choose": "Why choose",
+    "home.how_it_works": "How it works",
 
     // Chat Room
     "chat.title": "Chat Room",
@@ -141,6 +148,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.points": "Points",
     "profile.views": "Views",
     "profile.since": "Since",
+    "profile.view_profile": "View Profile",
     "profile.send_friend": "Send Friend Request",
     "profile.is_friend": "Already Friends",
     "profile.pending": "Request Pending",
@@ -189,6 +197,9 @@ const translations: Record<Language, Record<string, string>> = {
     "home.stats_users": "Utilisateurs Actifs",
     "home.stats_countries": "Pays",
     "home.stats_matches": "Matchs Quotidiens",
+    "home.active_users": "Utilisateurs actifs",
+    "home.why_choose": "Pourquoi choisir",
+    "home.how_it_works": "Comment ça marche",
 
     // Chat Room
     "chat.title": "Salle de chat",
@@ -220,6 +231,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.points": "Points",
     "profile.views": "Vues",
     "profile.since": "Depuis",
+    "profile.view_profile": "Voir le profil",
     "profile.send_friend": "Envoyer demande d'ami",
     "profile.is_friend": "Déjà amis",
     "profile.pending": "Demande en attente",

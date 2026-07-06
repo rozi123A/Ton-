@@ -1,4 +1,5 @@
 import { Heart, UserCheck, Loader2 } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -43,6 +44,7 @@ type DisplayUser = {
 };
 
 function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: (id: number) => void }) {
+  const { t } = useTranslation();
   const cardRef = useRef<HTMLDivElement>(null);
   const viewedRef = useRef(false);
   const recordView = trpc.users.recordView.useMutation();
@@ -80,7 +82,7 @@ function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: 
         <div
           className={`relative mb-4 ${user.id > 0 ? 'cursor-pointer' : ''}`}
           onClick={() => user.id > 0 && onViewProfile?.(user.id)}
-          title={user.id > 0 ? "عرض الملف الشخصي" : undefined}
+          title={user.id > 0 ? t('profile.view_profile') || "View Profile" : undefined}
         >
           <img
             src={user.avatar}
@@ -112,7 +114,7 @@ function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: 
         )}
 
         {user.age > 0 && (
-          <p className="text-sm text-gray-500 mb-4">{user.age} سنة</p>
+          <p className="text-sm text-gray-500 mb-4">{user.age} {t('profile.years')}</p>
         )}
 
         <div className="flex items-center justify-center gap-4 text-sm text-gray-600 mb-4">
@@ -122,7 +124,7 @@ function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: 
           </div>
           <div className="flex items-center gap-1">
             <Heart className="w-4 h-4 text-pink-600" />
-            <span>نشط</span>
+            <span>{t('chat.online')}</span>
           </div>
         </div>
 
@@ -130,7 +132,7 @@ function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: 
           onClick={() => window.location.href = '/chat'}
           className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-4 rounded-2xl hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-purple-200 group-hover:shadow-purple-300"
         >
-          ابدا الدردشة
+          {t('nav.chat')}
         </button>
       </div>
     </div>
@@ -138,6 +140,7 @@ function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: 
 }
 
 export default function TrendingUsers() {
+  const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const utils = trpc.useUtils();
   const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);
@@ -183,12 +186,12 @@ export default function TrendingUsers() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">
-            المستخدمون النشطون الان
+            {t('home.active_users') || 'Active Users Now'}
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             {hasRealUsers
-              ? `${realUsers.length} مستخدم مسجل — تواصل معهم الان`
-              : "تواصل مع اشخاص حقيقيين يبحثون عن محادثات حقيقية الان"}
+              ? `${realUsers.length} ${t('home.stats_users')} — ${t('home.hero_title')}`
+              : t('home.hero_desc')}
           </p>
         </div>
 
