@@ -8,12 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 export default function Store() {
+  const { t: translate, isRTL } = useTranslation();
+  const t = (key: string) => translate(key);
   const [location, setLocation] = useLocation();
   const { user, refresh: mutateAuth } = useAuth();
   const [payMethod, setPayMethod] = useState<'money' | 'credits'>('money');
@@ -42,16 +45,16 @@ export default function Store() {
   /* ── mutations ─────────────────────────────────────────────────── */
   const submitPaymentMutation = trpc.gifts.submitPaymentRequest.useMutation({
     onSuccess: () => {
-      toast.success("تم إرسال طلبك بنجاح! سيتم تفعيل الميزة بعد مراجعة الإدارة (خلال 5-30 دقيقة).");
+      toast.success(t('store.payment_modal.success_msg'));
       setShowPayModal(false);
       setTxId('');
     },
-    onError: (e) => toast.error(`فشل إرسال الطلب: ${e.message}`),
+    onError: (e) => toast.error(`${t('store.payment_modal.error_msg')}: ${e.message}`),
   });
 
   const upgradeWithCreditsMutation = trpc.gifts.upgradeWithCredits.useMutation({
     onSuccess: () => {
-      toast.success("🎉 مرحباً بك في Premium! تم خصم 500 نقطة.");
+      toast.success(isRTL ? "🎉 مرحباً بك في Premium! تم خصم 500 نقطة." : "🎉 Welcome to Premium! 500 points deducted.");
       mutateAuth();
     },
     onError: (e) => toast.error(e.message),
@@ -64,26 +67,25 @@ export default function Store() {
   const PREMIUM_COST = 500;
   const canAfford    = userCredits >= PREMIUM_COST;
 
-  // أسعار جديدة مخفضة
   const starPackages = [
-    { amount: 50,  price: "$0.99",  label: "باقة المبتدئين" },
-    { amount: 150, price: "$2.49",  label: "الباقة الاقتصادية", popular: true },
-    { amount: 500, price: "$6.99", label: "باقة المحترفين" },
+    { amount: 50,  price: "$0.99",  label: t('store.stars_pack_1') },
+    { amount: 150, price: "$2.49",  label: t('store.stars_pack_2'), popular: true },
+    { amount: 500, price: "$6.99", label: t('store.stars_pack_3') },
   ];
 
   const premiumFeatures = [
-    { title: "تبديل الكاميرا",       icon: <Camera      className="w-5 h-5 text-blue-500"   /> },
-    { title: "فلاتر Premium",         icon: <Sparkles    className="w-5 h-5 text-purple-500" /> },
-    { title: "شارة ذهبية VIP",        icon: <Star        className="w-5 h-5 text-yellow-500" /> },
-    { title: "100 نقطة مجانية/شهر",   icon: <Zap         className="w-5 h-5 text-orange-500" /> },
-    { title: "فلتر الجنس والدولة",    icon: <Shield className="w-5 h-5 text-green-500"  /> },
-    { title: "أولوية المطابقة",       icon: <ArrowRight  className="w-5 h-5 text-indigo-500" /> },
+    { title: t('store.features.cam'),       icon: <Camera      className="w-5 h-5 text-blue-500"   /> },
+    { title: t('store.features.filters'),   icon: <Sparkles    className="w-5 h-5 text-purple-500" /> },
+    { title: t('store.features.badge'),     icon: <Star        className="w-5 h-5 text-yellow-500" /> },
+    { title: t('store.features.points'),    icon: <Zap         className="w-5 h-5 text-orange-500" /> },
+    { title: t('store.features.shield'),    icon: <Shield      className="w-5 h-5 text-green-500"  /> },
+    { title: t('store.features.priority'),  icon: <ArrowRight  className="w-5 h-5 text-indigo-500" /> },
   ];
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success("تم النسخ بنجاح");
+    toast.success(t('store.payment_modal.copy_success'));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -94,7 +96,7 @@ export default function Store() {
 
   const handleSubmitPayment = () => {
     if (!txId.trim()) {
-      toast.error("يرجى إدخال رقم المعاملة (TXID)");
+      toast.error(t('store.txid_placeholder'));
       return;
     }
     if (!selectedItem) return;
@@ -108,45 +110,38 @@ export default function Store() {
     });
   };
 
-  /* ── render ────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
 
       <main className="flex-grow container mx-auto px-4 py-10">
-
-        {/* Back button */}
         <div className="mb-8 flex justify-start">
           <button
             onClick={handleBack}
             className="group flex items-center gap-3 px-5 py-2.5 bg-gradient-to-b from-yellow-300 to-yellow-500 text-gray-900 font-bold rounded-2xl shadow-[0_4px_0_0_#a16207] active:shadow-none active:translate-y-1 transition-all hover:brightness-110"
           >
-            <ArrowRight className="w-4 h-4 rotate-180" />
-            {fromChat ? 'العودة للدردشة' : 'الصفحة الرئيسية'}
+            <ArrowRight className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
+            {fromChat ? t('common.back') : t('nav.features')}
           </button>
         </div>
 
-        {/* Page title */}
         <div className="text-center mb-10">
           <Badge className="mb-3 px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-100 border-none">
-            عروض حصرية
+            {t('store.exclusive')}
           </Badge>
           <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
             <ShoppingBag className="w-8 h-8 text-purple-600" />
-            متجر ConnectLive
+            {t('store.title')}
           </h1>
           <p className="text-gray-500 text-sm max-w-xl mx-auto">
-            ارتقِ بتجربتك مع ميزات Premium — اشترِ عبر Binance Pay أو USDT.
+            {t('store.desc')}
           </p>
         </div>
 
-        {/* ══ Premium Card ══════════════════════════════════════════ */}
         <div className="max-w-2xl mx-auto mb-12">
           <div className="relative overflow-hidden rounded-3xl border-2 border-purple-400 shadow-2xl shadow-purple-200 bg-white">
-
-            {/* VIP badge */}
             <div className="absolute top-0 left-0 bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white px-5 py-1.5 rounded-br-2xl font-black text-sm flex items-center gap-1">
-              <Crown className="w-3.5 h-3.5" /> VIP
+              <Crown className="w-3.5 h-3.5" /> {t('store.vip_badge')}
             </div>
 
             <div className="p-6 pt-8">
@@ -155,17 +150,16 @@ export default function Store() {
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-gray-900">Premium VIP</h2>
-                  <p className="text-gray-400 text-xs">الباقة الكاملة للمحترفين</p>
+                  <h2 className="text-xl font-black text-gray-900">{t('store.vip_title')}</h2>
+                  <p className="text-gray-400 text-xs">{t('store.vip_desc')}</p>
                 </div>
                 {isPremium && (
                   <span className="mr-auto bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">
-                    ✓ مشترك حالياً
+                    ✓ {t('store.current_sub')}
                   </span>
                 )}
               </div>
 
-              {/* Features grid */}
               <div className="grid grid-cols-2 gap-2.5 mb-7">
                 {premiumFeatures.map((f, i) => (
                   <div key={i} className="flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
@@ -175,55 +169,47 @@ export default function Store() {
                 ))}
               </div>
 
-              {/* ── Payment method toggle ─────────────────────────── */}
               {!isPremium && (
                 <>
                   <div className="flex gap-2 mb-5 p-1 bg-gray-100 rounded-2xl">
                     <button
                       onClick={() => setPayMethod('money')}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        payMethod === 'money'
-                          ? 'bg-white shadow text-purple-700'
-                          : 'text-gray-400 hover:text-gray-600'
+                        payMethod === 'money' ? 'bg-white shadow text-purple-700' : 'text-gray-400 hover:text-gray-600'
                       }`}
                     >
-                      💰 دفع رقمي (Binance)
+                      {t('store.digital_pay')}
                     </button>
                     <button
                       onClick={() => setPayMethod('credits')}
                       className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        payMethod === 'credits'
-                          ? 'bg-white shadow text-yellow-700'
-                          : 'text-gray-400 hover:text-gray-600'
+                        payMethod === 'credits' ? 'bg-white shadow text-yellow-700' : 'text-gray-400 hover:text-gray-600'
                       }`}
                     >
-                      <Zap className="w-3.5 h-3.5" /> بنقاطي
+                      <Zap className="w-3.5 h-3.5" /> {t('store.my_points')}
                     </button>
                   </div>
 
-                  {/* Money option */}
                   {payMethod === 'money' && (
                     <div className="space-y-3">
                       <div className="flex items-baseline justify-center gap-1 mb-4">
                         <span className="text-4xl font-black text-gray-900">$2.99</span>
-                        <span className="text-gray-400 text-sm">/شهرياً</span>
+                        <span className="text-gray-400 text-sm">{t('store.monthly')}</span>
                       </div>
                       <Button
                         onClick={() => handlePayClick({ type: 'vip', amount: 0, price: '$2.99' })}
                         className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:brightness-110 text-white font-black py-6 text-base rounded-2xl shadow-lg shadow-purple-300/40 transition-all gap-2"
                       >
-                        <Sparkles className="w-5 h-5" /> اشترك الآن عبر Binance/USDT
+                        <Sparkles className="w-5 h-5" /> {t('store.subscribe_now')}
                       </Button>
                     </div>
                   )}
 
-                  {/* Credits option */}
                   {payMethod === 'credits' && (
                     <div className="space-y-4">
-                      {/* Progress bar */}
                       <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-bold text-gray-700">رصيدك الحالي</span>
+                          <span className="text-sm font-bold text-gray-700">{t('store.balance')}</span>
                           <span className={`text-base font-black ${canAfford ? 'text-green-600' : 'text-red-500'}`}>
                             <Zap className="w-3.5 h-3.5 inline mb-0.5 mr-0.5" />
                             {userCredits} / {PREMIUM_COST}
@@ -236,8 +222,8 @@ export default function Store() {
                           />
                         </div>
                         {!canAfford && (
-                          <p className="text-xs text-gray-400 mt-1.5 text-right">
-                            تحتاج <span className="font-bold text-yellow-600">{PREMIUM_COST - userCredits} نقطة إضافية</span> — تجمّعها من المكافأة اليومية والهدايا.
+                          <p className="text-xs text-gray-400 mt-1.5">
+                            {t('store.need_more')} <span className="font-bold text-yellow-600">{PREMIUM_COST - userCredits} {t('store.points_extra')}</span> — {t('store.collect_daily')}
                           </p>
                         )}
                       </div>
@@ -246,17 +232,10 @@ export default function Store() {
                         onClick={() => upgradeWithCreditsMutation.mutate()}
                         disabled={!canAfford || upgradeWithCreditsMutation.isPending}
                         className={`w-full font-black py-6 text-base rounded-2xl shadow-lg transition-all gap-2 ${
-                          canAfford
-                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:brightness-110 text-gray-900 shadow-orange-200'
-                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          canAfford ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:brightness-110 text-gray-900 shadow-orange-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         }`}
                       >
-                        {upgradeWithCreditsMutation.isPending
-                          ? <><Zap className="w-5 h-5 animate-spin" /> جاري الخصم...</>
-                          : canAfford
-                            ? <><Zap className="w-5 h-5" /> اشترك بـ 500 نقطة ⚡</>
-                            : <><Zap className="w-5 h-5" /> رصيد غير كافٍ ({userCredits}/{PREMIUM_COST})</>
-                        }
+                        {upgradeWithCreditsMutation.isPending ? t('store.deducting') : canAfford ? t('store.points_btn') : `${t('store.insufficient_balance')} (${userCredits}/${PREMIUM_COST})`}
                       </Button>
                     </div>
                   )}
@@ -265,44 +244,43 @@ export default function Store() {
 
               {isPremium && (
                 <div className="text-center py-4 bg-green-50 rounded-2xl border border-green-200">
-                  <p className="text-green-700 font-black text-base">✨ أنت مشترك بالفعل في Premium</p>
-                  <p className="text-green-500 text-xs mt-1">استمتع بجميع الميزات الحصرية!</p>
+                  <p className="text-green-700 font-black text-base">✨ {t('store.already_premium')}</p>
+                  <p className="text-green-500 text-xs mt-1">{t('store.enjoy_features')}</p>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* ══ Star Packages ═════════════════════════════════════════ */}
         <div className="max-w-4xl mx-auto">
           <h2 className="text-xl font-bold text-gray-800 mb-5 text-center flex items-center justify-center gap-2">
             <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-            شحن النجوم
+            {t('store.stars_recharge')}
           </h2>
           <div className="grid sm:grid-cols-3 gap-5">
             {starPackages.map((pkg, i) => (
               <Card key={i} className={`relative overflow-hidden border-2 transition-all hover:scale-[1.02] hover:shadow-lg ${pkg.popular ? 'border-yellow-400 shadow-md' : 'border-gray-200'}`}>
                 {pkg.popular && (
                   <div className="absolute top-0 right-0 bg-yellow-400 text-gray-900 px-3 py-1 rounded-bl-xl font-black text-[10px] uppercase">
-                    الأكثر توفيراً ⭐
+                    {t('store.most_popular')}
                   </div>
                 )}
                 <CardHeader className="text-center pb-2 pt-8">
-                  <div className="mx-auto w-11 h-11 bg-yellow-50 rounded-full flex items-center justify-center mb-2 border border-yellow-200">
+                  <div className="mx-auto w-11 h-11 bg-yellow-50 rounded-full flex items-center justify-center mb-2">
                     <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
                   </div>
-                  <CardTitle className="text-2xl font-black text-gray-900">{pkg.amount} نجمة</CardTitle>
-                  <CardDescription className="text-xs font-bold text-gray-400">{pkg.label}</CardDescription>
+                  <CardTitle className="text-2xl font-black">{pkg.amount} {t('store.stars_count')}</CardTitle>
+                  <CardDescription className="font-bold text-purple-600">{pkg.label}</CardDescription>
                 </CardHeader>
-                <CardContent className="text-center pb-6">
-                  <div className="text-2xl font-black text-purple-600">{pkg.price}</div>
+                <CardContent className="text-center">
+                  <div className="text-3xl font-black text-gray-900">{pkg.price}</div>
                 </CardContent>
                 <CardFooter>
                   <Button
                     onClick={() => handlePayClick({ type: 'stars', amount: pkg.amount, price: pkg.price })}
-                    className={`w-full font-bold rounded-xl py-5 ${pkg.popular ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-500' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
+                    className="w-full bg-gray-900 hover:bg-black text-white rounded-xl font-bold"
                   >
-                    شحن الآن
+                    {t('store.buy_now')}
                   </Button>
                 </CardFooter>
               </Card>
@@ -313,111 +291,95 @@ export default function Store() {
 
       <Footer />
 
-      {/* ══ Payment Modal ══════════════════════════════════════════ */}
       <Dialog open={showPayModal} onOpenChange={setShowPayModal}>
-        <DialogContent className="sm:max-w-[420px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl" dir="rtl">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-black flex items-center gap-2">
-                <Wallet className="w-6 h-6 text-purple-400" />
-                تأكيد عملية الدفع
-              </DialogTitle>
-              <DialogDescription className="text-gray-400 text-sm mt-1">
-                اختر وسيلة الدفع المفضلة لديك وقم بالتحويل.
-              </DialogDescription>
-            </DialogHeader>
+        <DialogContent className="sm:max-w-md rounded-3xl border-none bg-gray-900 text-white overflow-hidden p-0">
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-8 text-center">
+            <div className="mx-auto w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 shadow-xl border border-white/30">
+              <Wallet className="w-8 h-8 text-white" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-white mb-2">{t('store.pay_modal_title')}</DialogTitle>
+            <DialogDescription className="text-white/80 text-sm">{t('store.pay_modal_desc')}</DialogDescription>
           </div>
 
-          <div className="p-6 bg-white space-y-6">
-            {/* Summary */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-              <div>
-                <p className="text-gray-400 text-[10px] font-bold uppercase mb-0.5">المنتج</p>
-                <p className="text-gray-900 font-black text-sm">
-                  {selectedItem?.type === 'vip' ? 'اشتراك Premium VIP' : `${selectedItem?.amount} نجمة`}
-                </p>
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
+              <div className="text-center border-r border-white/10">
+                <p className="text-white/40 text-[10px] uppercase font-bold mb-1">{t('store.product')}</p>
+                <p className="text-sm font-bold">{selectedItem?.type === 'vip' ? t('store.vip_title') : `${selectedItem?.amount} ${t('store.stars_count')}`}</p>
               </div>
-              <div className="text-right">
-                <p className="text-gray-400 text-[10px] font-bold uppercase mb-0.5">المبلغ</p>
-                <p className="text-purple-600 font-black text-lg">{selectedItem?.price}</p>
+              <div className="text-center">
+                <p className="text-white/40 text-[10px] uppercase font-bold mb-1">{t('store.amount')}</p>
+                <p className="text-lg font-black text-pink-400">{selectedItem?.price}</p>
               </div>
             </div>
 
-            {/* Crypto Tabs */}
-            <div className="flex gap-2 p-1 bg-gray-100 rounded-2xl">
-              <button
-                onClick={() => setCryptoMethod('binance_pay')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  cryptoMethod === 'binance_pay' ? 'bg-white shadow text-gray-900' : 'text-gray-400'
-                }`}
-              >
-                <div className="w-4 h-4 rounded-full bg-yellow-400 flex items-center justify-center text-[8px] font-black text-gray-900">B</div>
-                Binance Pay
-              </button>
+            <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
               <button
                 onClick={() => setCryptoMethod('usdt_trc20')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  cryptoMethod === 'usdt_trc20' ? 'bg-white shadow text-gray-900' : 'text-gray-400'
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all ${
+                  cryptoMethod === 'usdt_trc20' ? 'bg-white text-gray-900 shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'
                 }`}
               >
-                <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-[8px] font-black text-white">T</div>
-                USDT (TRC20)
+                USDT (TRC20) <span className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-[10px]">T</span>
+              </button>
+              <button
+                onClick={() => setCryptoMethod('binance_pay')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all ${
+                  cryptoMethod === 'binance_pay' ? 'bg-white text-gray-900 shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'
+                }`}
+              >
+                Binance Pay <span className="w-5 h-5 bg-yellow-500 text-white rounded-full flex items-center justify-center text-[10px]">B</span>
               </button>
             </div>
 
-            {/* Address Box */}
-            <div className="p-5 bg-yellow-50/50 border border-yellow-100 rounded-2xl text-center relative">
-              <p className="text-yellow-700 text-[10px] font-black uppercase mb-2">
-                {cryptoMethod === 'binance_pay' ? 'Binance Pay ID' : 'USDT TRC20 Address'}
-              </p>
-              <div className="flex items-center justify-center gap-3">
-                <code className="text-gray-900 font-black text-base tracking-wider">
-                  {cryptoMethod === 'binance_pay' 
-                    ? (payConfig?.binancePayId || '813764011') 
-                    : (payConfig?.usdtAddress || 'سيظهر العنوان هنا')}
-                </code>
-                <button 
-                  onClick={() => copyToClipboard(cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtAddress || ''))}
-                  className="p-2 hover:bg-yellow-100 rounded-lg transition-colors"
-                >
-                  <Copy className="w-4 h-4 text-yellow-600" />
-                </button>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <Label className="text-xs font-bold text-white/60 uppercase tracking-wider">
+                  {cryptoMethod === 'binance_pay' ? 'Binance Pay ID' : 'USDT Wallet (TRC20)'}
+                </Label>
               </div>
-              <p className="mt-3 text-[10px] text-yellow-600 font-medium">
-                * يرجى تحويل المبلغ الموضح أعلاه بدقة لضمان سرعة التفعيل.
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl blur group-hover:blur-md transition-all" />
+                <div className="relative flex items-center bg-gray-800 border border-white/10 rounded-2xl p-1">
+                  <div className="flex-1 px-4 py-3 font-mono text-sm text-white/90 truncate">
+                    {cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtAddress || 'Txxxxxxxxxxxxxxxxxxxxxxxxx')}
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtAddress || 'Txxxxxxxxxxxxxxxxxxxxxxxxx'))}
+                    className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors"
+                  >
+                    {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <p className="text-[10px] text-yellow-500/80 italic px-1">
+                * {isRTL ? 'يرجى تحويل المبلغ الموضح أعلاه بدقة لضمان سرعة التفعيل.' : 'Please transfer the exact amount shown above for fast activation.'}
               </p>
             </div>
 
-            {/* TXID Input */}
-            <div className="space-y-3">
-              <Label className="text-gray-900 font-black text-sm flex items-center gap-2">
-                رقم المعاملة (TXID / Order ID)
-                <div className="group relative">
-                  <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
-                  <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-gray-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    تجد هذا الرقم في تطبيق Binance بعد إتمام التحويل في تفاصيل العملية.
-                  </div>
-                </div>
+            <div className="space-y-3 pt-2">
+              <Label className="text-xs font-bold text-white/60 uppercase tracking-wider flex items-center gap-1.5">
+                {t('store.txid_label')}
+                <Info className="w-3 h-3 text-blue-400 cursor-help" title={t('store.txid_help')} />
               </Label>
               <Input
-                placeholder="أدخل رقم المعاملة هنا للتأكيد..."
                 value={txId}
                 onChange={(e) => setTxId(e.target.value)}
-                className="rounded-xl border-gray-200 py-6 text-center font-mono text-sm focus:ring-purple-500"
+                placeholder={t('store.txid_placeholder')}
+                className="bg-gray-800 border-white/10 rounded-2xl py-6 text-white placeholder:text-white/20 focus:border-purple-500 transition-all"
               />
-              <p className="text-[10px] text-gray-400 text-center">
-                سيقوم الأدمن بمراجعة هذا الرقم وتفعيل طلبك خلال دقائق.
-              </p>
             </div>
+          </div>
 
+          <DialogFooter className="p-6 pt-0">
             <Button
               onClick={handleSubmitPayment}
               disabled={submitPaymentMutation.isPending}
-              className="w-full bg-gray-900 hover:bg-black text-white font-black py-6 rounded-2xl text-base shadow-xl transition-all"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white font-black py-7 text-lg rounded-2xl shadow-2xl shadow-purple-900/40 transition-all border-t border-white/20"
             >
-              {submitPaymentMutation.isPending ? "جاري الإرسال..." : "تأكيد عملية الدفع"}
+              {submitPaymentMutation.isPending ? t('store.submitting') : t('store.confirm_pay')}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
