@@ -1,4 +1,5 @@
 import "dotenv/config";
+import crypto from "crypto";
 import express, { type Request, type Response } from "express";
 import { createServer } from "http";
 import net from "net";
@@ -491,8 +492,16 @@ function registerRecordingRoutes(app: express.Express) {
 function validateAdminToken(token: string | undefined): boolean {
   if (!token) return false;
   try {
+    const adminSecret = process.env.ADMIN_SECRET || 'admin2025';
+    // Accept HMAC-signed tokens (new) or legacy base64 tokens (transitional)
+    const expected = crypto
+      .createHmac('sha256', adminSecret)
+      .update('admin-session')
+      .digest('hex');
+    if (token === expected) return true;
+    // Legacy fallback: base64(admin:<secret>) — must match exact secret
     const decoded = Buffer.from(token, 'base64').toString('utf8');
-    return decoded.startsWith('admin:');
+    return decoded === `admin:${adminSecret}`;
   } catch { return false; }
 }
 
