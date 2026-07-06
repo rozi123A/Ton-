@@ -218,14 +218,23 @@ export default function NotificationBell() {
       {/* Bell button */}
       <button
         onClick={() => { setOpen(o => !o); if (!open) markAllRead(); }}
-        className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+        className={
+          unread > 0
+            ? "relative p-2 rounded-full transition-all duration-200 bg-red-50 hover:bg-red-100 ring-2 ring-red-200 shadow-sm shadow-red-100"
+            : "relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+        }
         title="الإشعارات"
       >
-        <Bell className="w-5 h-5 text-gray-600" />
+        <Bell className={unread > 0 ? "w-5 h-5 text-red-500" : "w-5 h-5 text-gray-600"} />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-md animate-pulse">
-            {unread > 9 ? '9+' : unread}
-          </span>
+          <>
+            {/* Ping ring for attention */}
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 opacity-60 animate-ping" />
+            {/* Solid badge */}
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 shadow-md border-2 border-white">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          </>
         )}
       </button>
 
