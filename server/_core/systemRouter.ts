@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { notifyOwner } from "./notification";
-import { adminProcedure, publicProcedure, router } from "./trpc";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "./trpc";
 
 export const systemRouter = router({
   health: publicProcedure
@@ -27,7 +27,8 @@ export const systemRouter = router({
       } as const;
     }),
 
-  getPaymentConfig: publicProcedure.query(async () => {
+  // 🔒 FIX: Payment config requires authentication — not public anymore
+  getPaymentConfig: protectedProcedure.query(async () => {
     const { ENV } = await import("./env");
     return {
       binancePayId: ENV.binancePayId,

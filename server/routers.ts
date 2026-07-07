@@ -56,7 +56,17 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const guestOpenId = `guest_${nanoid()}`;
-        const avatarUrl = input.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`;
+        // 🔒 FIX: Validate avatar URL — block SSRF via private/internal addresses
+        const _defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`;
+        const avatarUrl = (() => {
+          if (!input.avatar) return _defaultAvatar;
+          try {
+            const u = new URL(input.avatar);
+            if (u.protocol !== 'https:') return _defaultAvatar;
+            if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.0\.0\.0|::1)/i.test(u.hostname)) return _defaultAvatar;
+            return input.avatar;
+          } catch { return _defaultAvatar; }
+        })();
 
         // Use client-provided browser country first (always accurate), then IP fallback
         const country = input.country?.toUpperCase() || await detectCountry(ctx.req);
@@ -74,16 +84,18 @@ export const appRouter = router({
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        return { success: true, token: sessionToken };
+        // 🔒 FIX: Token sent via httpOnly cookie only — not exposed in response body
+        return { success: true };
       }),
 
     saveProfile: protectedProcedure
       .input(z.object({
-        name: z.string().optional(),
-        age: z.number().optional(),
+        // 🔒 FIX: Max lengths to prevent oversized payloads
+        name: z.string().max(100).optional(),
+        age: z.number().min(13).max(120).optional(),
         gender: z.enum(['male', 'female', 'other']).optional(),
-        avatar: z.string().optional(),
-        bio: z.string().optional(),
+        avatar: z.string().url().max(512).optional(),
+        bio: z.string().max(500).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await saveUserProfile(ctx.user.id, input);
@@ -155,7 +167,8 @@ export const appRouter = router({
 
   messages: router({
     save: protectedProcedure
-      .input(z.object({ receiverId: z.number(), content: z.string() }))
+      // 🔒 FIX: Limit message length to prevent spam/DoS
+      .input(z.object({ receiverId: z.number(), content: z.string().min(1).max(2000) }))
       .mutation(async ({ ctx, input }) => {
         await saveMessage(ctx.user.id, input.receiverId, input.content);
         return { success: true };

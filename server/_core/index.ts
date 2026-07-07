@@ -13,6 +13,9 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { ensureSchema } from "../db";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { validateEnv } from "./env";
 
 // ── Signaling via Server-Sent Events (SSE) ────────────────────────────────────
 
@@ -689,11 +692,38 @@ async function findAvailablePort(startPort = 3000): Promise<number> {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function startServer() {
+  // 🔒 FIX: Validate critical secrets on startup — exits if misconfigured
+  validateEnv();
   await ensureSchema();
   const app = express();
   const server = createServer(app);
 
   app.set("trust proxy", 1);
+
+  // 🔒 FIX: Security headers via helmet
+  app.use(helmet({
+    contentSecurityPolicy: false, // disabled to avoid breaking existing inline scripts
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  // 🔒 FIX: Rate limiting on sensitive endpoints
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20,
+    message: { error: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  const generalLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api/trpc/users.guestLogin', authLimiter);
+  app.use('/api/trpc/admin.verifyAdmin', authLimiter);
+  app.use('/api/trpc', generalLimiter);
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 

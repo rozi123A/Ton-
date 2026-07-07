@@ -55,6 +55,7 @@ export function useAuth(options?: UseAuthOptions) {
         sessionStorage.removeItem("manus-cookie");
         localStorage.removeItem("guest_token");
         localStorage.removeItem("manus-cookie");
+        localStorage.removeItem("manus-runtime-user-info"); // 🔒 FIX: clear any stale user data
       } catch {}
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
@@ -62,10 +63,7 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
+    // 🔒 FIX: Do NOT store sensitive user data in localStorage (XSS risk)
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
