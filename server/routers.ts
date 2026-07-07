@@ -202,17 +202,31 @@ export const appRouter = router({
     /** Submit manual payment request — admin approves from dashboard */
     submitPaymentRequest: protectedProcedure
       .input(z.object({
-        amount: z.string(),
-        method: z.string(),
-        transactionId: z.string(),
-        itemType: z.string(),
+        // 🔒 FIX: method and itemType are enum-validated — no freeform strings
+        method: z.enum(['binance_pay', 'usdt_trc20']),
+        transactionId: z.string().min(5).max(200).trim(),
+        itemType: z.enum(['vip', 'stars']),
         itemAmount: z.number().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        // 🔒 FIX: Amount is set server-side based on itemType — user cannot forge the price
+        const PRICES: Record<string, string> = {
+          vip: '.99',
+          stars_5000:  '/nix/store/smkzrg2vvp3lng3hq7v9svfni5mnqjh2-bash-interactive-5.2p37/bin/bash.99',
+          stars_15000: '.49',
+          stars_50000: '.99',
+        };
+        const priceKey = input.itemType === 'stars' ? `stars_${input.itemAmount}` : 'vip';
+        const amount = PRICES[priceKey] ?? PRICES[input.itemType] ?? ' .??';
+
         const { createPaymentRequest } = await import("./db");
         await createPaymentRequest({
           userId: ctx.user.id,
-          ...input
+          amount,
+          method: input.method,
+          transactionId: input.transactionId,
+          itemType: input.itemType,
+          itemAmount: input.itemAmount,
         });
         await createNotification(ctx.user.id, {
           type: 'system',
@@ -329,10 +343,11 @@ export const appRouter = router({
         return { success: true, creditsGained: creditsToGain };
       }),
 
-    /** Simulate purchasing credits (Stripe coming soon) */
-    buyCredits: protectedProcedure
-      .input(z.number().min(1).max(10000))
+    /** Grant credits — ADMIN ONLY. Prevents free credit generation by regular users */
+    buyCredits: adminProcedure
+      .input(z.number().min(1).max(100000))
       .mutation(async ({ ctx, input }) => {
+        // 🔒 FIX: Was publicly callable — now restricted to admins only
         await addCredits(ctx.user.id, input);
         const newBalance = await getUserCredits(ctx.user.id);
         return { success: true, newBalance };

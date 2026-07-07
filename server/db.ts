@@ -153,6 +153,8 @@ export async function ensureSchema(): Promise<void> {
        "createdAt"     TIMESTAMP NOT NULL DEFAULT now(),
        "updatedAt"     TIMESTAMP NOT NULL DEFAULT now()
      )`,
+    // 🔒 FIX: Unique index to block duplicate transaction IDs
+    `CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_txid_unique ON payment_requests ("transactionId")`,
   ];
 
   for (const stmt of tables) {
@@ -686,6 +688,16 @@ export async function createPaymentRequest(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  // 🔒 FIX: Block duplicate transaction IDs — one TXID can only be used once
+  const existing = await db
+    .select({ id: paymentRequests.id })
+    .from(paymentRequests)
+    .where(eq(paymentRequests.transactionId, data.transactionId))
+    .limit(1);
+  if (existing.length > 0) {
+    throw new Error('رقم المعاملة مستخدم بالفعل. يرجى التأكد من إدخال رقم صحيح وفريد.');
+  }
+
   await db.insert(paymentRequests).values({
     ...data,
     status: 'pending',
