@@ -186,7 +186,7 @@ export const appRouter = router({
       return { credits };
     }),
 
-    /** Submit a manual payment request (Binance/USDT) */
+    /** Submit payment request + auto-activate features immediately */
     submitPaymentRequest: protectedProcedure
       .input(z.object({
         amount: z.string(),
@@ -196,11 +196,35 @@ export const appRouter = router({
         itemAmount: z.number().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        // Record the request for admin reference
         const { createPaymentRequest } = await import("./db");
         await createPaymentRequest({
           userId: ctx.user.id,
           ...input
         });
+
+        // Auto-activate features immediately upon USDT address submission
+        const db = await getDb();
+        if (db) {
+          if (input.itemType === 'vip') {
+            await upgradeToPremium(ctx.user.id);
+            await createNotification(ctx.user.id, {
+              type: 'system',
+              title: '🎉 تم تفعيل VIP فوراً!',
+              message: 'تم تفعيل اشتراكك في Premium. استمتع بجميع الميزات الحصرية!',
+            });
+          } else if (input.itemType === 'stars' && input.itemAmount) {
+            await db.update(users)
+              .set({ wallet: sql`${users.wallet} + ${input.itemAmount}` })
+              .where(eq(users.id, ctx.user.id));
+            await createNotification(ctx.user.id, {
+              type: 'system',
+              title: '⭐ تمت إضافة النجوم!',
+              message: `تمت إضافة ${input.itemAmount} نجمة إلى محفظتك فوراً!`,
+            });
+          }
+        }
+
         return { success: true };
       }),
 
