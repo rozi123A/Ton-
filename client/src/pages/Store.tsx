@@ -45,7 +45,8 @@ export default function Store() {
   /* ── mutations ─────────────────────────────────────────────────── */
   const submitPaymentMutation = trpc.gifts.submitPaymentRequest.useMutation({
     onSuccess: () => {
-      toast.success(t('store.payment_modal.success_msg'));
+      toast.success(isRTL ? '🎉 تم! ستحصل على ميزاتك فوراً.' : '🎉 Done! Your features are now active.');
+      mutateAuth();
       setShowPayModal(false);
       setTxId('');
     },
@@ -96,7 +97,7 @@ export default function Store() {
 
   const handleSubmitPayment = () => {
     if (!txId.trim()) {
-      toast.error(t('store.txid_placeholder'));
+      toast.error(isRTL ? 'يرجى إدخال عنوان USDT الخاص بك' : 'Please enter your USDT address');
       return;
     }
     if (!selectedItem) return;
@@ -298,7 +299,11 @@ export default function Store() {
               <Wallet className="w-8 h-8 text-white" />
             </div>
             <DialogTitle className="text-2xl font-black text-white mb-2">{t('store.pay_modal_title')}</DialogTitle>
-            <DialogDescription className="text-white/80 text-sm">{t('store.pay_modal_desc')}</DialogDescription>
+            <DialogDescription className="text-white/80 text-sm">
+            {isRTL
+              ? 'أرسل المبلغ على العنوان أدناه ثم أدخل عنوان USDT الخاص بك للتفعيل الفوري'
+              : 'Send the amount to the address below, then enter your USDT address for instant activation'}
+          </DialogDescription>
           </div>
 
           <div className="p-6 space-y-6">
@@ -359,13 +364,13 @@ export default function Store() {
 
             <div className="space-y-3 pt-2">
               <Label className="text-xs font-bold text-white/60 uppercase tracking-wider flex items-center gap-1.5">
-                {t('store.txid_label')}
+                {isRTL ? 'عنوان USDT الخاص بك (TRC20)' : 'Your USDT Address (TRC20)'}
                 <Info className="w-3 h-3 text-blue-400 cursor-help" title={t('store.txid_help')} />
               </Label>
               <Input
                 value={txId}
                 onChange={(e) => setTxId(e.target.value)}
-                placeholder={t('store.txid_placeholder')}
+                placeholder={isRTL ? 'أدخل عنوان USDT الخاص بك هنا...' : 'Enter your USDT address...'}
                 className="bg-gray-800 border-white/10 rounded-2xl py-6 text-white placeholder:text-white/20 focus:border-purple-500 transition-all"
               />
             </div>
@@ -377,7 +382,9 @@ export default function Store() {
               disabled={submitPaymentMutation.isPending}
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white font-black py-7 text-lg rounded-2xl shadow-2xl shadow-purple-900/40 transition-all border-t border-white/20"
             >
-              {submitPaymentMutation.isPending ? t('store.submitting') : t('store.confirm_pay')}
+              {submitPaymentMutation.isPending
+    ? (isRTL ? '⏳ جاري التفعيل...' : '⏳ Activating...')
+    : (isRTL ? '✅ تأكيد وتفعيل فوري' : '✅ Confirm & Activate Now')}
             </Button>
           </DialogFooter>
         </DialogContent>
