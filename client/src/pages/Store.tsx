@@ -198,16 +198,37 @@ export default function Store() {
 
                   {payMethod === 'money' && (
                     <div className="space-y-3">
-                      <div className="flex items-baseline justify-center gap-1 mb-4">
-                        <span className="text-4xl font-black text-gray-900">$2.99</span>
-                        <span className="text-gray-400 text-sm">{t('store.monthly')}</span>
+                      <p className="text-center text-xs text-gray-400 mb-2">
+                        {isRTL ? 'اختر باقة الاشتراك' : 'Choose a subscription plan'}
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { price: '$0.99', label: isRTL ? 'شهر' : '1 Month', popular: false },
+                          { price: '$2.49', label: isRTL ? '3 أشهر' : '3 Months', popular: true },
+                          { price: '$6.99', label: isRTL ? 'سنة' : '1 Year', popular: false },
+                        ].map((plan) => (
+                          <button
+                            key={plan.price}
+                            onClick={() => handlePayClick({ type: 'vip', amount: 0, price: plan.price })}
+                            className={`relative flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border-2 transition-all hover:scale-[1.03] active:scale-95 ${
+                              plan.popular
+                                ? 'border-purple-500 bg-purple-50 shadow-md shadow-purple-200'
+                                : 'border-gray-200 bg-white hover:border-purple-300'
+                            }`}
+                          >
+                            {plan.popular && (
+                              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full whitespace-nowrap">
+                                {isRTL ? '🔥 الأشهر' : '🔥 Popular'}
+                              </span>
+                            )}
+                            <span className="text-lg font-black text-gray-900">{plan.price}</span>
+                            <span className="text-[10px] text-gray-500 font-semibold">{plan.label}</span>
+                            <span className="text-[9px] text-purple-500 font-bold flex items-center gap-0.5">
+                              <Sparkles className="w-2.5 h-2.5" /> VIP
+                            </span>
+                          </button>
+                        ))}
                       </div>
-                      <Button
-                        onClick={() => handlePayClick({ type: 'vip', amount: 0, price: '$2.99' })}
-                        className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:brightness-110 text-white font-black py-6 text-base rounded-2xl shadow-lg shadow-purple-300/40 transition-all gap-2"
-                      >
-                        <Sparkles className="w-5 h-5" /> {t('store.subscribe_now')}
-                      </Button>
                     </div>
                   )}
 
