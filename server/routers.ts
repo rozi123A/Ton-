@@ -199,30 +199,35 @@ export const appRouter = router({
       return { credits };
     }),
 
-    /** Submit manual payment request — admin approves from dashboard */
+    /** Submit manual payment request  admin approves from dashboard */
     submitPaymentRequest: protectedProcedure
       .input(z.object({
-        // 🔒 FIX: method and itemType are enum-validated — no freeform strings
+        // = FIX: All fields strictly validated
         method: z.enum(['binance_pay', 'usdt_trc20']),
         transactionId: z.string().min(5).max(200).trim(),
         itemType: z.enum(['vip', 'stars']),
         itemAmount: z.number().optional(),
+        // amount is whitelisted  user cannot forge an arbitrary price
+        amount: z.enum(['$0.99', '$2.49', '$6.99']),
       }))
       .mutation(async ({ ctx, input }) => {
-        // 🔒 FIX: Amount is set server-side based on itemType — user cannot forge the price
-        const PRICES: Record<string, string> = {
-          vip: '.99',
-          stars_5000:  '/nix/store/smkzrg2vvp3lng3hq7v9svfni5mnqjh2-bash-interactive-5.2p37/bin/bash.99',
-          stars_15000: '.49',
-          stars_50000: '.99',
-        };
-        const priceKey = input.itemType === 'stars' ? `stars_${input.itemAmount}` : 'vip';
-        const amount = PRICES[priceKey] ?? PRICES[input.itemType] ?? ' .??';
+        // = FIX: Validate itemAmount matches the claimed price for star packages
+        if (input.itemType === 'stars') {
+          const STAR_PRICES: Record<number, string> = {
+            5000:  '$0.99',
+            15000: '$2.49',
+            50000: '$6.99',
+          };
+          const expected = input.itemAmount ? STAR_PRICES[input.itemAmount] : undefined;
+          if (!expected || expected !== input.amount) {
+            throw new Error(''DE(D: D' J*7'(B E9 'D('B) 'DE.*'1).');
+          }
+        }
 
         const { createPaymentRequest } = await import("./db");
         await createPaymentRequest({
           userId: ctx.user.id,
-          amount,
+          amount: input.amount,
           method: input.method,
           transactionId: input.transactionId,
           itemType: input.itemType,
@@ -230,10 +235,11 @@ export const appRouter = router({
         });
         await createNotification(ctx.user.id, {
           type: 'system',
-          title: '📨 تم استلام طلبك',
-          message: 'سيتم مراجعة طلب الدفع وتفعيل الميزات خلال 24 ساعة بعد التحقق.',
+          title: '=� *E '3*D'E 7D(C',
+          message: '3J*E E1',9) 7D( 'D/A9 H*A9JD 'DEJ2'* .D'D 24 3'9) (9/ 'D*-BB.',
         });
         return { success: true };
+      }),
       }),
 
     /** Get pending payment requests (Admin only) */
