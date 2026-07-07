@@ -45,8 +45,9 @@ export default function Store() {
   /* ── mutations ─────────────────────────────────────────────────── */
   const submitPaymentMutation = trpc.gifts.submitPaymentRequest.useMutation({
     onSuccess: () => {
-      toast.success(isRTL ? '🎉 تم! ستحصل على ميزاتك فوراً.' : '🎉 Done! Your features are now active.');
-      mutateAuth();
+      toast.success(isRTL
+        ? '📨 تم إرسال طلبك! سيتم التفعيل خلال 24 ساعة بعد التحقق.'
+        : '📨 Request submitted! Features will be activated within 24h after review.');
       setShowPayModal(false);
       setTxId('');
     },
@@ -99,8 +100,8 @@ export default function Store() {
     if (!txId.trim()) {
       toast.error(
       cryptoMethod === 'usdt_trc20'
-        ? (isRTL ? 'يرجى إدخال عنوان USDT الخاص بك' : 'Please enter your USDT address')
-        : (isRTL ? 'يرجى إدخال Binance Pay ID أو إيميلك' : 'Please enter your Binance Pay ID or email')
+        ? (isRTL ? 'يرجى إدخال رقم التحويل (Hash)' : 'Please enter the transaction hash')
+        : (isRTL ? 'يرجى إدخال رقم طلب Binance Pay' : 'Please enter Binance Pay Order ID')
     );
       return;
     }
@@ -305,8 +306,8 @@ export default function Store() {
             <DialogTitle className="text-2xl font-black text-white mb-2">{t('store.pay_modal_title')}</DialogTitle>
             <DialogDescription className="text-white/80 text-sm">
             {isRTL
-              ? 'أرسل المبلغ على العنوان أدناه ثم أدخل عنوان USDT الخاص بك للتفعيل الفوري'
-              : 'Send the amount to the address below, then enter your USDT address for instant activation'}
+              ? 'أرسل المبلغ على العنوان أدناه ثم أرسل رقم التحويل للمراجعة والتفعيل'
+              : 'Send the amount to the address below, then submit your transaction ID for review & activation'}
           </DialogDescription>
           </div>
 
@@ -367,22 +368,17 @@ export default function Store() {
             </div>
 
             <div className="space-y-3 pt-2">
-              <Label className="text-xs font-bold text-white/60 uppercase tracking-wider flex items-center justify-between w-full">
-                <span className="flex items-center gap-1.5">
-                  {cryptoMethod === 'usdt_trc20'
-                    ? (isRTL ? 'عنوان USDT الخاص بك (TRC20)' : 'Your USDT Address (TRC20)')
-                    : (isRTL ? 'Binance Pay ID أو إيميل Binance' : 'Binance Pay ID or Email')}
-                </span>
-                <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded-full normal-case">
-                  ⚡ {isRTL ? 'تفعيل فوري' : 'Instant'}
-                </span>
+              <Label className="text-xs font-bold text-white/60 uppercase tracking-wider flex items-center gap-1.5">
+                {cryptoMethod === 'usdt_trc20'
+                  ? (isRTL ? 'رقم التحويل (Transaction Hash)' : 'Transaction Hash (TxID)')
+                  : (isRTL ? 'رقم طلب Binance Pay (Order ID)' : 'Binance Pay Order ID')}
               </Label>
               <Input
                 value={txId}
                 onChange={(e) => setTxId(e.target.value)}
                 placeholder={cryptoMethod === 'usdt_trc20'
-                  ? (isRTL ? 'أدخل عنوان USDT الخاص بك...' : 'Enter your USDT address...')
-                  : (isRTL ? 'أدخل Binance Pay ID أو إيميل Binance...' : 'Enter Binance Pay ID or email...')}
+                  ? (isRTL ? 'مثال: abc123def456...' : 'e.g. abc123def456...')
+                  : (isRTL ? 'مثال: 123456789' : 'e.g. 123456789')}
                 className="bg-gray-800 border-white/10 rounded-2xl py-6 text-white placeholder:text-white/20 focus:border-purple-500 transition-all"
               />
             </div>
@@ -395,8 +391,8 @@ export default function Store() {
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white font-black py-7 text-lg rounded-2xl shadow-2xl shadow-purple-900/40 transition-all border-t border-white/20"
             >
               {submitPaymentMutation.isPending
-    ? (isRTL ? '⏳ جاري التفعيل...' : '⏳ Activating...')
-    : (isRTL ? '✅ تأكيد وتفعيل فوري' : '✅ Confirm & Activate Now')}
+                ? (isRTL ? '⏳ جاري الإرسال...' : '⏳ Submitting...')
+                : (isRTL ? '📨 إرسال طلب الدفع' : '📨 Submit Payment Request')}
             </Button>
           </DialogFooter>
         </DialogContent>
