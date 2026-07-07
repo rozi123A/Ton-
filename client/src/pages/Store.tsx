@@ -352,10 +352,10 @@ export default function Store() {
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl blur group-hover:blur-md transition-all" />
                 <div className="relative flex items-center bg-gray-800 border border-white/10 rounded-2xl p-1">
                   <div className="flex-1 px-4 py-3 font-mono text-sm text-white/90 truncate">
-                    {cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtAddress || 'Txxxxxxxxxxxxxxxxxxxxxxxxx')}
+                    {cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtTrc20Address || 'Txxxxxxxxxxxxxxxxxxxxxxxxx')}
                   </div>
                   <button
-                    onClick={() => copyToClipboard(cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtAddress || 'Txxxxxxxxxxxxxxxxxxxxxxxxx'))}
+                    onClick={() => copyToClipboard(cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtTrc20Address || 'Txxxxxxxxxxxxxxxxxxxxxxxxx'))}
                     className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors"
                   >
                     {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
