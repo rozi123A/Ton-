@@ -97,7 +97,11 @@ export default function Store() {
 
   const handleSubmitPayment = () => {
     if (!txId.trim()) {
-      toast.error(isRTL ? 'يرجى إدخال عنوان USDT الخاص بك' : 'Please enter your USDT address');
+      toast.error(
+      cryptoMethod === 'usdt_trc20'
+        ? (isRTL ? 'يرجى إدخال عنوان USDT الخاص بك' : 'Please enter your USDT address')
+        : (isRTL ? 'يرجى إدخال Binance Pay ID أو إيميلك' : 'Please enter your Binance Pay ID or email')
+    );
       return;
     }
     if (!selectedItem) return;
@@ -363,14 +367,22 @@ export default function Store() {
             </div>
 
             <div className="space-y-3 pt-2">
-              <Label className="text-xs font-bold text-white/60 uppercase tracking-wider flex items-center gap-1.5">
-                {isRTL ? 'عنوان USDT الخاص بك (TRC20)' : 'Your USDT Address (TRC20)'}
-                <Info className="w-3 h-3 text-blue-400 cursor-help" title={t('store.txid_help')} />
+              <Label className="text-xs font-bold text-white/60 uppercase tracking-wider flex items-center justify-between w-full">
+                <span className="flex items-center gap-1.5">
+                  {cryptoMethod === 'usdt_trc20'
+                    ? (isRTL ? 'عنوان USDT الخاص بك (TRC20)' : 'Your USDT Address (TRC20)')
+                    : (isRTL ? 'Binance Pay ID أو إيميل Binance' : 'Binance Pay ID or Email')}
+                </span>
+                <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-2 py-0.5 rounded-full normal-case">
+                  ⚡ {isRTL ? 'تفعيل فوري' : 'Instant'}
+                </span>
               </Label>
               <Input
                 value={txId}
                 onChange={(e) => setTxId(e.target.value)}
-                placeholder={isRTL ? 'أدخل عنوان USDT الخاص بك هنا...' : 'Enter your USDT address...'}
+                placeholder={cryptoMethod === 'usdt_trc20'
+                  ? (isRTL ? 'أدخل عنوان USDT الخاص بك...' : 'Enter your USDT address...')
+                  : (isRTL ? 'أدخل Binance Pay ID أو إيميل Binance...' : 'Enter Binance Pay ID or email...')}
                 className="bg-gray-800 border-white/10 rounded-2xl py-6 text-white placeholder:text-white/20 focus:border-purple-500 transition-all"
               />
             </div>
