@@ -74,8 +74,8 @@ export default function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start gap-3">
                 <Mail className="w-5 h-5 text-purple-400 mt-1 flex-shrink-0" />
-                <a href="mailto:info@connectlive.com" className="text-gray-400 hover:text-purple-400 transition-colors">
-                  info@connectlive.com
+                <a href="mailto:earnsoccer850@gmail.com" className="text-gray-400 hover:text-purple-400 transition-colors">
+                  earnsoccer850@gmail.com
                 </a>
               </li>
               <li className="flex items-start gap-3">
