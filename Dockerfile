@@ -1,18 +1,18 @@
 FROM node:20-slim
 
-# Remove corepack completely to avoid any pnpm auto-activation
-RUN corepack disable && rm -f /usr/local/bin/corepack
+WORKDIR /app
+
+# Copy package files and remove packageManager to avoid corepack auto-activation
+COPY package.json pnpm-lock.yaml ./
+RUN sed -i '/"packageManager"/d' package.json
 
 # Install pnpm directly via npm
 RUN npm install -g pnpm@10.4.1
 
-WORKDIR /app
-
-COPY package.json pnpm-lock.yaml ./
+# Install dependencies and build
 RUN pnpm install --no-frozen-lockfile
 
 COPY . .
-
 RUN NODE_ENV=production pnpm run build
 
 ENV NODE_ENV=production
