@@ -1,6 +1,6 @@
 FROM node:20-slim AS base
 
-RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
+RUN npm install -g pnpm@10.4.1
 
 WORKDIR /app
 
