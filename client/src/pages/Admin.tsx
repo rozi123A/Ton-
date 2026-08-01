@@ -6,6 +6,52 @@ import { toast } from 'sonner';
 
 const ADMIN_SESSION_KEY = 'admin_mode';
 
+type ActiveCall = {
+  peerId1: string;
+  name1: string;
+  avatar1: string;
+  userId1?: number;
+  peerId2: string;
+  name2: string;
+  avatar2: string;
+  userId2?: number;
+};
+
+type RecMeta = {
+  sessionId: string;
+  name1: string;
+  name2: string;
+  startTime: number;
+  size: number;
+};
+
+function CallWatcher({
+  call,
+  token,
+  onClose,
+}: {
+  call: ActiveCall;
+  token: string;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+        <div>
+          <p style={{ margin: 0, color: 'white', fontWeight: 700 }}>مراقبة المكالمة</p>
+          <p style={{ margin: '4px 0 0', color: '#9ca3af', fontSize: '12px' }}>{call.name1} &amp; {call.name2}</p>
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>
+          <X style={{ width: '18px' }} />
+        </button>
+      </div>
+      <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: 0 }}>
+        بدأت المراقبة الآمنة للجلسة. {token ? '' : 'انتهت صلاحية جلسة الإدارة.'}
+      </p>
+    </div>
+  );
+}
+
 const COUNTRY_NAMES: Record<string, string> = {
   SA:'السعودية 🇸🇦', AE:'الإمارات 🇦🇪', EG:'مصر 🇪🇬', KW:'الكويت 🇰🇼',
   QA:'قطر 🇶🇦', BH:'البحرين 🇧🇭', OM:'عمان 🇴🇲', JO:'الأردن 🇯🇴',

@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/contexts/LanguageContext";
 
+type PaymentAmount = "$0.99" | "$2.49" | "$6.99";
+
 export default function Store() {
   const { t: translate, isRTL } = useTranslation();
   const t = (key: string) => translate(key);
@@ -23,7 +25,7 @@ export default function Store() {
   
   // Payment Modal State
   const [showPayModal, setShowPayModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<{ type: 'vip' | 'stars', amount: number, price: string } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ type: 'vip' | 'stars', amount: number, price: PaymentAmount } | null>(null);
   const [cryptoMethod, setCryptoMethod] = useState<'binance_pay' | 'usdt_trc20'>('binance_pay');
   const [txId, setTxId] = useState('');
   const [copied, setCopied] = useState(false);
@@ -69,7 +71,7 @@ export default function Store() {
   const PREMIUM_COST = 50000;
   const canAfford    = userCredits >= PREMIUM_COST;
 
-  const starPackages = [
+  const starPackages: Array<{ amount: number; price: PaymentAmount; label: string; popular?: boolean }> = [
     { amount: 5000,  price: "$0.99",  label: t('store.stars_pack_1') },
     { amount: 15000, price: "$2.49",  label: t('store.stars_pack_2'), popular: true },
     { amount: 50000, price: "$6.99",  label: t('store.stars_pack_3') },
@@ -84,6 +86,12 @@ export default function Store() {
     { title: t('store.features.priority'),  icon: <ArrowRight  className="w-5 h-5 text-indigo-500" /> },
   ];
 
+  const vipPlans: Array<{ price: PaymentAmount; label: string; popular: boolean }> = [
+    { price: '$0.99', label: isRTL ? 'شهر' : '1 Month', popular: false },
+    { price: '$2.49', label: isRTL ? '3 أشهر' : '3 Months', popular: true },
+    { price: '$6.99', label: isRTL ? 'سنة' : '1 Year', popular: false },
+  ];
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
@@ -91,7 +99,7 @@ export default function Store() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handlePayClick = (item: { type: 'vip' | 'stars', amount: number, price: string }) => {
+  const handlePayClick = (item: { type: 'vip' | 'stars', amount: number, price: PaymentAmount }) => {
     setSelectedItem(item);
     setShowPayModal(true);
   };
@@ -202,11 +210,7 @@ export default function Store() {
                         {isRTL ? 'اختر باقة الاشتراك' : 'Choose a subscription plan'}
                       </p>
                       <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { price: '$0.99', label: isRTL ? 'شهر' : '1 Month', popular: false },
-                          { price: '$2.49', label: isRTL ? '3 أشهر' : '3 Months', popular: true },
-                          { price: '$6.99', label: isRTL ? 'سنة' : '1 Year', popular: false },
-                        ].map((plan) => (
+                        {vipPlans.map((plan) => (
                           <button
                             key={plan.price}
                             onClick={() => handlePayClick({ type: 'vip', amount: 0, price: plan.price })}

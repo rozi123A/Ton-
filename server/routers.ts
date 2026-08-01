@@ -220,7 +220,7 @@ export const appRouter = router({
           };
           const expected = input.itemAmount ? STAR_PRICES[input.itemAmount] : undefined;
           if (!expected || expected !== input.amount) {
-            throw new Error(''DE(D: D' J*7'(B E9 'D('B) 'DE.*'1).');
+            throw new Error("سعر باقة النجوم غير صالح.");
           }
         }
 
@@ -235,11 +235,10 @@ export const appRouter = router({
         });
         await createNotification(ctx.user.id, {
           type: 'system',
-          title: '=� *E '3*D'E 7D(C',
-          message: '3J*E E1',9) 7D( 'D/A9 H*A9JD 'DEJ2'* .D'D 24 3'9) (9/ 'D*-BB.',
+          title: 'تم استلام طلب الدفع',
+          message: 'سنراجع طلب الدفع ونحدّث حالته بعد التحقق من العملية.',
         });
         return { success: true };
-      }),
       }),
 
     /** Get pending payment requests (Admin only) */
