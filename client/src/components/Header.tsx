@@ -1,4 +1,4 @@
-import { Menu, X, LogOut, Video, UserCircle, Star, Languages } from "lucide-react";
+import { Menu, X, LogOut, Video, UserCircle, Star, Languages, Shield } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -53,6 +53,18 @@ export default function Header() {
             <>
               {/* Notification Bell */}
               <NotificationBell />
+
+              {/* Admin dashboard — visible only to admin accounts */}
+              {(user as any).role === "admin" && (
+                <button
+                  onClick={() => setLocation("/admin")}
+                  title="لوحة الإدارة"
+                  aria-label="لوحة الإدارة"
+                  className="w-9 h-9 rounded-full border-2 border-red-300 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center"
+                >
+                  <Shield className="w-4 h-4" />
+                </button>
+              )}
 
               {/* Avatar → profile */}
               <button onClick={handleProfile} title="الملف الشخصي"
@@ -179,12 +191,30 @@ export default function Header() {
                   </div>
                   {/* Notification bell in mobile menu too */}
                   <NotificationBell />
+                  {(user as any).role === "admin" && (
+                    <button
+                      onClick={() => { setIsMenuOpen(false); setLocation("/admin"); }}
+                      title="لوحة الإدارة"
+                      aria-label="لوحة الإدارة"
+                      className="w-9 h-9 rounded-full border-2 border-red-300 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center flex-shrink-0"
+                    >
+                      <Shield className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
                 <button onClick={() => { setIsMenuOpen(false); handleProfile(); }}
                   className="border-2 border-purple-300 text-purple-600 font-bold py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 hover:bg-purple-50 transition-colors"
                 >
                   <UserCircle className="w-4 h-4 flex-shrink-0" /> {t('nav.profile')}
                 </button>
+                {(user as any).role === "admin" && (
+                  <button
+                    onClick={() => { setIsMenuOpen(false); setLocation("/admin"); }}
+                    className="border-2 border-red-300 text-red-600 font-bold py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
+                  >
+                    <Shield className="w-4 h-4 flex-shrink-0" /> لوحة الإدارة
+                  </button>
+                )}
                 <button onClick={() => { setIsMenuOpen(false); handleStartChat(); }}
                   className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-6 rounded-2xl text-center flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
                 >
