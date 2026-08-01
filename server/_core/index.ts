@@ -720,7 +720,10 @@ async function startServer() {
 
   app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 
-  app.get("/ping", (_req, res) => res.json({ ok: true, ts: Date.now() }));
+  app.get("/ping", (_req, res) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ ok: true, ts: Date.now() });
+  });
 
   // Version endpoint — returns server start time so clients can detect new deploys
   const SERVER_VERSION = Date.now().toString();
@@ -732,12 +735,14 @@ async function startServer() {
   if (process.env.NODE_ENV !== "development") {
     const selfUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "");
     if (selfUrl) {
-      const INTERVAL_MS = 14 * 60 * 1000;
-      setInterval(async () => {
+      const pingSelf = async () => {
         try { await fetch(`${selfUrl}/ping`); console.log("[keep-alive] pinged", selfUrl); }
         catch (err) { console.warn("[keep-alive] ping failed:", err); }
-      }, INTERVAL_MS);
-      console.log(`[keep-alive] scheduled every 14 min → ${selfUrl}/ping`);
+      };
+      const INTERVAL_MS = 10 * 60 * 1000;
+      setTimeout(pingSelf, 30 * 1000);
+      setInterval(pingSelf, INTERVAL_MS);
+      console.log(`[keep-alive] scheduled every 10 min → ${selfUrl}/ping`);
     } else {
       console.warn("[keep-alive] RENDER_EXTERNAL_URL not set — self-ping disabled");
     }
