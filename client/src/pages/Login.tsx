@@ -72,12 +72,6 @@ export default function Login() {
         ...(photo ? { avatar: photo } : {}),
         ...(browserCountry ? { country: browserCountry } : {}),
       });
-      if (result?.token) {
-        try {
-          localStorage.setItem('guest_token', result.token);
-          localStorage.setItem('manus-cookie', `app_session_id=${result.token}`);
-        } catch { /* storage unavailable */ }
-      }
       await utils.auth.me.invalidate();
       setTimeout(() => setLocation('/chat'), 300);
     } catch (err) {

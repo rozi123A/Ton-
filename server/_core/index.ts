@@ -2,7 +2,6 @@ import "dotenv/config";
 import crypto from "crypto";
 import express, { type Request, type Response } from "express";
 import { createServer } from "http";
-import net from "net";
 import fs from "fs";
 import path from "path";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
@@ -495,7 +494,8 @@ function registerRecordingRoutes(app: express.Express) {
 function validateAdminToken(token: string | undefined): boolean {
   if (!token) return false;
   try {
-    const adminSecret = process.env.ADMIN_SECRET || 'admin2025';
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (!adminSecret) return false;
     // Accept HMAC-signed tokens (new) or legacy base64 tokens (transitional)
     const expected = crypto
       .createHmac('sha256', adminSecret)
@@ -674,22 +674,6 @@ function registerNotifyRoutes(app: express.Express) {
   });
 }
 
-// ── Port helpers ──────────────────────────────────────────────────────────────
-function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise(resolve => {
-    const server = net.createServer();
-    server.listen(port, () => { server.close(() => resolve(true)); });
-    server.on("error", () => resolve(false));
-  });
-}
-
-async function findAvailablePort(startPort = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) return port;
-  }
-  throw new Error(`No available port found starting from ${startPort}`);
-}
-
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function startServer() {
   // 🔒 FIX: Validate critical secrets on startup — exits if misconfigured
@@ -765,10 +749,16 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-  if (port !== preferredPort) console.log(`Port ${preferredPort} busy, using ${port}`);
-  server.listen(port, () => console.log(`Server running on http://localhost:${port}/`));
+  const port = Number.parseInt(process.env.PORT || "3000", 10);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid PORT value: ${process.env.PORT}`);
+  }
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`Server running on port ${port}`);
+  });
 }
 
-startServer().catch(console.error);
+startServer().catch((error) => {
+  console.error("[Startup] Server failed to start:", error);
+  process.exitCode = 1;
+});
