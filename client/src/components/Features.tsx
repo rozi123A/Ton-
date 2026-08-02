@@ -1,0 +1,107 @@
+import { Shield, Zap, Users, Lock, Smartphone, Award } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
+
+/**
+ * Features Section Component
+ * Design: Showcase key platform features with icons and descriptions
+ * Features: Grid layout with feature cards and benefits
+ */
+
+interface Feature {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  gradient: string;
+}
+
+export default function Features() {
+  const { t: translate } = useTranslation();
+  const t = translate;
+
+  const features: Feature[] = [
+    {
+      icon: <Zap className="w-8 h-8" />,
+      title: t('features.instant_title') || "اتصالات فورية وعالية الجودة",
+      description: t('features.instant_desc') || "استمتع باتصالات فيديو وصوت فائقة الوضوح مع أشخاص حقيقيين من جميع أنحاء العالم.",
+      gradient: "from-purple-600 to-blue-600",
+    },
+    {
+      icon: <Shield className="w-8 h-8" />,
+      title: t('features.privacy_title') || "خصوصية وأمان لا مثيل لهما",
+      description: t('features.privacy_desc') || "في ConnectLive، خصوصيتك هي أولويتنا القصوى. نحن نضمن اتصالات مجهولة تماماً.",
+      gradient: "from-pink-600 to-purple-600",
+    },
+    {
+      icon: <Lock className="w-8 h-8" />,
+      title: t('features.control_title') || "تحكم كامل في تجربتك",
+      description: t('features.control_desc') || "تمنحك ConnectLive التحكم الكامل في مكالماتك: تشغيل/إيقاف الميكروفون والكاميرا.",
+      gradient: "from-cyan-600 to-blue-600",
+    },
+    {
+      icon: <Users className="w-8 h-8" />,
+      title: t('features.community_title') || "مجتمع عالمي متنوع",
+      description: t('features.community_desc') || "تواصل مع مجتمع واسع ومتنوع من المستخدمين من مختلف الثقافات والخلفيات.",
+      gradient: "from-orange-600 to-pink-600",
+    },
+    {
+      icon: <Smartphone className="w-8 h-8" />,
+      title: t('features.flexibility_title') || "مرونة الوصول عبر الأجهزة",
+      description: t('features.flexibility_desc') || "استخدم ConnectLive بسلاسة على أي جهاز، سواء كنت تفضل الويب أو التطبيق.",
+      gradient: "from-green-600 to-cyan-600",
+    },
+    {
+      icon: <Award className="w-8 h-8" />,
+      title: t('features.gifts_title') || "نظام هدايا وأصدقاء متطور",
+      description: t('features.gifts_desc') || "تواصل مع من تحب بشكل أعمق! أرسل هدايا افتراضية مميزة وأضف أصدقاءك الجدد.",
+      gradient: "from-yellow-600 to-orange-600",
+    },
+  ];
+
+  return (
+    <section id="features" className="py-20 bg-white">
+      <div className="container mx-auto px-4">
+        {/* Section Header */}
+        <div className="text-center mb-16">
+          <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 text-gray-900">
+            {t('home.why_choose') || 'Why choose'} <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">ConnectLive</span>?
+          </h2>
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+            {t('home.hero_desc')}
+          </p>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {features.map((feature, index) => (
+            <div
+              key={index}
+              className="group relative bg-white rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgba(124,58,237,0.1)] transition-all duration-500 hover:-translate-y-2 border border-gray-100/50 overflow-hidden"
+            >
+              {/* Background gradient on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-pink-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              {/* Content */}
+              <div className="relative z-10">
+                {/* Icon */}
+                <div
+                  className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.gradient} text-white mb-6 shadow-lg group-hover:shadow-xl transition-all duration-300`}
+                >
+                  {feature.icon}
+                </div>
+
+                {/* Title */}
+                <h3 className="font-bold text-xl text-gray-900 mb-3">{feature.title}</h3>
+
+                {/* Description */}
+                <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+
+                {/* Hover accent line */}
+                <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-full w-0 group-hover:w-12 transition-all duration-300" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
