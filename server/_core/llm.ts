@@ -142,35 +142,27 @@ const normalizeContentPart = (
 const normalizeMessage = (message: Message) => {
   const { role, name, tool_call_id } = message;
 
+  const result: any = { role };
+  if (name) result.name = name;
+  if (tool_call_id) result.tool_call_id = tool_call_id;
+
   if (role === "tool" || role === "function") {
-    const content = ensureArray(message.content)
+    result.content = ensureArray(message.content)
       .map(part => (typeof part === "string" ? part : JSON.stringify(part)))
       .join("\n");
-
-    return {
-      role,
-      name,
-      tool_call_id,
-      content,
-    };
+    return result;
   }
 
   const contentParts = ensureArray(message.content).map(normalizeContentPart);
 
   // If there's only text content, collapse to a single string for compatibility
   if (contentParts.length === 1 && contentParts[0].type === "text") {
-    return {
-      role,
-      name,
-      content: contentParts[0].text,
-    };
+    result.content = contentParts[0].text;
+  } else {
+    result.content = contentParts;
   }
 
-  return {
-    role,
-    name,
-    content: contentParts,
-  };
+  return result;
 };
 
 const normalizeToolChoice = (

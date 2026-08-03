@@ -51,6 +51,17 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
   const [mapResult, setMapResult] = useState<GeocodeResult | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (activeTab === "chat") {
+      scrollToBottom();
+    }
+  }, [messages, activeTab]);
 
   const chatMutation = trpc.ai.chat.useMutation({
     onSuccess: data => {
@@ -220,6 +231,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                     المساعد يفكر...
                   </div>
                 )}
+                <div ref={chatEndRef} />
               </div>
               <div className="mt-3 flex gap-2">
                 <textarea

@@ -38,13 +38,22 @@ export const appRouter = router({
   ai: router({
     chat: protectedProcedure
       .input(z.object({
-        messages: z.array(aiMessageSchema).min(1).max(30),
+        messages: z.array(aiMessageSchema).min(1).max(100),
         model: z.string().min(1).max(100).optional(),
         maxTokens: z.number().int().min(1).max(4_000).optional(),
       }))
       .mutation(async ({ input }) => {
+        const systemPrompt = {
+          role: "system" as const,
+          content: "أنت المساعد الذكي الرسمي لمنصة ConnectLive. أنت خبير، ودود، ومحترف. تساعد المستخدمين في الدردشة، توليد الصور، والخرائط. أجب دائماً باللغة العربية بأسلوب راقٍ ومفيد."
+        };
+
+        const messages = input.messages.some(m => m.role === "system")
+          ? input.messages
+          : [systemPrompt, ...input.messages];
+
         const result = await invokeLLM({
-          messages: input.messages,
+          messages,
           model: input.model,
           maxTokens: input.maxTokens,
         });
