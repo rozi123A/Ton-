@@ -5,7 +5,7 @@ import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
   SwitchCamera, Lock, Gift, Bell, Star, Search, ShoppingBag, Zap,
-  Users, UserRound, Heart, ChevronLeft, Globe, Sparkles, Play, Square
+  Users, UserRound, Heart, ChevronLeft, Globe, Bot, Play, Square
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useTranslation } from '@/contexts/LanguageContext';
@@ -1336,7 +1336,7 @@ export default function ChatRoom() {
                   className={`transition-colors ${status === 'matched' ? 'text-purple-300 hover:text-purple-200' : 'text-white/25'}`}
                   title="فلاتر"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Bot className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => {
@@ -1537,11 +1537,10 @@ export default function ChatRoom() {
 
           <button
             onClick={() => setShowAIStudio(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/15 to-purple-500/15 py-3.5 text-sm font-bold text-cyan-100 transition hover:from-cyan-500/25 hover:to-purple-500/25 active:scale-[0.98] shadow-sm shadow-cyan-500/10"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-pink-400/40 bg-gradient-to-r from-pink-500/20 to-purple-600/20 py-3.5 text-sm font-bold text-pink-100 transition hover:from-pink-500/30 hover:to-purple-600/30 active:scale-[0.98] shadow-md shadow-pink-500/20"
           >
-            <Sparkles className="h-4 w-4 text-cyan-300" />
-            <span>استوديو الذكاء الاصطناعي</span>
-            <span className="text-[10px] font-medium text-cyan-300/70 bg-cyan-400/10 px-1.5 py-0.5 rounded-full border border-cyan-400/20">AI</span>
+            <Bot className="h-5 w-5 text-pink-300" />
+            <span>Smart assistant</span>
           </button>
 
           {/* ── Row 3 : ابدأ مباشرة · الرادار ─────────────── */}
