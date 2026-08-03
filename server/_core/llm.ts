@@ -368,9 +368,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } else if (ENV.aiModel) {
     payload.model = ENV.aiModel;
   } else if (ENV.openaiApiKey && !ENV.forgeApiKey) {
-    // Auto-detect Groq model or default to Llama 3.3 for best experience
+    // Use the most compatible Llama 3 model for Groq to ensure it works for everyone
     const isGroq = ENV.openaiApiKey.startsWith("gsk_") || ENV.openaiApiBase.includes("groq");
-    payload.model = isGroq ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
+    payload.model = isGroq ? "llama3-8b-8192" : "gpt-4o-mini";
   }
 
   if (tools && tools.length > 0) {
@@ -408,19 +408,28 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetchWithBackoff(resolveApiUrl(), {
+  const apiUrl = resolveApiUrl();
+  const apiKey = ENV.forgeApiKey || ENV.openaiApiKey;
+
+  const response = await fetchWithBackoff(apiUrl, {
     method: "POST",
     headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey || ENV.openaiApiKey}`,
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
+    let errorDetail = "";
+    try {
+      const errJson = await response.json();
+      errorDetail = JSON.stringify(errJson.error || errJson);
+    } catch {
+      errorDetail = await response.text();
+    }
     throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+      `API Error (${response.status}): ${errorDetail.substring(0, 200)}`
     );
   }
 
