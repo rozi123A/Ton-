@@ -236,7 +236,7 @@ export default function ChatRoom() {
       const alreadyClaimed = notifications.some(n => 
         n.type === 'system' && 
         n.title === 'مكافأة يومية 🎁' && 
-        new Date(n.createdAt).toDateString() === new Date().toDateString()
+        (Date.now() - new Date(n.createdAt).getTime()) < 24 * 60 * 60 * 1000
       );
       setShowDailyBonus(!alreadyClaimed);
     }
