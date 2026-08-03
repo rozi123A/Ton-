@@ -43,22 +43,36 @@ export type GenerateImageResponse = {
 export async function generateImage(
   options: GenerateImageOptions
 ): Promise<GenerateImageResponse> {
+  // --- Fallback to Free Service (Pollinations.ai) if Forge is not configured ---
   if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    throw new Error("خدمة توليد الصور غير مهيأة. يرجى تكوين BUILT_IN_FORGE_API_URL و BUILT_IN_FORGE_API_KEY.");
+    try {
+      const seed = Math.floor(Math.random() * 1000000);
+      const encodedPrompt = encodeURIComponent(options.prompt);
+      const freeImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&seed=${seed}`;
+      
+      // We fetch the image and save it to our storage to maintain consistency
+      const imgRes = await fetch(freeImageUrl);
+      if (!imgRes.ok) throw new Error("Free image service failed");
+      
+      const buffer = Buffer.from(await imgRes.arrayBuffer());
+      const { url } = await storagePut(
+        `generated/${Date.now()}.png`,
+        buffer,
+        "image/png"
+      );
+      
+      return { url };
+    } catch (err) {
+      throw new Error("فشل توليد الصورة عبر الخدمة المجانية. يرجى المحاولة لاحقاً.");
+    }
   }
 
-  // Build the full URL by appending the service path to the base URL
-  const baseUrl = ENV.forgeApiUrl.endsWith("/")
-    ? ENV.forgeApiUrl
-    : `${ENV.forgeApiUrl}/`;
-  const fullUrl = new URL(
-    "images.v1.ImageService/GenerateImage",
-    baseUrl
-  ).toString();
+  // --- Original Forge Implementation ---
+  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+  const fullUrl = new URL("images.v1.ImageService/GenerateImage", baseUrl).toString();
 
   const model = options.model ?? DEFAULT_IMAGE_MODEL;
-  const quality =
-    options.quality ?? (model === DEFAULT_IMAGE_MODEL ? DEFAULT_IMAGE_QUALITY : undefined);
+  const quality = options.quality ?? (model === DEFAULT_IMAGE_MODEL ? DEFAULT_IMAGE_QUALITY : undefined);
 
   const response = await fetch(fullUrl, {
     method: "POST",
@@ -78,29 +92,20 @@ export async function generateImage(
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
-    throw new Error(
-      `Image generation request failed (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
-    );
+    throw new Error(`Image generation request failed (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`);
   }
 
   const result = (await response.json()) as {
-    image: {
-      b64Json: string;
-      mimeType: string;
-    };
+    image: { b64Json: string; mimeType: string; };
   };
-  const base64Data = result.image.b64Json;
-  const buffer = Buffer.from(base64Data, "base64");
+  const buffer = Buffer.from(result.image.b64Json, "base64");
 
-  // Save to S3
   const { url } = await storagePut(
     `generated/${Date.now()}.png`,
     buffer,
     result.image.mimeType
   );
-  return {
-    url,
-  };
+  return { url };
 }
 
 export type ImageModelInfo = {
