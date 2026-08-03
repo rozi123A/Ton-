@@ -45,26 +45,11 @@ export async function generateImage(
 ): Promise<GenerateImageResponse> {
   // --- Fallback to Free Service (Pollinations.ai) if Forge is not configured ---
   if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    try {
-      const seed = Math.floor(Math.random() * 1000000);
-      const encodedPrompt = encodeURIComponent(options.prompt);
-      const freeImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&seed=${seed}`;
-      
-      // We fetch the image and save it to our storage to maintain consistency
-      const imgRes = await fetch(freeImageUrl);
-      if (!imgRes.ok) throw new Error("Free image service failed");
-      
-      const buffer = Buffer.from(await imgRes.arrayBuffer());
-      const { url } = await storagePut(
-        `generated/${Date.now()}.png`,
-        buffer,
-        "image/png"
-      );
-      
-      return { url };
-    } catch (err) {
-      throw new Error("فشل توليد الصورة عبر الخدمة المجانية. يرجى المحاولة لاحقاً.");
-    }
+    const seed = Math.floor(Math.random() * 1000000);
+    const encodedPrompt = encodeURIComponent(options.prompt);
+    // Return the external URL directly to avoid storage failures when Forge keys are missing
+    const freeImageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&seed=${seed}`;
+    return { url: freeImageUrl };
   }
 
   // --- Original Forge Implementation ---

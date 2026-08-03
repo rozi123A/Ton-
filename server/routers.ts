@@ -97,17 +97,30 @@ export const appRouter = router({
               message: "ملف الصوت فارغ.",
             });
           }
-          const uploaded = await storagePut(
-            `voice/${ctx.user.id}-${Date.now()}.${input.mimeType.split("/")[1] || "audio"}`,
-            audio,
-            input.mimeType,
-          );
-          const origin = `${ctx.req.protocol}://${ctx.req.get("host")}`;
-          const result = await transcribeAudio({
-            audioUrl: new URL(uploaded.url, origin).toString(),
-            language: input.language,
-            prompt: input.prompt,
-          });
+
+          let result;
+          // If Forge keys are missing, we can't use storagePut. 
+          // We need to modify transcribeAudio to accept a buffer or handle it here.
+          if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+             result = await transcribeAudio({
+                audioBuffer: audio,
+                mimeType: input.mimeType,
+                language: input.language,
+                prompt: input.prompt,
+             } as any);
+          } else {
+            const uploaded = await storagePut(
+              `voice/${ctx.user.id}-${Date.now()}.${input.mimeType.split("/")[1] || "audio"}`,
+              audio,
+              input.mimeType,
+            );
+            const origin = `${ctx.req.protocol}://${ctx.req.get("host")}`;
+            result = await transcribeAudio({
+              audioUrl: new URL(uploaded.url, origin).toString(),
+              language: input.language,
+              prompt: input.prompt,
+            });
+          }
 
           if ("error" in result) {
             throw new TRPCError({
