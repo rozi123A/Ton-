@@ -209,6 +209,10 @@ const resolveApiUrl = () => {
     return `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`;
   }
   if (ENV.openaiApiKey) {
+    // Auto-detect Groq keys to simplify setup for the user
+    if (ENV.openaiApiKey.startsWith("gsk_") && !ENV.openaiApiBase.includes("groq")) {
+      return "https://api.groq.com/openai/v1/chat/completions";
+    }
     return `${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`;
   }
   return "https://forge.manus.im/v1/chat/completions";
@@ -364,8 +368,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } else if (ENV.aiModel) {
     payload.model = ENV.aiModel;
   } else if (ENV.openaiApiKey && !ENV.forgeApiKey) {
-    // If using Groq as base, default to a Llama model, otherwise gpt-4o-mini
-    payload.model = ENV.openaiApiBase.includes("groq") ? "llama-3.1-70b-versatile" : "gpt-4o-mini";
+    // Auto-detect Groq model or default to Llama 3.3 for best experience
+    const isGroq = ENV.openaiApiKey.startsWith("gsk_") || ENV.openaiApiBase.includes("groq");
+    payload.model = isGroq ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
   }
 
   if (tools && tools.length > 0) {

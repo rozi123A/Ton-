@@ -43,34 +43,42 @@ export const appRouter = router({
         maxTokens: z.number().int().min(1).max(4_000).optional(),
       }))
       .mutation(async ({ input }) => {
-        const systemPrompt = {
-          role: "system" as const,
-          content: "أنت المساعد الذكي الرسمي لمنصة ConnectLive. أنت خبير، ودود، ومحترف. تساعد المستخدمين في الدردشة، توليد الصور، والخرائط. أجب دائماً باللغة العربية بأسلوب راقٍ ومفيد."
-        };
+        try {
+          const systemPrompt = {
+            role: "system" as const,
+            content: "أنت المساعد الذكي الرسمي لمنصة ConnectLive. أنت خبير، ودود، ومحترف. تساعد المستخدمين في الدردشة، توليد الصور، والخرائط. أجب دائماً باللغة العربية بأسلوب راقٍ ومفيد."
+          };
 
-        const messages = input.messages.some(m => m.role === "system")
-          ? input.messages
-          : [systemPrompt, ...input.messages];
+          const messages = input.messages.some(m => m.role === "system")
+            ? input.messages
+            : [systemPrompt, ...input.messages];
 
-        const result = await invokeLLM({
-          messages,
-          model: input.model,
-          maxTokens: input.maxTokens,
-        });
-        const content = result.choices[0]?.message?.content;
-        const text = typeof content === "string"
-          ? content
-          : Array.isArray(content)
-            ? content.filter(part => part.type === "text").map(part => part.text).join("\n")
-            : "";
+          const result = await invokeLLM({
+            messages,
+            model: input.model,
+            maxTokens: input.maxTokens,
+          });
+          const content = result.choices[0]?.message?.content;
+          const text = typeof content === "string"
+            ? content
+            : Array.isArray(content)
+              ? content.filter(part => part.type === "text").map(part => part.text).join("\n")
+              : "";
 
-        if (!text) {
+          if (!text) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "لم تُرجع خدمة الذكاء الاصطناعي نصاً صالحاً.",
+            });
+          }
+          return { text };
+        } catch (error: any) {
+          console.error("[AI Chat Error]", error);
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "لم تُرجع خدمة الذكاء الاصطناعي نصاً صالحاً.",
+            code: "BAD_GATEWAY",
+            message: `فشل الاتصال بالذكاء الاصطناعي: ${error.message || "خطأ غير معروف"}`,
           });
         }
-        return { text };
       }),
 
     generateImage: protectedProcedure
