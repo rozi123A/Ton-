@@ -152,14 +152,40 @@ export function MapView({
         mapInstance.current.remove();
       }
 
-      mapInstance.current = L.map(mapContainer.current).setView(
+      mapInstance.current = L.map(mapContainer.current, {
+        zoomControl: false, // We'll add it later to position it better
+      }).setView(
         [initialCenter.lat, initialCenter.lng],
         initialZoom
       );
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(mapInstance.current);
+      // Professional Layers
+      const streets = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OSM'
+      });
+
+      const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community'
+      });
+
+      const dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CartoDB',
+        subdomains: 'abcd',
+        maxZoom: 20
+      });
+
+      // Default to Satellite for that "Professional" look the user wants
+      satellite.addTo(mapInstance.current);
+
+      // Add Layer Control
+      const baseMaps = {
+        "الأقمار الصناعية": satellite,
+        "خريطة ليلية": dark,
+        "خريطة الشوارع": streets,
+      };
+
+      L.control.layers(baseMaps, {}, { position: 'topright', collapsed: false }).addTo(mapInstance.current);
+      L.control.zoom({ position: 'bottomright' }).addTo(mapInstance.current);
 
       L.marker([initialCenter.lat, initialCenter.lng]).addTo(mapInstance.current);
 
