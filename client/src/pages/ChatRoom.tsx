@@ -5,7 +5,7 @@ import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
   SwitchCamera, Lock, Gift, Bell, Star, Search, ShoppingBag, Zap,
-  Users, UserRound, Heart, ChevronLeft, Globe, Wand2, Play, Square
+  Users, UserRound, Heart, ChevronLeft, Globe, Sparkles, Play, Square
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useTranslation } from '@/contexts/LanguageContext';
@@ -1336,7 +1336,7 @@ export default function ChatRoom() {
                   className={`transition-colors ${status === 'matched' ? 'text-purple-300 hover:text-purple-200' : 'text-white/25'}`}
                   title="فلاتر"
                 >
-                  <Wand2 className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => {
@@ -1537,10 +1537,11 @@ export default function ChatRoom() {
 
           <button
             onClick={() => setShowAIStudio(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 py-3 text-sm font-bold text-cyan-100 transition hover:bg-cyan-500/20 active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/15 to-purple-500/15 py-3.5 text-sm font-bold text-cyan-100 transition hover:from-cyan-500/25 hover:to-purple-500/25 active:scale-[0.98] shadow-sm shadow-cyan-500/10"
           >
-            <Wand2 className="h-4 w-4" />
-            أدوات الذكاء الاصطناعي: مساعد، صور، صوت وخرائط
+            <Sparkles className="h-4 w-4 text-cyan-300" />
+            <span>استوديو الذكاء الاصطناعي</span>
+            <span className="text-[10px] font-medium text-cyan-300/70 bg-cyan-400/10 px-1.5 py-0.5 rounded-full border border-cyan-400/20">AI</span>
           </button>
 
           {/* ── Row 3 : ابدأ مباشرة · الرادار ─────────────── */}
