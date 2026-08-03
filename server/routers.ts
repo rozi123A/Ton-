@@ -18,12 +18,158 @@ import { eq, sql } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
 import { detectCountry } from "./_core/detectCountry";
+import { invokeLLM } from "./_core/llm";
+import { generateImage } from "./_core/imageGeneration";
+import { transcribeAudio } from "./_core/voiceTranscription";
+import { makeRequest } from "./_core/map";
+import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
+const aiMessageSchema = z.object({
+  role: z.enum(["system", "user", "assistant"]),
+  content: z.string().min(1).max(20_000),
+});
+
 export const appRouter = router({
   system: systemRouter,
+
+  ai: router({
+    chat: protectedProcedure
+      .input(z.object({
+        messages: z.array(aiMessageSchema).min(1).max(30),
+        model: z.string().min(1).max(100).optional(),
+        maxTokens: z.number().int().min(1).max(4_000).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await invokeLLM({
+          messages: input.messages,
+          model: input.model,
+          maxTokens: input.maxTokens,
+        });
+        const content = result.choices[0]?.message?.content;
+        const text = typeof content === "string"
+          ? content
+          : Array.isArray(content)
+            ? content.filter(part => part.type === "text").map(part => part.text).join("\n")
+            : "";
+
+        if (!text) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "لم تُرجع خدمة الذكاء الاصطناعي نصاً صالحاً.",
+          });
+        }
+        return { text };
+      }),
+
+    generateImage: protectedProcedure
+      .input(z.object({
+        prompt: z.string().trim().min(3).max(2_000),
+        model: z.string().trim().min(1).max(100).optional(),
+        quality: z.enum(["low", "medium", "high"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          return await generateImage(input);
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: error instanceof Error ? error.message : "تعذر توليد الصورة.",
+          });
+        }
+      }),
+
+    transcribe: protectedProcedure
+      .input(z.object({
+        audioBase64: z.string().min(20).max(24_000_000),
+        mimeType: z.string().regex(/^audio\//).max(100),
+        language: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/).optional(),
+        prompt: z.string().trim().max(500).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const audio = Buffer.from(input.audioBase64, "base64");
+          if (!audio.length) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "ملف الصوت فارغ.",
+            });
+          }
+          const uploaded = await storagePut(
+            `voice/${ctx.user.id}-${Date.now()}.${input.mimeType.split("/")[1] || "audio"}`,
+            audio,
+            input.mimeType,
+          );
+          const origin = `${ctx.req.protocol}://${ctx.req.get("host")}`;
+          const result = await transcribeAudio({
+            audioUrl: new URL(uploaded.url, origin).toString(),
+            language: input.language,
+            prompt: input.prompt,
+          });
+
+          if ("error" in result) {
+            throw new TRPCError({
+              code: "BAD_GATEWAY",
+              message: result.error,
+              cause: result.details,
+            });
+          }
+          return result;
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: error instanceof Error ? error.message : "تعذر تحويل الصوت إلى نص.",
+          });
+        }
+      }),
+  }),
+
+  maps: router({
+    geocode: publicProcedure
+      .input(z.object({
+        address: z.string().trim().min(2).max(300),
+        language: z.string().regex(/^[a-z]{2}$/).optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          return await makeRequest("/maps/api/geocode/json", {
+            address: input.address,
+            language: input.language,
+          });
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: error instanceof Error ? error.message : "تعذر البحث عن الموقع.",
+          });
+        }
+      }),
+
+    directions: publicProcedure
+      .input(z.object({
+        origin: z.string().trim().min(2).max(300),
+        destination: z.string().trim().min(2).max(300),
+        mode: z.enum(["driving", "walking", "bicycling", "transit"]).optional(),
+        language: z.string().regex(/^[a-z]{2}$/).optional(),
+      }))
+      .query(async ({ input }) => {
+        try {
+          return await makeRequest("/maps/api/directions/json", {
+            origin: input.origin,
+            destination: input.destination,
+            mode: input.mode,
+            language: input.language,
+          });
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: error instanceof Error ? error.message : "تعذر حساب الطريق.",
+          });
+        }
+      }),
+  }),
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

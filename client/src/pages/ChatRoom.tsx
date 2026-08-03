@@ -17,6 +17,7 @@ import FriendsPanel from '@/components/FriendsPanel';
 import DirectMessagePanel from '@/components/DirectMessagePanel';
 import UserProfileModal from '@/components/UserProfileModal';
 import PremiumMessageBubble from "@/components/PremiumMessageBubble";
+import AIStudio from "@/components/AIStudio";
 import { playMessageSound, playFriendSound, playRingSound } from '@/lib/notificationSound';
 import { toast } from 'sonner';
 
@@ -131,6 +132,7 @@ export default function ChatRoom() {
 
   // ── new features ────────────────────────────────────────────────────────────
   const [showTranslation, setShowTranslation] = useState(false);
+  const [showAIStudio, setShowAIStudio] = useState(false);
   const [showFaceFilters, setShowFaceFilters] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);
@@ -1533,6 +1535,14 @@ export default function ChatRoom() {
             </button>
           </div>
 
+          <button
+            onClick={() => setShowAIStudio(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 py-3 text-sm font-bold text-cyan-100 transition hover:bg-cyan-500/20 active:scale-[0.98]"
+          >
+            <Wand2 className="h-4 w-4" />
+            أدوات الذكاء الاصطناعي: مساعد، صور، صوت وخرائط
+          </button>
+
           {/* ── Row 3 : ابدأ مباشرة · الرادار ─────────────── */}
           <div className="grid grid-cols-2 gap-2 pb-1">
 
@@ -1624,6 +1634,8 @@ export default function ChatRoom() {
       {showGifts && (
         <GiftPanel credits={credits} onSend={sendGift} onClose={() => setShowGifts(false)} disabled={spendGift.isPending} />
       )}
+
+      {showAIStudio && <AIStudio onClose={() => setShowAIStudio(false)} />}
 
       {/* ── Convert Stars Modal ─────────────────────────────────────── */}
       {showConvertModal && (() => {
