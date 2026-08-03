@@ -11,6 +11,7 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   openaiApiBase: process.env.OPENAI_API_BASE ?? "https://api.openai.com/v1",
+  aiModel: process.env.AI_MODEL ?? "",
   binancePayId: process.env.BINANCE_PAY_ID ?? "",
   usdtTrc20Address: process.env.USDT_TRC20_ADDRESS ?? "",
 };

@@ -369,8 +369,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (model) {
     payload.model = model;
+  } else if (ENV.aiModel) {
+    payload.model = ENV.aiModel;
   } else if (ENV.openaiApiKey && !ENV.forgeApiKey) {
-    payload.model = "gpt-4o-mini"; // Default model for OpenAI fallback
+    // If using Groq as base, default to a Llama model, otherwise gpt-4o-mini
+    payload.model = ENV.openaiApiBase.includes("groq") ? "llama-3.1-70b-versatile" : "gpt-4o-mini";
   }
 
   if (tools && tools.length > 0) {
