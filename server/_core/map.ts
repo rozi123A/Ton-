@@ -56,15 +56,43 @@ export async function makeRequest<T = unknown>(
   params: Record<string, unknown> = {},
   options: RequestOptions = {}
 ): Promise<T> {
+  // --- Fallback to Free Geocoding (Nominatim) if Google Maps is not configured ---
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    if (endpoint.includes("geocode")) {
+      const url = new URL("https://nominatim.openstreetmap.org/search");
+      url.searchParams.append("q", String(params.address || ""));
+      url.searchParams.append("format", "json");
+      url.searchParams.append("limit", "1");
+      url.searchParams.append("accept-language", String(params.language || "ar"));
+
+      const response = await fetch(url.toString(), {
+        headers: { "User-Agent": "ConnectLive-App" }
+      });
+      
+      if (!response.ok) throw new Error("Free geocoding service failed");
+      
+      const data = await response.json();
+      // Map Nominatim response to Google Maps format for compatibility
+      const results = data.map((item: any) => ({
+        formatted_address: item.display_name,
+        geometry: {
+          location: {
+            lat: parseFloat(item.lat),
+            lng: parseFloat(item.lon)
+          }
+        }
+      }));
+      
+      return { results, status: results.length > 0 ? "OK" : "ZERO_RESULTS" } as any;
+    }
+    throw new Error("خدمة الخرائط غير مهيأة. يرجى تكوين BUILT_IN_FORGE_API_URL و BUILT_IN_FORGE_API_KEY.");
+  }
+
+  // --- Original Google Maps Implementation ---
   const { baseUrl, apiKey } = getMapsConfig();
-
-  // Construct full URL: baseUrl + /v1/maps/proxy + endpoint
   const url = new URL(`${baseUrl}/v1/maps/proxy${endpoint}`);
-
-  // Add API key as query parameter (standard Google Maps API authentication)
   url.searchParams.append("key", apiKey);
 
-  // Add other query parameters
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
       url.searchParams.append(key, String(value));
@@ -73,17 +101,13 @@ export async function makeRequest<T = unknown>(
 
   const response = await fetch(url.toString(), {
     method: options.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `Google Maps API request failed (${response.status} ${response.statusText}): ${errorText}`
-    );
+    throw new Error(`Google Maps API request failed (${response.status} ${response.statusText}): ${errorText}`);
   }
 
   return (await response.json()) as T;

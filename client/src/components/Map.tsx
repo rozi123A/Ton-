@@ -86,41 +86,48 @@ declare global {
   }
 }
 
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
-const FORGE_BASE_URL =
-  import.meta.env.VITE_FRONTEND_FORGE_API_URL ||
-  "https://forge.butterfly-effect.dev";
-const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
+// Using Leaflet via CDN for a free, no-API-key Map experience
+const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 
-let mapScriptPromise: Promise<void> | null = null;
+let leafletPromise: Promise<void> | null = null;
 
-function loadMapScript() {
-  if (!API_KEY) {
-    return Promise.reject(new Error("مفتاح الخرائط غير مضبوط في إعدادات Render."));
-  }
-  if (window.google?.maps) return Promise.resolve();
-  if (mapScriptPromise) return mapScriptPromise;
+function loadLeaflet() {
+  if (leafletPromise) return leafletPromise;
 
-  mapScriptPromise = new Promise<void>((resolve, reject) => {
+  leafletPromise = new Promise<void>((resolve, reject) => {
+    // Load CSS
+    if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = LEAFLET_CSS;
+      document.head.appendChild(link);
+    }
+
+    // Load JS
+    if ((window as any).L) {
+      resolve();
+      return;
+    }
+
     const script = document.createElement("script");
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=marker,places,geocoding,geometry`;
+    script.src = LEAFLET_JS;
     script.async = true;
-    script.crossOrigin = "anonymous";
     script.onload = () => resolve();
     script.onerror = () => {
-      mapScriptPromise = null;
-      reject(new Error("تعذر تحميل خرائط Google. تحقق من VITE_FRONTEND_FORGE_API_URL و VITE_FRONTEND_FORGE_API_KEY."));
+      leafletPromise = null;
+      reject(new Error("تعذر تحميل مكتبة الخرائط المجانية."));
     };
     document.head.appendChild(script);
   });
-  return mapScriptPromise;
+  return leafletPromise;
 }
 
 interface MapViewProps {
   className?: string;
-  initialCenter?: google.maps.LatLngLiteral;
+  initialCenter?: { lat: number; lng: number };
   initialZoom?: number;
-  onMapReady?: (map: google.maps.Map) => void;
+  onMapReady?: (map: any) => void;
 }
 
 export function MapView({
@@ -130,25 +137,33 @@ export function MapView({
   onMapReady,
 }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<google.maps.Map | null>(null);
+  const mapInstance = useRef<any>(null);
   const [error, setError] = useState("");
 
   const init = usePersistFn(async () => {
     try {
-      await loadMapScript();
-      if (!mapContainer.current || !window.google?.maps) {
+      await loadLeaflet();
+      const L = (window as any).L;
+      if (!mapContainer.current || !L) {
         throw new Error("لم يتم تحميل مكتبة الخرائط.");
       }
-      map.current = new window.google.maps.Map(mapContainer.current, {
-        zoom: initialZoom,
-        center: initialCenter,
-        mapTypeControl: true,
-        fullscreenControl: true,
-        zoomControl: true,
-        streetViewControl: true,
-        mapId: "DEMO_MAP_ID",
-      });
-      onMapReady?.(map.current);
+
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+      }
+
+      mapInstance.current = L.map(mapContainer.current).setView(
+        [initialCenter.lat, initialCenter.lng],
+        initialZoom
+      );
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(mapInstance.current);
+
+      L.marker([initialCenter.lat, initialCenter.lng]).addTo(mapInstance.current);
+
+      onMapReady?.(mapInstance.current);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "تعذر تحميل الخريطة.");
     }
@@ -156,11 +171,17 @@ export function MapView({
 
   useEffect(() => {
     init();
-  }, [init]);
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+    };
+  }, [init, initialCenter.lat, initialCenter.lng, initialZoom]);
 
   return error ? (
     <div className={cn("flex min-h-[180px] items-center justify-center bg-slate-900 p-4 text-center text-xs text-yellow-100", className)}>
       {error}
     </div>
-  ) : <div ref={mapContainer} className={cn("w-full h-[500px]", className)} />;
+  ) : <div ref={mapContainer} className={cn("w-full h-[500px] z-0", className)} />;
 }
