@@ -323,7 +323,7 @@ export const appRouter = router({
         const alreadyClaimed = notifs.some(n =>
           n.type === 'system' &&
           n.title === 'مكافأة يومية 🎁' &&
-          new Date(n.createdAt).toDateString() === new Date().toDateString()
+          (Date.now() - new Date(n.createdAt).getTime()) < 24 * 60 * 60 * 1000
         );
         if (alreadyClaimed) throw new Error("لقد استلمت مكافأتك اليومية بالفعل!");
 
