@@ -1540,7 +1540,7 @@ export default function ChatRoom() {
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-pink-400/40 bg-gradient-to-r from-pink-500/20 to-purple-600/20 py-3.5 text-sm font-bold text-pink-100 transition hover:from-pink-500/30 hover:to-purple-600/30 active:scale-[0.98] shadow-md shadow-pink-500/20"
           >
             <Bot className="h-5 w-5 text-pink-300" />
-            <span>Smart assistant</span>
+            <span>المساعد الذكي</span>
           </button>
 
           {/* ── Row 3 : ابدأ مباشرة · الرادار ─────────────── */}

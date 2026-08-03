@@ -9,6 +9,8 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  openaiApiKey: process.env.OPENAI_API_KEY ?? "",
+  openaiApiBase: process.env.OPENAI_API_BASE ?? "https://api.openai.com/v1",
   binancePayId: process.env.BINANCE_PAY_ID ?? "",
   usdtTrc20Address: process.env.USDT_TRC20_ADDRESS ?? "",
 };

@@ -212,14 +212,19 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+const resolveApiUrl = () => {
+  if (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0) {
+    return `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`;
+  }
+  if (ENV.openaiApiKey) {
+    return `${ENV.openaiApiBase.replace(/\/$/, "")}/chat/completions`;
+  }
+  return "https://forge.manus.im/v1/chat/completions";
+};
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (!ENV.forgeApiKey && !ENV.openaiApiKey) {
+    throw new Error("لم يتم تكوين مفتاح API للذكاء الاصطناعي (BUILT_IN_FORGE_API_KEY أو OPENAI_API_KEY)");
   }
 };
 
@@ -364,6 +369,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (model) {
     payload.model = model;
+  } else if (ENV.openaiApiKey && !ENV.forgeApiKey) {
+    payload.model = "gpt-4o-mini"; // Default model for OpenAI fallback
   }
 
   if (tools && tools.length > 0) {
@@ -405,7 +412,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${ENV.forgeApiKey || ENV.openaiApiKey}`,
     },
     body: JSON.stringify(payload),
   });
@@ -435,12 +442,14 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+  const url = (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0)
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
-    : "https://forge.manus.im/v1/models";
+    : (ENV.openaiApiKey)
+      ? `${ENV.openaiApiBase.replace(/\/$/, "")}/models`
+      : "https://forge.manus.im/v1/models";
 
   const response = await fetchWithBackoff(url, {
-    headers: { authorization: `Bearer ${ENV.forgeApiKey}` },
+    headers: { authorization: `Bearer ${ENV.forgeApiKey || ENV.openaiApiKey}` },
   });
 
   if (!response.ok) {

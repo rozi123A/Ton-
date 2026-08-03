@@ -43,11 +43,8 @@ export type GenerateImageResponse = {
 export async function generateImage(
   options: GenerateImageOptions
 ): Promise<GenerateImageResponse> {
-  if (!ENV.forgeApiUrl) {
-    throw new Error("BUILT_IN_FORGE_API_URL is not configured");
-  }
-  if (!ENV.forgeApiKey) {
-    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    throw new Error("خدمة توليد الصور غير مهيأة. يرجى تكوين BUILT_IN_FORGE_API_URL و BUILT_IN_FORGE_API_KEY.");
   }
 
   // Build the full URL by appending the service path to the base URL
@@ -122,11 +119,8 @@ export type ListImageModelsResponse = {
  * Feed a returned `model` value into generateImage({ model }).
  */
 export async function listImageModels(): Promise<ListImageModelsResponse> {
-  if (!ENV.forgeApiUrl) {
-    throw new Error("BUILT_IN_FORGE_API_URL is not configured");
-  }
-  if (!ENV.forgeApiKey) {
-    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    throw new Error("خدمة توليد الصور غير مهيأة. يرجى تكوين BUILT_IN_FORGE_API_URL و BUILT_IN_FORGE_API_KEY.");
   }
 
   const baseUrl = ENV.forgeApiUrl.endsWith("/")
