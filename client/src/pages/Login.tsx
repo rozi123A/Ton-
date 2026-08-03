@@ -6,6 +6,10 @@ import { Heart, Video, Camera } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { detectBrowserCountry } from '@/lib/detectCountry';
+import {
+  GUEST_SESSION_ACTIVE_KEY,
+  GUEST_TOKEN_KEY,
+} from '@shared/const';
 
 async function compressImage(file: File, maxPx = 1200): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -64,6 +68,9 @@ export default function Login() {
     if (!gender) { setError('يرجى اختيار الجنس'); return; }
     setIsLoading(true);
     try {
+      // Re-enable the saved device identity for this login attempt. The
+      // server will reuse it instead of creating a new guest account.
+      localStorage.setItem(GUEST_SESSION_ACTIVE_KEY, '1');
       const browserCountry = detectBrowserCountry();
       const result = await guestLoginMutation.mutateAsync({
         name: name.trim(),
@@ -72,9 +79,15 @@ export default function Login() {
         ...(photo ? { avatar: photo } : {}),
         ...(browserCountry ? { country: browserCountry } : {}),
       });
+      // Keep only the signed session credential on this device. Profile data,
+      // points, friends, and history remain server-side in the guest account.
+      if (result.guestToken) {
+        localStorage.setItem(GUEST_TOKEN_KEY, result.guestToken);
+      }
       await utils.auth.me.invalidate();
       setTimeout(() => setLocation('/chat'), 300);
     } catch (err) {
+      localStorage.removeItem(GUEST_SESSION_ACTIVE_KEY);
       console.error(err);
       setError('حدث خطا اثناء التسجيل، يرجى المحاولة مرة اخرى');
     } finally {

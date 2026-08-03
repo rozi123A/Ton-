@@ -20,6 +20,7 @@ import { sdk } from "./_core/sdk";
 import { detectCountry } from "./_core/detectCountry";
 import { nanoid } from "nanoid";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 export const appRouter = router({
   system: systemRouter,
@@ -43,6 +44,30 @@ export const appRouter = router({
         }
         return { country };
       }),
+
+    /**
+     * Save a signed, long-lived recovery session for an existing guest.
+     * The client stores this token on the same device so logout only ends the
+     * active session and does not abandon the guest's database account.
+     */
+    rememberGuest: protectedProcedure.mutation(async ({ ctx }) => {
+      if (
+        ctx.user.loginMethod !== "guest" ||
+        !ctx.user.openId.startsWith("guest_")
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only guest accounts can be remembered on this device",
+        });
+      }
+
+      const guestToken = await sdk.createSessionToken(ctx.user.openId, {
+        name: ctx.user.name || "زائر",
+        expiresInMs: ONE_YEAR_MS,
+      });
+
+      return { success: true, guestToken };
+    }),
   }),
 
   users: router({
@@ -55,7 +80,15 @@ export const appRouter = router({
         country: z.string().length(2).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const guestOpenId = `guest_${nanoid()}`;
+        // If the request already carries a valid guest session (the
+        // persistent device token), continue using that account. Otherwise
+        // create a new guest identity.
+        const existingGuestOpenId =
+          ctx.user?.loginMethod === "guest" &&
+          ctx.user.openId.startsWith("guest_")
+            ? ctx.user.openId
+            : null;
+        const guestOpenId = existingGuestOpenId ?? `guest_${nanoid()}`;
         // 🔒 FIX: Validate avatar URL — block SSRF via private/internal addresses
         const _defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`;
         const avatarUrl = (() => {
@@ -84,8 +117,10 @@ export const appRouter = router({
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        // 🔒 FIX: Token sent via httpOnly cookie only — not exposed in response body
-        return { success: true };
+        // The guest token is intentionally returned so the browser can keep
+        // the same guest identity after logout. It contains no profile data;
+        // it is only a signed session credential and is never logged.
+        return { success: true, guestToken: sessionToken };
       }),
 
     saveProfile: protectedProcedure

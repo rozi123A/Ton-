@@ -2,6 +2,10 @@ import { getLoginUrl } from "@/const";
 import { detectBrowserCountry } from "@/lib/detectCountry";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
+import {
+  GUEST_SESSION_ACTIVE_KEY,
+  GUEST_TOKEN_KEY,
+} from "@shared/const";
 import { useCallback, useEffect, useMemo } from "react";
 
 type UseAuthOptions = {
@@ -36,8 +40,30 @@ export function useAuth(options?: UseAuthOptions) {
       utils.auth.me.setData(undefined, null);
     },
   });
+  const { mutate: rememberGuest } = trpc.auth.rememberGuest.useMutation();
+
+  // Existing guests created before persistent guest tokens were added get a
+  // recovery token once, while their current cookie session is still valid.
+  useEffect(() => {
+    const user = meQuery.data;
+    if (!user || user.loginMethod !== "guest") return;
+    try {
+      if (localStorage.getItem(GUEST_TOKEN_KEY)) return;
+    } catch {
+      return;
+    }
+
+    rememberGuest(undefined, {
+      onSuccess: ({ guestToken }) => {
+        try {
+          localStorage.setItem(GUEST_TOKEN_KEY, guestToken);
+        } catch {}
+      },
+    });
+  }, [meQuery.data, rememberGuest]);
 
   const logout = useCallback(async () => {
+    const wasGuest = meQuery.data?.loginMethod === "guest";
     try {
       await logoutMutation.mutateAsync();
     } catch (error: unknown) {
@@ -49,18 +75,19 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      // Clear all stored session tokens so the user is fully logged out
-      // across cookies, sessionStorage, and localStorage.
+      // End the active session, but keep a guest's signed device token so the
+      // same guest account can be restored after returning to the site.
       try {
         sessionStorage.removeItem("manus-cookie");
-        localStorage.removeItem("guest_token");
+        localStorage.removeItem(GUEST_SESSION_ACTIVE_KEY);
+        if (!wasGuest) localStorage.removeItem(GUEST_TOKEN_KEY);
         localStorage.removeItem("manus-cookie");
         localStorage.removeItem("manus-runtime-user-info"); // 🔒 FIX: clear any stale user data
       } catch {}
       utils.auth.me.setData(undefined, null);
       await utils.auth.me.invalidate();
     }
-  }, [logoutMutation, utils]);
+  }, [logoutMutation, meQuery.data, utils]);
 
   const state = useMemo(() => {
     // 🔒 FIX: Do NOT store sensitive user data in localStorage (XSS risk)

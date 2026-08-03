@@ -1,5 +1,10 @@
 import { trpc } from "@/lib/trpc";
-import { COOKIE_NAME, UNAUTHED_ERR_MSG } from '@shared/const';
+import {
+  COOKIE_NAME,
+  GUEST_SESSION_ACTIVE_KEY,
+  GUEST_TOKEN_KEY,
+  UNAUTHED_ERR_MSG,
+} from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
@@ -65,10 +70,14 @@ const trpcClient = trpc.createClient({
       url: (import.meta.env.VITE_API_URL || "") + "/api/trpc",
       transformer: superjson,
       headers() {
-        // 1. Guest token stored in localStorage (most reliable across restarts)
+        // 1. Persistent guest session for restoring the same device account.
         try {
-          const guestToken = localStorage.getItem("guest_token");
-          if (guestToken) return { Authorization: `Bearer ${guestToken}` };
+          const guestToken = localStorage.getItem(GUEST_TOKEN_KEY);
+          const sessionActive =
+            localStorage.getItem(GUEST_SESSION_ACTIVE_KEY) === "1";
+          if (guestToken && sessionActive) {
+            return { Authorization: `Bearer ${guestToken}` };
+          }
         } catch { /* storage unavailable */ }
 
         // 2. Preview auto-login fallback (Replit iframe / Safari ITP / WebView)
