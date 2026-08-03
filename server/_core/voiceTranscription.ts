@@ -136,19 +136,29 @@ export async function transcribeAudio(
     formData.append("prompt", prompt);
 
     // Step 4: Call the transcription service
-    const baseUrl = ENV.forgeApiUrl.endsWith("/")
-      ? ENV.forgeApiUrl
-      : `${ENV.forgeApiUrl}/`;
-    
-    const fullUrl = new URL(
-      "v1/audio/transcriptions",
-      baseUrl
-    ).toString();
+    let fullUrl: string;
+    let apiKey: string;
 
+    if (ENV.forgeApiUrl && ENV.forgeApiKey) {
+      const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+      fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
+      apiKey = ENV.forgeApiKey;
+    } else if (ENV.openaiApiKey) {
+      const baseUrl = ENV.openaiApiBase.endsWith("/") ? ENV.openaiApiBase : `${ENV.openaiApiBase}/`;
+      fullUrl = new URL("audio/transcriptions", baseUrl).toString();
+      apiKey = ENV.openaiApiKey;
+    } else {
+      return {
+        error: "خدمة تحويل الصوت غير مهيأة",
+        code: "SERVICE_ERROR",
+        details: "يرجى تكوين مفتاح API للذكاء الاصطناعي"
+      };
+    }
+    
     const response = await fetch(fullUrl, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${ENV.forgeApiKey}`,
+        authorization: `Bearer ${apiKey}`,
         "Accept-Encoding": "identity",
       },
       body: formData,
