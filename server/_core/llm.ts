@@ -363,14 +363,19 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     messages: messages.map(normalizeMessage),
   };
 
-  if (model) {
-    payload.model = model;
-  } else if (ENV.aiModel) {
-    payload.model = ENV.aiModel;
+  let selectedModel = model || ENV.aiModel;
+  
+  // Auto-fix for decommissioned Groq models
+  if (selectedModel === "llama-3.1-70b-versatile") {
+    selectedModel = "llama-3.3-70b-versatile";
+  }
+
+  if (selectedModel) {
+    payload.model = selectedModel;
   } else if (ENV.openaiApiKey && !ENV.forgeApiKey) {
-    // Use the most compatible Llama 3 model for Groq to ensure it works for everyone
+    // Default to the newest stable Groq model
     const isGroq = ENV.openaiApiKey.startsWith("gsk_") || ENV.openaiApiBase.includes("groq");
-    payload.model = isGroq ? "llama3-8b-8192" : "gpt-4o-mini";
+    payload.model = isGroq ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
   }
 
   if (tools && tools.length > 0) {
