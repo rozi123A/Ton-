@@ -786,3 +786,72 @@ export async function markNotificationsAsRead(userId: number) {
     console.error('[Database] markNotificationsAsRead failed:', err);
   }
 }
+
+
+export async function getTotalUsersCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const result = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
+    return result[0]?.count ?? 0;
+  } catch (err) {
+    console.error('[Database] getTotalUsersCount failed:', err);
+    return 0;
+  }
+}
+
+export async function getOnlineUsersCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
+      .from(users)
+      .where(sql`${users.lastSignedIn} > ${tenMinutesAgo}`);
+    return result[0]?.count ?? 0;
+  } catch (err) {
+    console.error('[Database] getOnlineUsersCount failed:', err);
+    return 0;
+  }
+}
+
+export async function searchUsers(query: string): Promise<Array<{
+  id: number; name: string | null; country: string | null; avatar: string | null;
+  gender: string | null; age: number | null; role: 'user' | 'admin';
+  createdAt: Date; loginMethod: string | null; isPremium: boolean; credits: number; wallet: number;
+}>> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select({
+        id: users.id, name: users.name, country: users.country, avatar: users.avatar,
+        gender: users.gender, age: users.age, role: users.role,
+        createdAt: users.createdAt, loginMethod: users.loginMethod,
+        isPremium: users.isPremium, credits: users.credits, wallet: users.wallet,
+      })
+      .from(users)
+      .where(sql`lower(${users.name}) like lower(${'%' + query + '%'})`)
+      .orderBy(desc(users.createdAt))
+      .limit(30);
+  } catch (err) {
+    console.error('[Database] searchUsers failed:', err);
+    return [];
+  }
+}
+
+export async function broadcastNotificationToAll(title: string, message: string): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const allUsers = await db.select({ id: users.id }).from(users).where(ne(users.role, 'admin'));
+    if (allUsers.length === 0) return 0;
+    await db.insert(notifications).values(
+      allUsers.map(u => ({ userId: u.id, type: 'system', title, message, isRead: false }))
+    );
+    return allUsers.length;
+  } catch (err) {
+    console.error('[Database] broadcastNotificationToAll failed:', err);
+    return 0;
+  }
+}
