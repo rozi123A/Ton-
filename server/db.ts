@@ -165,14 +165,24 @@ export async function ensureSchema(): Promise<void> {
     }
   }
 
-  // Add credits and isPremium columns to existing tables that predate this migration
-  try {
-    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS credits INTEGER NOT NULL DEFAULT 100`);
-    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet INTEGER NOT NULL DEFAULT 0`);
-    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "isPremium" BOOLEAN NOT NULL DEFAULT false`);
-    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileViews" INTEGER NOT NULL DEFAULT 0`);
-    await _rawClient.unsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(10)`);
-  } catch { /* ignore */ }
+  // Add missing columns to existing tables that predate these migrations.
+  // Each ALTER TABLE runs separately so one failure does not block the others.
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS credits       INTEGER   NOT NULL DEFAULT 100`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet        INTEGER   NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "isPremium"   BOOLEAN   NOT NULL DEFAULT false`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileViews" INTEGER  NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS country       VARCHAR(10)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS bio           TEXT`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "isOnline"    BOOLEAN   NOT NULL DEFAULT false`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "lastSeen"    TIMESTAMP NOT NULL DEFAULT now()`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "lastSignedIn" TIMESTAMP NOT NULL DEFAULT now()`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "loginMethod" VARCHAR(64)`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS role          role NOT NULL DEFAULT 'user'`,
+  ];
+  for (const m of migrations) {
+    try { await _rawClient.unsafe(m); } catch { /* column already exists — safe to ignore */ }
+  }
 
   console.log('[Database] Schema ready');
 }

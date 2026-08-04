@@ -390,17 +390,30 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 
 // ── Stats Tab Component ───────────────────────────────────────────────────
 function StatsTab({ adminToken }: { adminToken: string }) {
-  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery({ adminToken }, { enabled: !!adminToken, retry: 1 });
-  const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery({ adminToken, limit: 100 }, { enabled: !!adminToken, retry: 1 });
-  const { data: totalCount, isLoading: totalLoading } = trpc.admin.totalCount.useQuery({ adminToken }, { enabled: !!adminToken, retry: 1 });
-  const { data: premiumCount, isLoading: premiumLoading } = trpc.admin.premiumCount.useQuery({ adminToken }, { enabled: !!adminToken, retry: 1 });
-  const { data: onlineCount } = trpc.admin.onlineCount.useQuery({ adminToken }, { enabled: !!adminToken, refetchInterval: 30000, retry: 1 });
+  const { data: dbStatus, isLoading: dbLoading } = trpc.admin.dbStatus.useQuery({ adminToken }, { enabled: !!adminToken, retry: 1 });
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery({ adminToken }, { enabled: !!adminToken && !!dbStatus?.connected, retry: 1 });
+  const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery({ adminToken, limit: 100 }, { enabled: !!adminToken && !!dbStatus?.connected, retry: 1 });
+  const { data: totalCount, isLoading: totalLoading } = trpc.admin.totalCount.useQuery({ adminToken }, { enabled: !!adminToken && !!dbStatus?.connected, retry: 1 });
+  const { data: premiumCount, isLoading: premiumLoading } = trpc.admin.premiumCount.useQuery({ adminToken }, { enabled: !!adminToken && !!dbStatus?.connected, retry: 1 });
+  const { data: onlineCount } = trpc.admin.onlineCount.useQuery({ adminToken }, { enabled: !!adminToken && !!dbStatus?.connected, refetchInterval: 30000, retry: 1 });
 
-  const isLoading = statsLoading || recentLoading || totalLoading || premiumLoading;
+  const isLoading = dbLoading || (dbStatus?.connected && (statsLoading || recentLoading || totalLoading || premiumLoading));
 
   function refetch() { refetchStats(); }
 
   if (isLoading) return <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري التحميل...</div>;
+
+  if (dbStatus && !dbStatus.connected) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
+          <p style={{ color: '#ef4444', fontWeight: 800, fontSize: '16px', margin: '0 0 8px' }}>⚠️ قاعدة البيانات غير متصلة</p>
+          <p style={{ color: '#fca5a5', fontSize: '13px', margin: '0 0 12px' }}>{dbStatus.reason}</p>
+          <p style={{ color: '#9ca3af', fontSize: '12px', margin: 0 }}>تأكد من ضبط متغير البيئة <code style={{ backgroundColor: '#374151', padding: '2px 6px', borderRadius: '4px' }}>DATABASE_URL</code> في إعدادات الخادم</p>
+        </div>
+      </div>
+    );
+  }
 
   if (statsError && totalCount === undefined && recent === undefined) {
     return (

@@ -670,7 +670,25 @@ deductRadarStars: protectedProcedure
         return searchUsers(input.query);
       }),
 
-    broadcast: publicProcedure
+    /** DB health check — returns connection status and row counts */
+    dbStatus: publicProcedure
+      .input(z.object({ adminToken: z.string() }))
+      .query(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
+        const db = await getDb();
+        if (!db) {
+          return { connected: false, totalUsers: 0, reason: 'DATABASE_URL غير مضبوط أو الاتصال فشل' };
+        }
+        try {
+          const [total] = await db.select({ count: sql`cast(count(*) as int)` }).from(users);
+          return { connected: true, totalUsers: total?.count ?? 0, reason: null };
+        } catch (err: any) {
+          return { connected: false, totalUsers: 0, reason: String(err?.message ?? err) };
+        }
+      }),
+
+        broadcast: publicProcedure
       .input(z.object({ adminToken: z.string(), title: z.string().min(1).max(200), message: z.string().min(1).max(1000) }))
       .mutation(async ({ input }) => {
         const { ENV } = await import('./_core/env');
