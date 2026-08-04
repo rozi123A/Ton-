@@ -815,6 +815,20 @@ export async function getOnlineUsersCount(): Promise<number> {
   }
 }
 
+export async function getPremiumCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
+      .from(users)
+      .where(eq(users.isPremium, true));
+    return result[0]?.count ?? 0;
+  } catch (err) {
+    console.error('[Database] getPremiumCount failed:', err);
+    return 0;
+  }
+}
+
 export async function searchUsers(query: string): Promise<Array<{
   id: number; name: string | null; country: string | null; avatar: string | null;
   gender: string | null; age: number | null; role: 'user' | 'admin';

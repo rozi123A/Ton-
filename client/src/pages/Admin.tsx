@@ -390,14 +390,29 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 
 // ── Stats Tab Component ───────────────────────────────────────────────────
 function StatsTab({ adminToken }: { adminToken: string }) {
-  const { data: stats, isLoading, refetch } = trpc.admin.countryStats.useQuery({ adminToken }, { enabled: !!adminToken });
-  const { data: recent } = trpc.admin.newRegistrations.useQuery({ adminToken, limit: 100 }, { enabled: !!adminToken });
-  const { data: totalCount } = trpc.admin.totalCount.useQuery({ adminToken }, { enabled: !!adminToken });
-  const { data: onlineCount } = trpc.admin.onlineCount.useQuery({ adminToken }, { enabled: !!adminToken, refetchInterval: 30000 });
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery({ adminToken }, { enabled: !!adminToken, retry: 1 });
+  const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery({ adminToken, limit: 100 }, { enabled: !!adminToken, retry: 1 });
+  const { data: totalCount, isLoading: totalLoading } = trpc.admin.totalCount.useQuery({ adminToken }, { enabled: !!adminToken, retry: 1 });
+  const { data: premiumCount, isLoading: premiumLoading } = trpc.admin.premiumCount.useQuery({ adminToken }, { enabled: !!adminToken, retry: 1 });
+  const { data: onlineCount } = trpc.admin.onlineCount.useQuery({ adminToken }, { enabled: !!adminToken, refetchInterval: 30000, retry: 1 });
+
+  const isLoading = statsLoading || recentLoading || totalLoading || premiumLoading;
+
+  function refetch() { refetchStats(); }
 
   if (isLoading) return <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري التحميل...</div>;
 
-  const totalUsers = totalCount ?? recent?.length ?? 0;
+  if (statsError && totalCount === undefined && recent === undefined) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>
+        <p style={{ fontWeight: 700, marginBottom: '8px' }}>فشل تحميل الإحصائيات</p>
+        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '16px' }}>تأكد من صحة كلمة المرور أو أعد تسجيل الدخول</p>
+        <button onClick={refetch} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 700 }}>إعادة المحاولة</button>
+      </div>
+    );
+  }
+
+  const totalUsers = totalCount ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -411,8 +426,20 @@ function StatsTab({ adminToken }: { adminToken: string }) {
           <Crown style={{ width: '24px', height: '24px', color: '#fbbf24', margin: '0 auto 8px' }} />
           <h4 style={{ margin: 0, color: '#fde68a', fontSize: '12px', fontWeight: 700 }}>أعضاء VIP</h4>
           <p style={{ margin: '4px 0 0', color: 'white', fontSize: '28px', fontWeight: 900 }}>
-            {recent?.filter(u => u.isPremium).length || 0}
+            {premiumCount ?? 0}
           </p>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '-12px' }}>
+        <div style={{ backgroundColor: '#0f2026', border: '1px solid #134e4a', borderRadius: '20px', padding: '16px', textAlign: 'center' }}>
+          <Wifi style={{ width: '20px', height: '20px', color: '#34d399', margin: '0 auto 6px' }} />
+          <h4 style={{ margin: 0, color: '#6ee7b7', fontSize: '12px', fontWeight: 700 }}>المتصلون الآن</h4>
+          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '24px', fontWeight: 900 }}>{onlineCount ?? 0}</p>
+        </div>
+        <div style={{ backgroundColor: '#1a0a0a', border: '1px solid #4a1515', borderRadius: '20px', padding: '16px', textAlign: 'center' }}>
+          <Users style={{ width: '20px', height: '20px', color: '#f87171', margin: '0 auto 6px' }} />
+          <h4 style={{ margin: 0, color: '#fca5a5', fontSize: '12px', fontWeight: 700 }}>آخر تسجيلات</h4>
+          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '24px', fontWeight: 900 }}>{recent?.length ?? 0}</p>
         </div>
       </div>
 

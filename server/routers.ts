@@ -7,7 +7,7 @@ import {
   saveUserProfile, getUsersByGender, getMessages, saveMessage,
   upsertUser, getUserByOpenId, getRecentUsers, incrementProfileViews,
   getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
-  getCountryStats, getNewRegistrations, getTotalUsersCount, getOnlineUsersCount, searchUsers, broadcastNotificationToAll,
+  getCountryStats, getNewRegistrations, getTotalUsersCount, getOnlineUsersCount, getPremiumCount, searchUsers, broadcastNotificationToAll,
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
@@ -645,6 +645,14 @@ export const appRouter = router({
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         return getOnlineUsersCount();
+      }),
+
+    premiumCount: publicProcedure
+      .input(z.object({ adminToken: z.string() }))
+      .query(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
+        return getPremiumCount();
       }),
 
     searchUsers: publicProcedure
