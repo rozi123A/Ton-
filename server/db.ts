@@ -221,10 +221,6 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.country = user.country;
     }
 
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
     if (user.role !== undefined) {
       values.role = user.role;
       updateSet.role = user.role;
@@ -233,13 +229,15 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.role = 'admin';
     }
 
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
+    // Always stamp lastSignedIn and isOnline on every upsert — this is what
+    // powers getOnlineUsersCount (lastSignedIn > 3 min ago) and the admin stats.
+    // BUG FIX: previously lastSignedIn was only added to updateSet when no other
+    // fields existed, so returning users never had their timestamp refreshed.
+    const _now = new Date();
+    values.lastSignedIn = user.lastSignedIn ?? _now;
+    updateSet.lastSignedIn = user.lastSignedIn ?? _now;
+    values.isOnline = true;
+    updateSet.isOnline = true;
 
     await db.insert(users).values(values).onConflictDoUpdate({
       target: users.openId,
