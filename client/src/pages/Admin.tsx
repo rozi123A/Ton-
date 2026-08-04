@@ -198,7 +198,7 @@ function PasswordGate({ onVerified }: { onVerified: () => void }) {
    Payments Tab — New Feature
 ══════════════════════════════════════════════════════════ */
 function PaymentsTab() {
-  const { data: payments, refetch, isLoading } = trpc.gifts.getPendingPayments.useQuery();
+  const { data: payments, refetch, isLoading } = trpc.gifts.getPendingPayments.useQuery(undefined, { refetchInterval: 60000 });
   const handleMutation = trpc.gifts.handlePaymentRequest.useMutation({
     onSuccess: () => {
       toast.success("تم تحديث حالة الطلب بنجاح");
@@ -339,12 +339,12 @@ export default function Admin() {
         </div>
 
         {/* Content */}
-        {activeTab === 'stats' && <StatsTab />}
+        {activeTab === 'stats' && <StatsTab adminToken={token!} />}
         {activeTab === 'payments' && <PaymentsTab />}
         {activeTab === 'calls' && <CallsTab token={token!} />}
         {activeTab === 'recordings' && <RecordingsTab token={token!} />}
-        {activeTab === 'search' && <SearchTab />}
-        {activeTab === 'broadcast' && <BroadcastTab />}
+        {activeTab === 'search' && <SearchTab adminToken={token!} />}
+        {activeTab === 'broadcast' && <BroadcastTab adminToken={token!} />}
       </div>
     </div>
   );
@@ -389,11 +389,11 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 }
 
 // ── Stats Tab Component ───────────────────────────────────────────────────
-function StatsTab() {
-  const { data: stats, isLoading, refetch } = trpc.admin.countryStats.useQuery();
-  const { data: recent } = trpc.admin.newRegistrations.useQuery(100);
-  const { data: totalCount } = trpc.admin.totalCount.useQuery();
-  const { data: onlineCount, refetch: refetchOnline } = trpc.admin.onlineCount.useQuery(undefined, { refetchInterval: 30000 });
+function StatsTab({ adminToken }: { adminToken: string }) {
+  const { data: stats, isLoading, refetch } = trpc.admin.countryStats.useQuery({ adminToken }, { enabled: !!adminToken });
+  const { data: recent } = trpc.admin.newRegistrations.useQuery({ adminToken, limit: 100 }, { enabled: !!adminToken });
+  const { data: totalCount } = trpc.admin.totalCount.useQuery({ adminToken }, { enabled: !!adminToken });
+  const { data: onlineCount } = trpc.admin.onlineCount.useQuery({ adminToken }, { enabled: !!adminToken, refetchInterval: 30000 });
 
   if (isLoading) return <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري التحميل...</div>;
 
@@ -542,13 +542,13 @@ function RecordingsTab({ token }: { token: string }) {
 /* ══════════════════════════════════════════════════════════
    Search Tab
 ══════════════════════════════════════════════════════════ */
-function SearchTab() {
+function SearchTab({ adminToken }: { adminToken: string }) {
   const [query, setQuery] = useState('');
   const [submitted, setSubmitted] = useState('');
 
   const { data: results, isLoading } = trpc.admin.searchUsers.useQuery(
-    { query: submitted },
-    { enabled: submitted.length > 0 }
+    { adminToken, query: submitted },
+    { enabled: !!adminToken && submitted.length > 0 }
   );
 
   const handleSearch = (e: React.FormEvent) => {
@@ -620,7 +620,7 @@ function SearchTab() {
 /* ══════════════════════════════════════════════════════════
    Broadcast Tab
 ══════════════════════════════════════════════════════════ */
-function BroadcastTab() {
+function BroadcastTab({ adminToken }: { adminToken: string }) {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
 
@@ -637,7 +637,7 @@ function BroadcastTab() {
     e.preventDefault();
     if (!title.trim() || !message.trim()) return;
     if (!confirm(`سيتم إرسال الإشعار لجميع المستخدمين. هل أنت متأكد؟`)) return;
-    broadcastMutation.mutate({ title: title.trim(), message: message.trim() });
+    broadcastMutation.mutate({ adminToken, title: title.trim(), message: message.trim() });
   };
 
   return (
