@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
+import { trpc } from "@/lib/trpc";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
@@ -45,10 +46,25 @@ function Router() {
 function App() {
   // Keep an active user's session warm without adding a request to the
   // critical first render. The server also runs its own keep-alive on Render.
+  // Keep server alive (Render free tier)
   useEffect(() => {
-    const ping = () =>
-      fetch("/ping", { cache: "no-store" }).catch(() => {/* ignore */});
-    const id = setInterval(ping, 10 * 60 * 1000);
+    const id = setInterval(
+      () => fetch("/ping", { cache: "no-store" }).catch(() => {}),
+      10 * 60 * 1000
+    );
+    return () => clearInterval(id);
+  }, []);
+
+  // Presence ping — updates lastSignedIn every 2 min so admin online count is accurate
+  const presencePing = trpc.users.ping.useMutation();
+  const presencePingRef = useRef(presencePing);
+  presencePingRef.current = presencePing;
+  useEffect(() => {
+    const id = setInterval(() => {
+      presencePingRef.current.mutate();
+    }, 2 * 60 * 1000);
+    // Fire immediately on mount so the user appears online right away
+    setTimeout(() => presencePingRef.current.mutate(), 3000);
     return () => clearInterval(id);
   }, []);
 

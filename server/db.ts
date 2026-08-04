@@ -804,7 +804,7 @@ export async function getOnlineUsersCount(): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
   try {
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const tenMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
       .where(sql`${users.lastSignedIn} > ${tenMinutesAgo}`);
@@ -867,5 +867,17 @@ export async function broadcastNotificationToAll(title: string, message: string)
   } catch (err) {
     console.error('[Database] broadcastNotificationToAll failed:', err);
     return 0;
+  }
+}
+
+export async function updateUserPresence(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(users)
+      .set({ isOnline: true, lastSignedIn: new Date() })
+      .where(eq(users.id, userId));
+  } catch (err) {
+    console.error('[Database] updateUserPresence failed:', err);
   }
 }

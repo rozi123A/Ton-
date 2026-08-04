@@ -11,7 +11,7 @@ import {
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
-  getUnreadMessageCount, markMessagesRead,
+  getUnreadMessageCount, markMessagesRead, updateUserPresence,
   getDb,
 } from "./db";
 import { eq, sql } from "drizzle-orm";
@@ -602,13 +602,20 @@ export const appRouter = router({
       }),
 
     /** Deduct stars for using Star Radar (paid filter — skipped for admin) */
-    deductRadarStars: protectedProcedure
+deductRadarStars: protectedProcedure
       .input(z.object({ amount: z.number().min(1).max(50) }))
       .mutation(async ({ ctx, input }) => {
         if ((ctx.user as any).role === 'admin') return { success: true };
         const { deductStars } = await import("./db");
         const success = await deductStars(ctx.user.id, input.amount);
         if (!success) throw new Error("رصيد نجوم غير كافٍ لاستخدام الرادار");
+        return { success: true };
+      }),
+
+    /** Presence ping — updates lastSignedIn and isOnline so admin stats are accurate */
+    ping: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await updateUserPresence(ctx.user.id);
         return { success: true };
       }),
   }),
