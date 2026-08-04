@@ -285,8 +285,11 @@ export const appRouter = router({
           } catch { return _defaultAvatar; }
         })();
 
-        // Use client-provided browser country first (always accurate), then IP fallback
-        const country = input.country?.toUpperCase() || await detectCountry(ctx.req);
+        // Use client-provided browser country first (always accurate).
+        // IP-based detection runs in parallel with user creation (non-blocking)
+        // to avoid stalling the login flow for up to 12s.
+        const ipCountry = detectCountry(ctx.req).catch(() => undefined);
+        const country = input.country?.toUpperCase() || undefined;
 
         try {
           await upsertUser({ openId: guestOpenId, name: input.name, loginMethod: 'guest', lastSignedIn: new Date(), ...(country ? { country } : {}) });
@@ -294,8 +297,17 @@ export const appRouter = router({
           if (user) {
             await saveUserProfile(user.id, { name: input.name, age: input.age, gender: input.gender, avatar: avatarUrl });
           }
+          // Background: save IP-detected country if not already set by client
+          if (!country) {
+            ipCountry.then(ipCountryCode => {
+              if (ipCountryCode && user) {
+                upsertUser({ openId: guestOpenId, country: ipCountryCode }).catch(() => {});
+              }
+            }).catch(() => {});
+          }
         } catch (dbErr) {
           console.warn('[GuestLogin] DB unavailable, continuing with JWT-only session:', dbErr);
+          // Still create session token even if DB failed
         }
 
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });

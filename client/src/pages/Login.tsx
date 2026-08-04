@@ -7,6 +7,7 @@ import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { detectBrowserCountry } from '@/lib/detectCountry';
 import {
+  COOKIE_NAME,
   GUEST_SESSION_ACTIVE_KEY,
   GUEST_TOKEN_KEY,
 } from '@shared/const';
@@ -85,9 +86,15 @@ export default function Login() {
       // points, friends, and history remain server-side in the guest account.
       if (result.guestToken) {
         localStorage.setItem(GUEST_TOKEN_KEY, result.guestToken);
+        // Store in sessionStorage so the Authorization header is sent on the
+        // next request even before the cookie is processed by the browser.
+        // This avoids waiting for auth.me to confirm the session.
+        sessionStorage.setItem('manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
       }
-      await utils.auth.me.invalidate();
-      setTimeout(() => setLocation('/chat'), 300);
+      // Redirect immediately — don't wait for auth.me to resolve.
+      // The Authorization header from sessionStorage ensures the next tRPC
+      // call (auth.me on /chat) will authenticate successfully.
+      setLocation('/chat');
     } catch (err) {
       localStorage.removeItem(GUEST_SESSION_ACTIVE_KEY);
       console.error(err);
