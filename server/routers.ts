@@ -32,6 +32,13 @@ const aiMessageSchema = z.object({
   content: z.string().min(1).max(20_000),
 });
 
+// ── Admin HMAC token verification (no session required) ─────────────────
+function verifyAdminHmac(token: string, secret: string): boolean {
+  if (!token || !secret) return false;
+  const expected = crypto.createHmac('sha256', secret).update('admin-session').digest('hex');
+  return token === expected;
+}
+
 export const appRouter = router({
   system: systemRouter,
 
@@ -606,13 +613,6 @@ export const appRouter = router({
       }),
   }),
 
-
-// ── Admin HMAC token verification (no session required) ─────────────────
-function verifyAdminHmac(token: string, secret: string): boolean {
-  if (!token || !secret) return false;
-  const expected = crypto.createHmac('sha256', secret).update('admin-session').digest('hex');
-  return token === expected;
-}
 
   admin: router({
     newRegistrations: publicProcedure
