@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
-import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, Shield, Eye, EyeOff, Video, Radio, X, MonitorPlay, Trash2, Play, Download, Wallet, Check, Ban, Clock, Star } from 'lucide-react';
+import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, Shield, Eye, EyeOff, Video, Radio, X, MonitorPlay, Trash2, Play, Download, Wallet, Check, Ban, Clock, Star, Search, Bell, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
 
 const ADMIN_SESSION_KEY = 'admin_mode';
@@ -287,7 +287,7 @@ function PaymentsTab() {
 
 export default function Admin() {
   const [location, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<'stats'|'calls'|'recordings'|'payments'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats'|'calls'|'recordings'|'payments'|'search'|'broadcast'>('stats');
   const [isVerified, setIsVerified] = useState(false);
   const token = sessionStorage.getItem(ADMIN_SESSION_KEY);
 
@@ -318,6 +318,8 @@ export default function Admin() {
             { id: 'calls', label: 'المكالمات', icon: <Video /> },
             { id: 'payments', label: 'الطلبات المالية', icon: <Wallet /> },
             { id: 'recordings', label: 'التسجيلات', icon: <MonitorPlay /> },
+            { id: 'search', label: 'بحث مستخدم', icon: <Search /> },
+            { id: 'broadcast', label: 'إشعار جماعي', icon: <Bell /> },
           ].map(tab => (
             <button
               key={tab.id}
@@ -341,6 +343,8 @@ export default function Admin() {
         {activeTab === 'payments' && <PaymentsTab />}
         {activeTab === 'calls' && <CallsTab token={token!} />}
         {activeTab === 'recordings' && <RecordingsTab token={token!} />}
+        {activeTab === 'search' && <SearchTab />}
+        {activeTab === 'broadcast' && <BroadcastTab />}
       </div>
     </div>
   );
@@ -387,11 +391,13 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 // ── Stats Tab Component ───────────────────────────────────────────────────
 function StatsTab() {
   const { data: stats, isLoading, refetch } = trpc.admin.countryStats.useQuery();
-  const { data: recent } = trpc.admin.newRegistrations.useQuery(50);
+  const { data: recent } = trpc.admin.newRegistrations.useQuery(100);
+  const { data: totalCount } = trpc.admin.totalCount.useQuery();
+  const { data: onlineCount, refetch: refetchOnline } = trpc.admin.onlineCount.useQuery(undefined, { refetchInterval: 30000 });
 
   if (isLoading) return <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري التحميل...</div>;
 
-  const totalUsers = recent?.length || 0;
+  const totalUsers = totalCount ?? recent?.length ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -528,6 +534,172 @@ function RecordingsTab({ token }: { token: string }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   Search Tab
+══════════════════════════════════════════════════════════ */
+function SearchTab() {
+  const [query, setQuery] = useState('');
+  const [submitted, setSubmitted] = useState('');
+
+  const { data: results, isLoading } = trpc.admin.searchUsers.useQuery(
+    { query: submitted },
+    { enabled: submitted.length > 0 }
+  );
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) setSubmitted(query.trim());
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px' }}>
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="ابحث باسم المستخدم..."
+          style={{
+            flex: 1, backgroundColor: '#1f2937', border: '1px solid #374151',
+            borderRadius: '12px', padding: '12px 16px', color: 'white', fontSize: '14px',
+            outline: 'none', direction: 'rtl',
+          }}
+        />
+        <button
+          type="submit"
+          style={{
+            backgroundColor: '#7c3aed', color: 'white', border: 'none',
+            borderRadius: '12px', padding: '12px 20px', fontWeight: 700,
+            cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px',
+          }}
+        >
+          <Search style={{ width: '16px', height: '16px' }} />
+          بحث
+        </button>
+      </form>
+
+      {isLoading && <div style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>جاري البحث...</div>}
+
+      {results && results.length === 0 && submitted && (
+        <div style={{ color: '#6b7280', textAlign: 'center', padding: '20px' }}>لم يُعثر على نتائج</div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {results?.map(u => (
+          <div key={u.id} style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '16px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img
+              src={u.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(u.name || 'U') + '&background=7c3aed&color=fff'}
+              style={{ width: '46px', height: '46px', borderRadius: '12px', objectFit: 'cover' }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                <p style={{ margin: 0, fontSize: '15px', fontWeight: 800 }}>{u.name}</p>
+                {u.isPremium && <Crown style={{ width: '14px', color: '#fbbf24' }} />}
+                {u.role === 'admin' && <Shield style={{ width: '14px', color: '#818cf8' }} />}
+              </div>
+              <p style={{ margin: 0, fontSize: '11px', color: '#6b7280' }}>
+                {u.gender === 'male' ? 'ذكر' : u.gender === 'female' ? 'أنثى' : 'آخر'} • {u.age} سنة • {COUNTRY_NAMES[u.country || ''] || u.country || 'غير محدد'}
+              </p>
+            </div>
+            <div style={{ textAlign: 'left', fontSize: '11px', color: '#4b5563' }}>
+              <p style={{ margin: 0 }}>⭐ {u.credits} نقطة</p>
+              <p style={{ margin: '2px 0 0' }}>💰 {u.wallet} نجمة</p>
+              <p style={{ margin: '2px 0 0' }}>#{u.id}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   Broadcast Tab
+══════════════════════════════════════════════════════════ */
+function BroadcastTab() {
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+
+  const broadcastMutation = trpc.admin.broadcast.useMutation({
+    onSuccess: (data) => {
+      toast.success(`✅ تم إرسال الإشعار لـ ${data.count} مستخدم بنجاح!`);
+      setTitle('');
+      setMessage('');
+    },
+    onError: (e) => toast.error(`فشل الإرسال: ${e.message}`),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim() || !message.trim()) return;
+    if (!confirm(`سيتم إرسال الإشعار لجميع المستخدمين. هل أنت متأكد؟`)) return;
+    broadcastMutation.mutate({ title: title.trim(), message: message.trim() });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '20px', padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+          <Bell style={{ width: '20px', height: '20px', color: '#f59e0b' }} />
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>إرسال إشعار لجميع المستخدمين</h3>
+        </div>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label style={{ display: 'block', color: '#9ca3af', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>عنوان الإشعار</label>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="مثال: تحديث جديد!"
+              maxLength={200}
+              style={{
+                width: '100%', backgroundColor: '#1f2937', border: '1px solid #374151',
+                borderRadius: '12px', padding: '12px 16px', color: 'white', fontSize: '14px',
+                outline: 'none', direction: 'rtl', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', color: '#9ca3af', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>نص الإشعار</label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder="اكتب رسالتك هنا..."
+              rows={4}
+              maxLength={1000}
+              style={{
+                width: '100%', backgroundColor: '#1f2937', border: '1px solid #374151',
+                borderRadius: '12px', padding: '12px 16px', color: 'white', fontSize: '14px',
+                outline: 'none', direction: 'rtl', resize: 'vertical', boxSizing: 'border-box',
+              }}
+            />
+            <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#4b5563', textAlign: 'left' }}>{message.length}/1000</p>
+          </div>
+          <button
+            type="submit"
+            disabled={broadcastMutation.isPending || !title.trim() || !message.trim()}
+            style={{
+              backgroundColor: broadcastMutation.isPending ? '#374151' : '#f59e0b',
+              color: broadcastMutation.isPending ? '#6b7280' : 'black',
+              border: 'none', borderRadius: '12px', padding: '14px',
+              fontWeight: 800, fontSize: '15px', cursor: broadcastMutation.isPending ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            }}
+          >
+            <Bell style={{ width: '18px' }} />
+            {broadcastMutation.isPending ? 'جاري الإرسال...' : 'إرسال للجميع'}
+          </button>
+        </form>
+      </div>
+
+      <div style={{ backgroundColor: '#1a1a2e', border: '1px solid #2d2d44', borderRadius: '16px', padding: '16px' }}>
+        <p style={{ margin: 0, color: '#6b7280', fontSize: '12px', lineHeight: '1.6' }}>
+          💡 الإشعارات ستظهر للمستخدمين في قسم الإشعارات عند دخولهم للتطبيق. لا يمكن التراجع عن الإرسال.
+        </p>
+      </div>
     </div>
   );
 }
