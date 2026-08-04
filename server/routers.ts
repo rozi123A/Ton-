@@ -684,7 +684,7 @@ deductRadarStars: protectedProcedure
           const [total] = await db.select({ count: sql`cast(count(*) as int)` }).from(users);
           return { connected: true, totalUsers: total?.count ?? 0, reason: null };
         } catch (err: any) {
-          return { connected: false, totalUsers: 0, reason: String(err?.message ?? err) };
+          const reason = err?.cause?.message ?? err?.message ?? String(err); return { connected: false, totalUsers: 0, reason: String(reason) };
         }
       }),
 

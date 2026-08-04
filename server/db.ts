@@ -53,7 +53,7 @@ export async function ensureSchema(): Promise<void> {
   ];
   for (const [typeName, values] of enums) {
     try {
-      await _rawClient.unsafe(`CREATE TYPE ${typeName} AS ENUM (${values})`);
+      await _rawClient.unsafe(`CREATE TYPE "${typeName}" AS ENUM (${values})`);
     } catch (e: any) {
       const msg: string = e?.message ?? '';
       if (!msg.includes('already exists')) {
@@ -79,7 +79,7 @@ export async function ensureSchema(): Promise<void> {
        "isOnline"    BOOLEAN NOT NULL DEFAULT false,
        "lastSeen"    TIMESTAMP NOT NULL DEFAULT now(),
        "loginMethod" VARCHAR(64),
-       role          role NOT NULL DEFAULT 'user',
+       role          "role" NOT NULL DEFAULT 'user',
        "createdAt"   TIMESTAMP NOT NULL DEFAULT now(),
        "updatedAt"   TIMESTAMP NOT NULL DEFAULT now(),
        "lastSignedIn" TIMESTAMP NOT NULL DEFAULT now()
@@ -178,7 +178,7 @@ export async function ensureSchema(): Promise<void> {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "lastSeen"    TIMESTAMP NOT NULL DEFAULT now()`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "lastSignedIn" TIMESTAMP NOT NULL DEFAULT now()`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "loginMethod" VARCHAR(64)`,
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS role          role NOT NULL DEFAULT 'user'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS role          "role" NOT NULL DEFAULT 'user'`,
   ];
   for (const m of migrations) {
     try { await _rawClient.unsafe(m); } catch { /* column already exists — safe to ignore */ }
