@@ -42,11 +42,12 @@ export async function getDb() {
  * This replaces the need for drizzle-kit CLI in production.
  */
 export async function ensureSchema(): Promise<void> {
-  const db = await getDb();
-  if (!db || !_rawClient) {
-    console.warn('[Database] ensureSchema skipped: no DB connection');
-    return;
-  }
+  try {
+    const db = await getDb();
+    if (!db || !_rawClient) {
+      console.warn('[Database] ensureSchema skipped: no DB connection');
+      return;
+    }
 
   // Create enums — no dollar-quoting needed: catch the "already exists" error in JS
   const enums: Array<[string, string]> = [
@@ -186,7 +187,10 @@ export async function ensureSchema(): Promise<void> {
     try { await _rawClient.unsafe(m); } catch { /* column already exists — safe to ignore */ }
   }
 
-  console.log('[Database] Schema ready');
+    console.log('[Database] Schema ready');
+  } catch (err) {
+    console.error('[Database] ensureSchema failed, but continuing startup:', err);
+  }
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
