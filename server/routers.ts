@@ -606,27 +606,60 @@ export const appRouter = router({
       }),
   }),
 
+
+// ── Admin HMAC token verification (no session required) ─────────────────
+function verifyAdminHmac(token: string, secret: string): boolean {
+  if (!token || !secret) return false;
+  const expected = crypto.createHmac('sha256', secret).update('admin-session').digest('hex');
+  return token === expected;
+}
+
   admin: router({
-    newRegistrations: adminProcedure
-      .input(z.number().min(1).max(200).optional())
-      .query(async ({ input }) => getNewRegistrations(input ?? 50)),
+    newRegistrations: publicProcedure
+      .input(z.object({ adminToken: z.string(), limit: z.number().min(1).max(200).optional() }))
+      .query(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
+        return getNewRegistrations(input.limit ?? 100);
+      }),
 
-    countryStats: adminProcedure
-      .query(async () => getCountryStats()),
+    countryStats: publicProcedure
+      .input(z.object({ adminToken: z.string() }))
+      .query(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
+        return getCountryStats();
+      }),
 
-    totalCount: adminProcedure
-      .query(async () => getTotalUsersCount()),
+    totalCount: publicProcedure
+      .input(z.object({ adminToken: z.string() }))
+      .query(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
+        return getTotalUsersCount();
+      }),
 
-    onlineCount: adminProcedure
-      .query(async () => getOnlineUsersCount()),
+    onlineCount: publicProcedure
+      .input(z.object({ adminToken: z.string() }))
+      .query(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
+        return getOnlineUsersCount();
+      }),
 
-    searchUsers: adminProcedure
-      .input(z.object({ query: z.string().min(1).max(100) }))
-      .query(async ({ input }) => searchUsers(input.query)),
+    searchUsers: publicProcedure
+      .input(z.object({ adminToken: z.string(), query: z.string().min(1).max(100) }))
+      .query(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
+        return searchUsers(input.query);
+      }),
 
-    broadcast: adminProcedure
-      .input(z.object({ title: z.string().min(1).max(200), message: z.string().min(1).max(1000) }))
+    broadcast: publicProcedure
+      .input(z.object({ adminToken: z.string(), title: z.string().min(1).max(200), message: z.string().min(1).max(1000) }))
       .mutation(async ({ input }) => {
+        const { ENV } = await import('./_core/env');
+        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         const count = await broadcastNotificationToAll(input.title, input.message);
         return { success: true, count };
       }),
