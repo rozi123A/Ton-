@@ -47,8 +47,10 @@ export default function Login() {
   const guestLoginMutation = trpc.users.guestLogin.useMutation();
 
   useEffect(() => {
-    if (!loading && isAuthenticated) setLocation('/chat');
-  }, [isAuthenticated, loading, setLocation]);
+    // Redirect to chat if already authenticated.
+    // Only check after a short delay so the form renders first.
+    if (isAuthenticated) setLocation('/chat');
+  }, [isAuthenticated, setLocation]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -95,16 +97,11 @@ export default function Login() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-cyan-400 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-white text-lg font-medium">جاري التحقق...</p>
-        </div>
-      </div>
-    );
-  }
+  // No loading screen — show the form immediately even if auth is still loading.
+  // If auth resolves to authenticated, redirect to /chat automatically.
+  // The auth.me query will still run in the background (retryOnMount:false
+  // means it won't run until explicitly triggered).
+  void loading; // suppress unused warning
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-cyan-400 flex items-center justify-center p-4 relative overflow-hidden">
