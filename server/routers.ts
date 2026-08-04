@@ -7,7 +7,7 @@ import {
   saveUserProfile, getUsersByGender, getMessages, saveMessage,
   upsertUser, getUserByOpenId, getRecentUsers, incrementProfileViews,
   getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
-  getCountryStats, getNewRegistrations,
+  getCountryStats, getNewRegistrations, getTotalUsersCount, getOnlineUsersCount, searchUsers, broadcastNotificationToAll,
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
@@ -614,6 +614,23 @@ export const appRouter = router({
     countryStats: adminProcedure
       .query(async () => getCountryStats()),
 
+    totalCount: adminProcedure
+      .query(async () => getTotalUsersCount()),
+
+    onlineCount: adminProcedure
+      .query(async () => getOnlineUsersCount()),
+
+    searchUsers: adminProcedure
+      .input(z.object({ query: z.string().min(1).max(100) }))
+      .query(async ({ input }) => searchUsers(input.query)),
+
+    broadcast: adminProcedure
+      .input(z.object({ title: z.string().min(1).max(200), message: z.string().min(1).max(1000) }))
+      .mutation(async ({ input }) => {
+        const count = await broadcastNotificationToAll(input.title, input.message);
+        return { success: true, count };
+      }),
+
     /**
      * Public endpoint — verify admin password without needing a user session.
      * Returns a signed token the client stores in sessionStorage.
@@ -710,3 +727,4 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
