@@ -24,7 +24,9 @@ export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
       const url = cleanDbUrl(process.env.DATABASE_URL);
-      _rawClient = postgres(url, { ssl: 'require', max: 10 });
+      // connect_timeout: 5s — fail fast if DB hostname is unreachable (prevents
+      // hanging the Render health-check on startup when DATABASE_URL is wrong).
+      _rawClient = postgres(url, { ssl: 'require', max: 10, connect_timeout: 5 });
       _db = drizzle(_rawClient);
     } catch (error) {
       console.warn('[Database] Failed to connect:', error);
@@ -199,49 +201,47 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 
   try {
-    const values: InsertUser = { openId: user.openId };
-    const updateSet: Record<string, unknown> = {};
+    const _now = new Date();
+    const lastSignedIn = user.lastSignedIn ?? _now;
 
-    const textFields = ['name', 'email', 'loginMethod'] as const;
-    type TextField = (typeof textFields)[number];
+    // Determine role: explicit > owner override > omit (let DB default apply)
+    const role: InsertUser['role'] | undefined =
+      user.role !== undefined
+        ? user.role
+        : user.openId === ENV.ownerOpenId
+          ? 'admin'
+          : undefined;
 
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
+    // Build a single, flat insert object — avoids Drizzle v0.44 duplicate-column
+    // bug where incrementally mutating InsertUser causes schema defaults to be
+    // emitted twice (once from the explicit value, once from the column default).
+    const insertValues: InsertUser = {
+      openId: user.openId,
+      isOnline: true,
+      lastSignedIn,
+      ...(user.name      !== undefined && { name:        user.name      ?? null }),
+      ...(user.email     !== undefined && { email:       user.email     ?? null }),
+      ...(user.loginMethod !== undefined && { loginMethod: user.loginMethod ?? null }),
+      ...(user.country                 && { country:     user.country }),
+      ...(role !== undefined           && { role }),
     };
 
-    textFields.forEach(assignNullable);
+    // The conflict update mirrors the insert (excluding openId which is the key).
+    // Using `sql\`excluded."col"\`` makes Drizzle emit the exact SQL we want and
+    // avoids any ORM-level double-column emission on conflict branches.
+    const conflictSet: Record<string, unknown> = {
+      isOnline:     sql`excluded."isOnline"`,
+      lastSignedIn: sql`excluded."lastSignedIn"`,
+    };
+    if (user.name      !== undefined) conflictSet.name        = sql`excluded.name`;
+    if (user.email     !== undefined) conflictSet.email       = sql`excluded.email`;
+    if (user.loginMethod !== undefined) conflictSet.loginMethod = sql`excluded."loginMethod"`;
+    if (user.country)                 conflictSet.country     = sql`excluded.country`;
+    if (role !== undefined)           conflictSet.role        = sql`excluded.role`;
 
-    // Handle country — only set/update when we have a real value, never overwrite with null
-    if (user.country) {
-      values.country = user.country;
-      updateSet.country = user.country;
-    }
-
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    // Always stamp lastSignedIn and isOnline on every upsert — this is what
-    // powers getOnlineUsersCount (lastSignedIn > 3 min ago) and the admin stats.
-    // BUG FIX: previously lastSignedIn was only added to updateSet when no other
-    // fields existed, so returning users never had their timestamp refreshed.
-    const _now = new Date();
-    values.lastSignedIn = user.lastSignedIn ?? _now;
-    updateSet.lastSignedIn = user.lastSignedIn ?? _now;
-    values.isOnline = true;
-    updateSet.isOnline = true;
-
-    await db.insert(users).values(values).onConflictDoUpdate({
+    await db.insert(users).values(insertValues).onConflictDoUpdate({
       target: users.openId,
-      set: updateSet,
+      set: conflictSet,
     });
   } catch (error) {
     console.error('[Database] Failed to upsert user:', error);
