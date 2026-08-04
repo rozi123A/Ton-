@@ -390,16 +390,22 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 
 // ── Stats Tab Component ───────────────────────────────────────────────────
 function StatsTab({ adminToken }: { adminToken: string }) {
-  const { data: dbStatus, isLoading: dbLoading } = trpc.admin.dbStatus.useQuery({ adminToken }, { enabled: !!adminToken, retry: 1 });
-  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery({ adminToken }, { enabled: !!adminToken && !!dbStatus?.connected, retry: 1 });
-  const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery({ adminToken, limit: 100 }, { enabled: !!adminToken && !!dbStatus?.connected, retry: 1 });
-  const { data: totalCount, isLoading: totalLoading } = trpc.admin.totalCount.useQuery({ adminToken }, { enabled: !!adminToken && !!dbStatus?.connected, retry: 1 });
-  const { data: premiumCount, isLoading: premiumLoading } = trpc.admin.premiumCount.useQuery({ adminToken }, { enabled: !!adminToken && !!dbStatus?.connected, retry: 1 });
-  const { data: onlineCount } = trpc.admin.onlineCount.useQuery({ adminToken }, { enabled: !!adminToken && !!dbStatus?.connected, refetchInterval: 30000, retry: 1 });
+  const { data: dbStatus, isLoading: dbLoading, isError: dbError } = trpc.admin.dbStatus.useQuery({ adminToken }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery({ adminToken }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
+  const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery({ adminToken, limit: 100 }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
+  const { data: totalCount, isLoading: totalLoading } = trpc.admin.totalCount.useQuery({ adminToken }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
+  const { data: premiumCount, isLoading: premiumLoading } = trpc.admin.premiumCount.useQuery({ adminToken }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
+  const { data: onlineCount, refetch: refetchOnline } = trpc.admin.onlineCount.useQuery({ adminToken }, { enabled: !!adminToken, refetchInterval: 60000, retry: 2, retryDelay: 1000 });
 
-  const isLoading = dbLoading || (dbStatus?.connected && (statsLoading || recentLoading || totalLoading || premiumLoading));
+  // Use dbStatus data if available (it now includes all stats), fallback to individual queries
+  const totalUsers = dbStatus?.totalUsers ?? totalCount ?? 0;
+  const vipCount = dbStatus?.premiumUsers ?? premiumCount ?? 0;
+  const onlineUsers = dbStatus?.onlineUsers ?? onlineCount ?? 0;
 
-  function refetch() { refetchStats(); }
+  // Show loading only while initial queries are still fetching
+  const isLoading = dbLoading || (dbStatus?.connected === true && (statsLoading || recentLoading));
+
+  function refetch() { refetchStats(); refetchOnline(); }
 
   if (isLoading) return <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري التحميل...</div>;
 
@@ -425,10 +431,15 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     );
   }
 
-  const totalUsers = totalCount ?? 0;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* DB Status Warning (non-blocking) */}
+      {dbStatus && !dbStatus.connected && (
+        <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '16px', padding: '16px', marginBottom: '8px' }}>
+          <p style={{ color: '#ef4444', fontWeight: 700, fontSize: '14px', margin: '0 0 4px' }}>⚠️ قاعدة البيانات غير متصلة</p>
+          <p style={{ color: '#fca5a5', fontSize: '12px', margin: 0 }}>{dbStatus.reason}</p>
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div style={{ backgroundColor: '#1e1b4b', border: '1px solid #3730a3', borderRadius: '20px', padding: '20px', textAlign: 'center' }}>
           <Users style={{ width: '24px', height: '24px', color: '#818cf8', margin: '0 auto 8px' }} />
@@ -438,16 +449,14 @@ function StatsTab({ adminToken }: { adminToken: string }) {
         <div style={{ backgroundColor: '#1e1b4b', border: '1px solid #3730a3', borderRadius: '20px', padding: '20px', textAlign: 'center' }}>
           <Crown style={{ width: '24px', height: '24px', color: '#fbbf24', margin: '0 auto 8px' }} />
           <h4 style={{ margin: 0, color: '#fde68a', fontSize: '12px', fontWeight: 700 }}>أعضاء VIP</h4>
-          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '28px', fontWeight: 900 }}>
-            {premiumCount ?? 0}
-          </p>
+          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '28px', fontWeight: 900 }}>{vipCount}</p>
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '-12px' }}>
         <div style={{ backgroundColor: '#0f2026', border: '1px solid #134e4a', borderRadius: '20px', padding: '16px', textAlign: 'center' }}>
           <Wifi style={{ width: '20px', height: '20px', color: '#34d399', margin: '0 auto 6px' }} />
           <h4 style={{ margin: 0, color: '#6ee7b7', fontSize: '12px', fontWeight: 700 }}>المتصلون الآن</h4>
-          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '24px', fontWeight: 900 }}>{onlineCount ?? 0}</p>
+          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '24px', fontWeight: 900 }}>{onlineUsers}</p>
         </div>
         <div style={{ backgroundColor: '#1a0a0a', border: '1px solid #4a1515', borderRadius: '20px', padding: '16px', textAlign: 'center' }}>
           <Users style={{ width: '20px', height: '20px', color: '#f87171', margin: '0 auto 6px' }} />

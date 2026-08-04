@@ -26,6 +26,7 @@ import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { ENV } from "./_core/env";
 
 const aiMessageSchema = z.object({
   role: z.enum(["system", "user", "assistant"]),
@@ -63,7 +64,7 @@ export const appRouter = router({
           const result = await invokeLLM({
             messages,
             model: input.model,
-            maxTokens: input.maxTokens,
+            maxTokens: input.maxTokens ?? 500,
           });
           const content = result.choices[0]?.message?.content;
           const text = typeof content === "string"
@@ -381,6 +382,13 @@ export const appRouter = router({
 
         return { success: true, starsGained: 5, creditsGained: 10 };
       }),
+
+    /** Presence ping — updates lastSignedIn and isOnline so admin stats are accurate */
+    ping: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await updateUserPresence(ctx.user.id);
+        return { success: true };
+      }),
   }),
 
   messages: router({
@@ -602,7 +610,7 @@ export const appRouter = router({
       }),
 
     /** Deduct stars for using Star Radar (paid filter — skipped for admin) */
-deductRadarStars: protectedProcedure
+    deductRadarStars: protectedProcedure
       .input(z.object({ amount: z.number().min(1).max(50) }))
       .mutation(async ({ ctx, input }) => {
         if ((ctx.user as any).role === 'admin') return { success: true };
@@ -611,15 +619,7 @@ deductRadarStars: protectedProcedure
         if (!success) throw new Error("رصيد نجوم غير كافٍ لاستخدام الرادار");
         return { success: true };
       }),
-
-    /** Presence ping — updates lastSignedIn and isOnline so admin stats are accurate */
-    ping: protectedProcedure
-      .mutation(async ({ ctx }) => {
-        await updateUserPresence(ctx.user.id);
-        return { success: true };
-      }),
   }),
-
 
   admin: router({
     newRegistrations: publicProcedure
@@ -681,10 +681,22 @@ deductRadarStars: protectedProcedure
           return { connected: false, totalUsers: 0, reason: 'DATABASE_URL غير مضبوط أو الاتصال فشل' };
         }
         try {
-          const [total] = await db.select({ count: sql`cast(count(*) as int)` }).from(users);
-          return { connected: true, totalUsers: total?.count ?? 0, reason: null };
+          // Fetch multiple stats in a single query to reduce latency
+          const [totalResult, premiumResult, onlineResult] = await Promise.all([
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
+          ]);
+          return {
+            connected: true,
+            totalUsers: totalResult[0]?.count ?? 0,
+            premiumUsers: premiumResult[0]?.count ?? 0,
+            onlineUsers: onlineResult[0]?.count ?? 0,
+            reason: null,
+          };
         } catch (err: any) {
-          const reason = err?.cause?.message ?? err?.message ?? String(err); return { connected: false, totalUsers: 0, reason: String(reason) };
+          const reason = err?.cause?.message ?? err?.message ?? String(err);
+          return { connected: false, totalUsers: 0, reason: String(reason) };
         }
       }),
 

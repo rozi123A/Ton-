@@ -500,7 +500,10 @@ export async function getNewRegistrations(limit = 50): Promise<Array<{
   createdAt: Date; loginMethod: string | null; isPremium: boolean;
 }>> {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    console.warn('[Database] getNewRegistrations: no DB connection');
+    return [];
+  }
   try {
     return await db
       .select({
@@ -520,7 +523,10 @@ export async function getNewRegistrations(limit = 50): Promise<Array<{
 
 export async function getCountryStats(): Promise<Array<{ country: string; count: number }>> {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    console.warn('[Database] getCountryStats: no DB connection');
+    return [];
+  }
   try {
     const rows = await db
       .select({ country: users.country, count: sql<number>`cast(count(*) as int)` })
@@ -798,7 +804,10 @@ export async function markNotificationsAsRead(userId: number) {
 
 export async function getTotalUsersCount(): Promise<number> {
   const db = await getDb();
-  if (!db) return 0;
+  if (!db) {
+    console.warn('[Database] getTotalUsersCount: no DB connection');
+    return 0;
+  }
   try {
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
     return result[0]?.count ?? 0;
@@ -810,12 +819,16 @@ export async function getTotalUsersCount(): Promise<number> {
 
 export async function getOnlineUsersCount(): Promise<number> {
   const db = await getDb();
-  if (!db) return 0;
+  if (!db) {
+    console.warn('[Database] getOnlineUsersCount: no DB connection');
+    return 0;
+  }
   try {
-    const tenMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+    // Users who were active in the last 5 minutes (lastSignedIn updated by ping)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(sql`${users.lastSignedIn} > ${tenMinutesAgo}`);
+      .where(sql`${users.lastSignedIn} > ${fiveMinutesAgo}`);
     return result[0]?.count ?? 0;
   } catch (err) {
     console.error('[Database] getOnlineUsersCount failed:', err);
@@ -825,7 +838,10 @@ export async function getOnlineUsersCount(): Promise<number> {
 
 export async function getPremiumCount(): Promise<number> {
   const db = await getDb();
-  if (!db) return 0;
+  if (!db) {
+    console.warn('[Database] getPremiumCount: no DB connection');
+    return 0;
+  }
   try {
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
@@ -883,7 +899,7 @@ export async function updateUserPresence(userId: number): Promise<void> {
   if (!db) return;
   try {
     await db.update(users)
-      .set({ isOnline: true, lastSignedIn: new Date() })
+      .set({ isOnline: true, lastSignedIn: new Date(), lastSeen: new Date() })
       .where(eq(users.id, userId));
   } catch (err) {
     console.error('[Database] updateUserPresence failed:', err);

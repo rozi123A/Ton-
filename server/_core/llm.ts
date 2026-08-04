@@ -269,9 +269,9 @@ const normalizeResponseFormat = ({
   };
 };
 
-const RETRY_MAX_RETRIES = 4;
-const RETRY_BASE_DELAY_MS = 500;
-const RETRY_MAX_DELAY_MS = 30_000;
+const RETRY_MAX_RETRIES = 2;
+const RETRY_BASE_DELAY_MS = 300;
+const RETRY_MAX_DELAY_MS = 5_000;
 
 type FetchInit = NonNullable<Parameters<typeof fetch>[1]>;
 

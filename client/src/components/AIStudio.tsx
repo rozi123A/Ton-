@@ -106,7 +106,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
     setPrompt("");
     chatMutation.mutate({
       messages: nextMessages,
-      maxTokens: 1_000,
+      maxTokens: 500,
     });
   };
 
