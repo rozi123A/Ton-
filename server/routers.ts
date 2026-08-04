@@ -285,30 +285,24 @@ export const appRouter = router({
           } catch { return _defaultAvatar; }
         })();
 
-        // Use client-provided browser country first (always accurate).
-        // IP-based detection runs in parallel with user creation (non-blocking)
-        // to avoid stalling the login flow for up to 12s.
-        const ipCountry = detectCountry(ctx.req).catch(() => undefined);
+        // Country from client (no server IP lookup — too slow)
         const country = input.country?.toUpperCase() || undefined;
 
-        try {
-          await upsertUser({ openId: guestOpenId, name: input.name, loginMethod: 'guest', lastSignedIn: new Date(), ...(country ? { country } : {}) });
-          const user = await getUserByOpenId(guestOpenId);
-          if (user) {
-            await saveUserProfile(user.id, { name: input.name, age: input.age, gender: input.gender, avatar: avatarUrl });
+        // DB operations with timeout — never block login
+        const DB_TIMEOUT = 3000;
+        const loginPromise = (async () => {
+          try {
+            await upsertUser({ openId: guestOpenId, name: input.name, loginMethod: 'guest', lastSignedIn: new Date(), ...(country ? { country } : {}) });
+            const user = await getUserByOpenId(guestOpenId);
+            if (user) {
+              await saveUserProfile(user.id, { name: input.name, age: input.age, gender: input.gender, avatar: avatarUrl });
+            }
+          } catch (dbErr) {
+            console.warn('[GuestLogin] DB error (non-fatal):', dbErr);
           }
-          // Background: save IP-detected country if not already set by client
-          if (!country) {
-            ipCountry.then(ipCountryCode => {
-              if (ipCountryCode && user) {
-                upsertUser({ openId: guestOpenId, country: ipCountryCode }).catch(() => {});
-              }
-            }).catch(() => {});
-          }
-        } catch (dbErr) {
-          console.warn('[GuestLogin] DB unavailable, continuing with JWT-only session:', dbErr);
-          // Still create session token even if DB failed
-        }
+        })();
+        // Race: if DB takes too long, just continue (session token still works)
+        await Promise.race([loginPromise, new Promise(r => setTimeout(r, DB_TIMEOUT))]);
 
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
         const cookieOptions = getSessionCookieOptions(ctx.req);
