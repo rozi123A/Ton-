@@ -42,14 +42,7 @@ export default function Hero() {
           {t('home.hero_title')}
         </h1>
 
-        {loading ? (
-          /* Loading state */
-          <div className="mt-10 flex flex-col items-center gap-4">
-            <div className="w-36 h-36 rounded-full bg-white/10 animate-pulse border-4 border-white/20" />
-            <div className="h-4 w-32 bg-white/20 rounded-full animate-pulse" />
-          </div>
-
-        ) : isAuthenticated && user ? (
+        {isAuthenticated && user ? (
           /* ===== SAVED ACCOUNT - circular card ===== */
           <div className="mt-8 flex flex-col items-center gap-5">
             <p className="text-white/80 text-base font-medium tracking-wide">{t('nav.logged_in')}</p>

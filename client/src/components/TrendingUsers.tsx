@@ -146,8 +146,9 @@ export default function TrendingUsers() {
   const utils = trpc.useUtils();
   const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);
 
-  const { data: realUsers, isPending } = trpc.users.getRecent.useQuery(20, {
-    staleTime: 30_000,
+  const { data: realUsers, isPending, isError } = trpc.users.getRecent.useQuery(20, {
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 
   // Auto-detect and save country for the current logged-in user once per session
@@ -169,8 +170,10 @@ export default function TrendingUsers() {
   }, [currentUser]);
 
   const hasRealUsers = realUsers && realUsers.length > 0;
+  // Show mock users immediately, don't block on pending state
+  const showRealUsers = hasRealUsers && !isError;
 
-  const displayUsers: DisplayUser[] = hasRealUsers
+  const displayUsers: DisplayUser[] = showRealUsers
     ? realUsers.map(u => ({
         id: u.id,
         name: u.name || 'مستخدم',
@@ -196,17 +199,11 @@ export default function TrendingUsers() {
           </p>
         </div>
 
-        {isPending ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-10 h-10 text-purple-500 animate-spin" />
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {displayUsers.map((user) => (
-              <UserCard key={user.id} user={user} onViewProfile={setViewProfileUserId} />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayUsers.map((user) => (
+            <UserCard key={user.id} user={user} onViewProfile={setViewProfileUserId} />
+          ))}
+        </div>
 
         {hasRealUsers && realUsers.length >= 20 && (
           <div className="text-center mt-12">

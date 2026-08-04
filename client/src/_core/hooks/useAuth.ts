@@ -19,7 +19,10 @@ export function useAuth(options?: UseAuthOptions) {
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
+    retryOnMount: false,
     refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes — avoid refetching on every render
+    gcTime: 10 * 60 * 1000,  // keep cached for 10 min
   });
 
   // Auto-detect and save country once per session — uses browser language first
@@ -91,9 +94,11 @@ export function useAuth(options?: UseAuthOptions) {
 
   const state = useMemo(() => {
     // 🔒 FIX: Do NOT store sensitive user data in localStorage (XSS risk)
+    // Only show loading on initial mount, not when data is cached
+    const isFirstLoad = !meQuery.data && !meQuery.error && !meQuery.isError;
     return {
       user: meQuery.data ?? null,
-      loading: meQuery.isLoading || logoutMutation.isPending,
+      loading: (isFirstLoad && meQuery.isPending) || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
     };

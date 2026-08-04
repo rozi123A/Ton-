@@ -682,6 +682,10 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
+  // 🔒 Optimize server timeouts — prevent slow connections from blocking
+  server.keepAliveTimeout = 30 * 1000; // 30s (default is 5min — too long for free tier)
+  server.headersTimeout = 35 * 1000;
+
   app.set("trust proxy", 1);
 
   // 🔒 Security headers via helmet
@@ -708,6 +712,15 @@ async function startServer() {
   app.use('/api/trpc/admin.verifyAdmin', authLimiter);
   app.use('/api/trpc', generalLimiter);
 
+  // 🔒 CORS — allow all origins (safe for WebSSE signaling + tRPC)
+  app.use((_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    if (_req.method === 'OPTIONS') { res.sendStatus(204); return; }
+    next();
+  });
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -729,6 +742,7 @@ async function startServer() {
   });
 
   // Version endpoint — returns server start time so clients can detect new deploys
+  // Registered BEFORE tRPC middleware so it responds instantly
   const SERVER_VERSION = Date.now().toString();
   app.get("/api/version", (_req, res) => {
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
