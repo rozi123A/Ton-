@@ -91,9 +91,10 @@ export default function Login() {
         // This avoids waiting for auth.me to confirm the session.
         sessionStorage.setItem('manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
       }
-      // Redirect immediately — don't wait for auth.me to resolve.
-      // The Authorization header from sessionStorage ensures the next tRPC
-      // call (auth.me on /chat) will authenticate successfully.
+      // Refresh auth.me cache with the new token before navigating.
+      // Without this, the stale null-user cache (staleTime=5min) causes ChatRoom
+      // to see isAuthenticated=false and immediately redirect back to login.
+      await utils.auth.me.fetch();
       setLocation('/chat');
     } catch (err) {
       localStorage.removeItem(GUEST_SESSION_ACTIVE_KEY);
