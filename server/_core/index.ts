@@ -676,30 +676,30 @@ function registerNotifyRoutes(app: express.Express) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function startServer() {
-  // 🔒 FIX: Validate critical secrets on startup — exits if misconfigured
+  // 🔒 Validate critical secrets immediately — exits if misconfigured
   validateEnv();
-  await ensureSchema();
+
   const app = express();
   const server = createServer(app);
 
   app.set("trust proxy", 1);
 
-  // 🔒 FIX: Security headers via helmet
+  // 🔒 Security headers via helmet
   app.use(helmet({
-    contentSecurityPolicy: false, // disabled to avoid breaking existing inline scripts
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   }));
 
-  // 🔒 FIX: Rate limiting on sensitive endpoints
+  // 🔒 Rate limiting on sensitive endpoints
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 20,
     message: { error: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
   });
   const generalLimiter = rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
+    windowMs: 1 * 60 * 1000,
     max: 120,
     standardHeaders: true,
     legacyHeaders: false,
@@ -720,6 +720,9 @@ async function startServer() {
 
   app.use("/api/trpc", createExpressMiddleware({ router: appRouter, createContext }));
 
+  // Health check — Render polls this to confirm the server is up.
+  // IMPORTANT: registered BEFORE ensureSchema() so /ping responds even while
+  // the DB migration is still running in the background.
   app.get("/ping", (_req, res) => {
     res.setHeader("Cache-Control", "no-store");
     res.json({ ok: true, ts: Date.now() });
@@ -758,8 +761,22 @@ async function startServer() {
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error(`Invalid PORT value: ${process.env.PORT}`);
   }
-  server.listen(port, "0.0.0.0", () => {
-    console.log(`Server running on port ${port}`);
+
+  // ── Bind port FIRST so Render's health check on /ping passes immediately ──
+  // ensureSchema() runs afterwards in the background. If it fails the server
+  // keeps running — DB-dependent routes will return errors until the schema
+  // is ready, but the process stays alive and healthy.
+  await new Promise<void>((resolve, reject) => {
+    server.listen(port, "0.0.0.0", () => {
+      console.log(`Server running on port ${port}`);
+      resolve();
+    });
+    server.on("error", reject);
+  });
+
+  // Run DB migration in the background after the port is open
+  ensureSchema().catch((err) => {
+    console.error("[Database] ensureSchema failed (server still running):", err);
   });
 }
 
