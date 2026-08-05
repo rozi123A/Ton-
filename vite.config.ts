@@ -134,11 +134,13 @@ export default defineConfig(async () => {
     build: {
       outDir: path.resolve(import.meta.dirname, "dist/public"),
       emptyOutDir: true,
+      sourcemap: false,
       rollupOptions: {
         output: {
-          entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-          chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-          assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
+          // Use a fixed suffix to force cache busting in some CDNs/Environments
+          entryFileNames: `assets/[name]-[hash]-v${Date.now()}.js`,
+          chunkFileNames: `assets/[name]-[hash]-v${Date.now()}.js`,
+          assetFileNames: `assets/[name]-[hash]-v${Date.now()}.[ext]`,
         },
       },
     },

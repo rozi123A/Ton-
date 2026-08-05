@@ -5,7 +5,7 @@ services:
     plan: free
     autoDeploy: true
     healthCheckPath: /ping
-    buildCommand: corepack pnpm install --frozen-lockfile && corepack pnpm run build
+    buildCommand: rm -rf dist && corepack pnpm install --frozen-lockfile && corepack pnpm run build
     startCommand: NODE_ENV=production node dist/index.js
     envVars:
       - key: DATABASE_URL

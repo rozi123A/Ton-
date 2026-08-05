@@ -112,32 +112,23 @@ export default function Login() {
         ...(browserCountry ? { country: browserCountry } : {}),
       });
       
-      const timeoutPromise = new Promise((_, reject) => 
-        // Timeout: 10 seconds for registration (Render's free tier can take time)
-        setTimeout(() => reject(new Error('TIMEOUT')), 10000)
-      );
+      // 🔒 CRITICAL FIX: Robust registration logic
+      const result = await Promise.race([
+        loginPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 20000))
+      ]) as any;
 
-      const result = await Promise.race([loginPromise, timeoutPromise]) as any;
-      // Keep only the signed session credential on this device. Profile data,
-      // points, friends, and history remain server-side in the guest account.
-      if (result.guestToken) {
+      if (result && result.guestToken) {
+        console.log('[Login] Success, storing token and redirecting...');
         safeStorageSet('local', GUEST_TOKEN_KEY, result.guestToken);
-        // Store in sessionStorage so the Authorization header is sent on the
-        // next request even before the cookie is processed by the browser.
-        // This avoids waiting for auth.me to confirm the session.
         safeStorageSet('session', 'manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
+        
+        // Full page reload to ensure fresh state and avoid auth issues
+        window.location.replace('/chat');
+        return; 
+      } else {
+        throw new Error('فشل الحصول على رمز الدخول');
       }
-      // Invalidate the auth.me cache so ChatRoom re-fetches in the background.
-      // Do NOT await a fetch() here — it blocks on a cold Render server and
-      // throws in catch(), which shows a registration error even though the
-      // token was stored correctly. ChatRoom handles a temporarily-null user
-      // without redirecting, and the Authorization header is already set.
-      // Use full page reload instead of SPA navigation.
-      // Reason: SPA nav keeps a stale null in auth.me cache, which causes the
-      // App-level presence ping (protectedProcedure) to fire while unauthenticated
-      // → UNAUTHORIZED error → global handler redirects back to "/".
-      // A full reload starts fresh: token is in localStorage, auth.me runs clean.
-      window.location.href = '/chat';
     } catch (err) {
       safeStorageRemove('local', GUEST_SESSION_ACTIVE_KEY);
       console.error('[Login Error]', err);
