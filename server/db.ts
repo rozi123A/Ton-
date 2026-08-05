@@ -30,8 +30,10 @@ export async function getDb() {
       _rawClient = postgres(url, { 
         ssl: { rejectUnauthorized: false }, // Better compatibility for Render/Neon/Supabase
         max: 10, 
-        connect_timeout: 10, // Increased timeout
-        idle_timeout: 20,
+        // Render's free PostgreSQL instance can take several seconds to wake
+        // from sleep. Keep this longer than the admin health-check timeout.
+        connect_timeout: 30,
+        idle_timeout: 30,
         max_lifetime: 60 * 30
       });
       _db = drizzle(_rawClient);
