@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useLocation } from 'wouter';
 import { Heart, Video, Camera } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { TRPCClientError } from '@trpc/client';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { detectBrowserCountry } from '@/lib/detectCountry';
 import {
@@ -57,6 +58,26 @@ function safeStorageRemove(kind: StorageKind, key: string) {
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(
+      () => reject(new Error('LOGIN_TIMEOUT')),
+      timeoutMs,
+    );
+
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
 export default function Login() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading } = useAuth();
@@ -95,7 +116,7 @@ export default function Login() {
     if (!gender) { setError('يرجى اختيار الجنس'); return; }
     
     // Prevent double-click
-    if (isLoading || guestLoginMutation.isPending) return;
+    if (isLoading) return;
     
     setIsLoading(true);
     try {
@@ -103,24 +124,16 @@ export default function Login() {
       safeStorageSet('local', GUEST_SESSION_ACTIVE_KEY, '1');
       const browserCountry = detectBrowserCountry();
       
-      // Create a timeout promise to prevent hanging forever
-      const loginPromise = guestLoginMutation.mutateAsync({
-        name: name.trim(),
-        age: parseInt(age),
-        gender: gender as 'male' | 'female' | 'other',
-        ...(photo ? { avatar: photo } : {}),
-        ...(browserCountry ? { country: browserCountry } : {}),
-      });
-      
-      // 🔒 SPEED & ROBUSTNESS FIX
+      // Send exactly one request. Calling mutateAsync twice here caused two
+      // guest accounts/requests to race and left the button spinning.
       console.log('[Login] Sending request...');
-      const result = await guestLoginMutation.mutateAsync({
+      const result = await withTimeout(guestLoginMutation.mutateAsync({
         name: name.trim(),
         age: parseInt(age),
         gender: gender as 'male' | 'female' | 'other',
         ...(photo ? { avatar: photo } : {}),
         ...(browserCountry ? { country: browserCountry } : {}),
-      }) as any;
+      }), 15000) as any;
 
       if (result && result.success) {
         console.log('[Login] Success! Token received.');
@@ -141,12 +154,16 @@ export default function Login() {
       // Detailed error messages for debugging
       let errorMsg = 'حدث خطا اثناء التسجيل، يرجى المحاولة مرة اخرى';
       if (err instanceof Error) {
-        if (err.message === 'TIMEOUT') {
+        if (err.message === 'LOGIN_TIMEOUT') {
           errorMsg = 'الخادم يستغرق وقتاً أطول من المعتاد، يرجى المحاولة مرة اخرى';
         } else if (err.message.includes('network') || err.message.includes('Network')) {
           errorMsg = 'خطأ في الاتصال بالإنترنت، يرجى التحقق من الاتصال';
         } else if (err.message.includes('CORS')) {
           errorMsg = 'خطأ في الاتصال بالخادم (CORS)، يرجى المحاولة لاحقاً';
+        } else if (err instanceof TRPCClientError && err.message) {
+          errorMsg = `تعذر بدء الدردشة: ${err.message}`;
+        } else if (err.message) {
+          errorMsg = `تعذر بدء الدردشة: ${err.message}`;
         }
       }
       setError(errorMsg);
@@ -256,10 +273,10 @@ export default function Login() {
 
             <Button
               type="submit"
-              disabled={isLoading || guestLoginMutation.isPending}
+               disabled={isLoading}
               className="w-full bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white font-bold py-3 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 mt-2"
             >
-              {isLoading || guestLoginMutation.isPending ? (
+              {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="animate-spin">جاري التسجيل...</span>
                 </span>

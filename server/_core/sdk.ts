@@ -285,42 +285,23 @@ class SDKServer {
 
     const sessionUserId = session.openId;
     const signedInAt = new Date();
-    let user = await db.getUserByOpenId(sessionUserId);
+    let user: User | undefined;
 
-    // Guest users (guest_*) are not on the OAuth server — handle them directly
-    if (!user && sessionUserId.startsWith("guest_")) {
-      const now = new Date();
-      // Try to upsert guest into DB (best-effort — DB may not have tables yet)
-      try {
-        await db.upsertUser({
-          openId: sessionUserId,
-          name: (session as any).name || "زائر",
-          loginMethod: "guest",
-          lastSignedIn: signedInAt,
-        });
-        user = await db.getUserByOpenId(sessionUserId);
-      } catch {
-        // DB not ready — return a virtual guest user from JWT payload
-      }
+    // Guest sessions must never be blocked by PostgreSQL. A saved guest token
+    // is sent on the login request itself, so waiting for a database query here
+    // made the "start chat" button spin forever when DB connectivity was slow.
+    if (sessionUserId.startsWith("guest_")) {
+      const guestLookup = db.getUserByOpenId(sessionUserId).catch(() => undefined);
+      user = await Promise.race([
+        guestLookup,
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 800)),
+      ]);
+
       if (!user) {
-        return {
-          id: -1,
-          openId: sessionUserId,
-          name: (session as any).name || "زائر",
-          email: null,
-          age: null,
-          gender: null,
-          avatar: null,
-          bio: null,
-          isOnline: true,
-          lastSeen: now,
-          loginMethod: "guest",
-          role: "user",
-          createdAt: now,
-          updatedAt: now,
-          lastSignedIn: now,
-        } as AuthenticatedUser;
+        return buildVirtualGuestUser(sessionUserId, (session as any).name || "زائر");
       }
+    } else {
+      user = await db.getUserByOpenId(sessionUserId);
     }
 
     // If user not in DB (non-guest), sync from OAuth server automatically
@@ -345,10 +326,18 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
-    await db.upsertUser({
-      openId: user.openId,
-      lastSignedIn: signedInAt,
-    });
+    if (user.loginMethod === "guest" || user.openId.startsWith("guest_")) {
+      // Presence updates are best-effort for guests and must not delay auth.
+      void db.upsertUser({
+        openId: user.openId,
+        lastSignedIn: signedInAt,
+      }).catch(() => {});
+    } else {
+      await db.upsertUser({
+        openId: user.openId,
+        lastSignedIn: signedInAt,
+      });
+    }
 
     return user;
   }
@@ -361,6 +350,27 @@ export type AuthenticatedUser = User & {
   taskUid?: string;
   isCron?: boolean;
 };
+
+function buildVirtualGuestUser(openId: string, name: string): AuthenticatedUser {
+  const now = new Date();
+  return {
+    id: -1,
+    openId,
+    name,
+    email: null,
+    age: null,
+    gender: null,
+    avatar: null,
+    bio: null,
+    isOnline: true,
+    lastSeen: now,
+    loginMethod: "guest",
+    role: "user",
+    createdAt: now,
+    updatedAt: now,
+    lastSignedIn: now,
+  } as AuthenticatedUser;
+}
 
 function buildCronUser(
   userInfo: GetUserInfoWithJwtResponse
