@@ -109,8 +109,8 @@ export default function Login() {
       });
       
       const timeoutPromise = new Promise((_, reject) => 
-        // Render's free tier can take a while to wake up after inactivity.
-        setTimeout(() => reject(new Error('TIMEOUT')), 30000)
+        // Timeout: 15 seconds for registration (Render's free tier can take time)
+        setTimeout(() => reject(new Error('TIMEOUT')), 15000)
       );
 
       const result = await Promise.race([loginPromise, timeoutPromise]) as any;
@@ -136,12 +136,20 @@ export default function Login() {
       window.location.href = '/chat';
     } catch (err) {
       safeStorageRemove('local', GUEST_SESSION_ACTIVE_KEY);
-      console.error(err);
-      setError(
-        err instanceof Error && err.message === 'TIMEOUT'
-          ? 'الخادم يستغرق وقتاً أطول من المعتاد، يرجى المحاولة مرة اخرى'
-          : 'حدث خطا اثناء التسجيل، يرجى المحاولة مرة اخرى',
-      );
+      console.error('[Login Error]', err);
+      
+      // Detailed error messages for debugging
+      let errorMsg = 'حدث خطا اثناء التسجيل، يرجى المحاولة مرة اخرى';
+      if (err instanceof Error) {
+        if (err.message === 'TIMEOUT') {
+          errorMsg = 'الخادم يستغرق وقتاً أطول من المعتاد، يرجى المحاولة مرة اخرى';
+        } else if (err.message.includes('network') || err.message.includes('Network')) {
+          errorMsg = 'خطأ في الاتصال بالإنترنت، يرجى التحقق من الاتصال';
+        } else if (err.message.includes('CORS')) {
+          errorMsg = 'خطأ في الاتصال بالخادم (CORS)، يرجى المحاولة لاحقاً';
+        }
+      }
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }

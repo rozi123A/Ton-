@@ -289,20 +289,27 @@ export const appRouter = router({
         const country = input.country?.toUpperCase() || undefined;
 
         // DB operations with timeout — never block login
-        const DB_TIMEOUT = 3000;
+        const DB_TIMEOUT = 2000; // Reduced from 3000ms to 2000ms for faster response
         const loginPromise = (async () => {
           try {
+            console.log('[GuestLogin] Starting DB upsert for:', guestOpenId);
             await upsertUser({ openId: guestOpenId, name: input.name, loginMethod: 'guest', lastSignedIn: new Date(), ...(country ? { country } : {}) });
             const user = await getUserByOpenId(guestOpenId);
             if (user) {
+              console.log('[GuestLogin] Saving profile for user:', user.id);
               await saveUserProfile(user.id, { name: input.name, age: input.age, gender: input.gender, avatar: avatarUrl });
             }
+            console.log('[GuestLogin] DB operations completed successfully');
           } catch (dbErr) {
             console.warn('[GuestLogin] DB error (non-fatal):', dbErr);
           }
         })();
         // Race: if DB takes too long, just continue (session token still works)
-        await Promise.race([loginPromise, new Promise(r => setTimeout(r, DB_TIMEOUT))]);
+        try {
+          await Promise.race([loginPromise, new Promise(r => setTimeout(r, DB_TIMEOUT))]);
+        } catch (e) {
+          console.warn('[GuestLogin] DB timeout or error (continuing anyway):', e);
+        }
 
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
         const cookieOptions = getSessionCookieOptions(ctx.req);
