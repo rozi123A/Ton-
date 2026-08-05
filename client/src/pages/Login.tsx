@@ -93,6 +93,10 @@ export default function Login() {
     if (!name.trim()) { setError('يرجى ادخال اسمك'); return; }
     if (!age || parseInt(age) < 13) { setError('يجب ان يكون عمرك 13 سنة او اكثر'); return; }
     if (!gender) { setError('يرجى اختيار الجنس'); return; }
+    
+    // Prevent double-click
+    if (isLoading || guestLoginMutation.isPending) return;
+    
     setIsLoading(true);
     try {
       // Re-enable the saved device identity for this login attempt.
