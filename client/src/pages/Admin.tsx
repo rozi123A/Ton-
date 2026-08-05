@@ -390,54 +390,19 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 
 // ── Stats Tab Component ───────────────────────────────────────────────────
 function StatsTab({ adminToken }: { adminToken: string }) {
-  const [dbWakeState, setDbWakeState] = useState<'sleeping' | 'waking' | 'awake' | 'error'>('sleeping');
-  const [wakeAttempts, setWakeAttempts] = useState(0);
-
-  // Step 1: Wake DB first via /api/wake-db (doesn't go through tRPC timeout)
-  useEffect(() => {
-    if (!adminToken) return;
-    setDbWakeState('waking');
-    const wakeDb = async () => {
-      try {
-        const res = await fetch('/api/wake-db', { signal: AbortSignal.timeout(120000) });
-        const data = await res.json();
-        if (data.ok && data.status === 'awake') {
-          setDbWakeState('awake');
-          setWakeAttempts(0);
-        } else {
-          setWakeAttempts(prev => prev + 1);
-          if (wakeAttempts < 2) {
-            // Retry after 15s
-            setTimeout(() => wakeDb(), 15000);
-          } else {
-            setDbWakeState('error');
-          }
-        }
-      } catch {
-        setWakeAttempts(prev => prev + 1);
-        if (wakeAttempts < 2) {
-          setTimeout(() => wakeDb(), 15000);
-        } else {
-          setDbWakeState('error');
-        }
-      }
-    };
-    wakeDb();
-  }, [adminToken]);
-
-  // Step 2: Once DB is awake, fetch all stats
-  const { data: dbStatus, isError: dbError, refetch: refetchDbStatus, isFetching } = trpc.admin.dbStatus.useQuery(
+  const { data: dbStatus, isLoading: dbLoading, isError: dbError, refetch: refetchDbStatus, isFetching } = trpc.admin.dbStatus.useQuery(
     { adminToken },
-    { enabled: dbWakeState === 'awake', retry: 1, staleTime: 30_000 },
+    { enabled: !!adminToken, retry: 2, staleTime: 30_000, refetchInterval: 60_000 },
   );
-  const statsEnabled = dbWakeState === 'awake' && dbStatus?.connected === true;
+
+  const statsEnabled = !!adminToken && dbStatus?.connected === true;
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.countryStats.useQuery(
     { adminToken },
-    { enabled: statsEnabled, retry: 1, staleTime: 60_000 },
+    { enabled: statsEnabled, retry: 2, staleTime: 60_000 },
   );
   const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery(
     { adminToken, limit: 100 },
-    { enabled: statsEnabled, retry: 1, staleTime: 60_000 },
+    { enabled: statsEnabled, retry: 2, staleTime: 60_000 },
   );
 
   const totalUsers = dbStatus?.totalUsers ?? 0;
@@ -445,40 +410,35 @@ function StatsTab({ adminToken }: { adminToken: string }) {
   const onlineUsers = dbStatus?.onlineUsers ?? 0;
 
   function refetchAll() {
-    setDbWakeState('sleeping');
-    setWakeAttempts(0);
+    refetchDbStatus();
+    refetchStats();
   }
 
-  // DB sleeping / waking — show progress
-  if (dbWakeState === 'sleeping' || dbWakeState === 'waking') {
+  // DB still loading — brief message
+  if (dbLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
         <div style={{ backgroundColor: '#111827', border: '1px solid #3730a3', borderRadius: '16px', padding: '32px' }}>
           <div style={{ width: '40px', height: '40px', border: '4px solid #3730a3', borderTop: '4px solid #7c3aed', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '15px', margin: '0 0 8px' }}>
-            {dbWakeState === 'sleeping' ? 'جاري صحوة قاعدة البيانات...' : 'قاعدة البيانات تصحى الآن...'}
-          </p>
-          <p style={{ color: '#6b7280', fontSize: '12px', margin: '0 0 16px' }}>
-            قاعدة البيانات المجانية تحتاج 15-30 ثانية للصحوة. سنعرض الإحصائيات فور جاهزيتها.
-          </p>
-          {wakeAttempts > 0 && <p style={{ color: '#f59e0b', fontSize: '11px', margin: 0 }}>محاولة {wakeAttempts} — الانتظار 15 ثانية...</p>}
+          <p style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '15px', margin: '0 0 8px' }}>جاري تحميل الإحصائيات...</p>
+          <p style={{ color: '#6b7280', fontSize: '12px', margin: 0 }}>الرجاء الانتظار</p>
         </div>
         <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  // DB error after retries
-  if (dbWakeState === 'error' || dbError || (dbStatus && !dbStatus.connected)) {
+  // DB error
+  if (dbError || (dbStatus && !dbStatus.connected)) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
         <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
           <p style={{ color: '#ef4444', fontWeight: 800, fontSize: '16px', margin: '0 0 8px' }}>⚠️ قاعدة البيانات غير متصلة</p>
-          <p style={{ color: '#fca5a5', fontSize: '13px', margin: '0 0 12px' }}>{dbStatus?.reason || 'انتهت مهلة الاتصال بقاعدة البيانات'}</p>
-          <p style={{ color: '#9ca3af', fontSize: '12px', margin: 0 }}>تأكد من أن DATABASE_URL مضبوط في إعدادات Render</p>
+          <p style={{ color: '#fca5a5', fontSize: '13px', margin: '0 0 12px' }}>{dbStatus?.reason || 'خطأ في الاتصال بقاعدة البيانات'}</p>
+          <p style={{ color: '#9ca3af', fontSize: '12px', margin: 0 }}>تأكد من ضبط DATABASE_URL في إعدادات Fly.io (Secrets)</p>
         </div>
-        <button onClick={refetchAll} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '12px 24px', cursor: 'pointer', fontWeight: 700 }}>
-          صحوة قاعدة البيانات
+        <button onClick={refetchAll} disabled={isFetching} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '12px 24px', cursor: 'pointer', fontWeight: 700, opacity: isFetching ? 0.6 : 1 }}>
+          {isFetching ? 'جاري الاتصال...' : 'إعادة المحاولة'}
         </button>
       </div>
     );

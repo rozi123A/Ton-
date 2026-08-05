@@ -767,25 +767,7 @@ async function startServer() {
     res.json({ version: SERVER_VERSION });
   });
 
-  // ── Keep-alive: self-ping to prevent Render from sleeping ─────────────────
-  if (process.env.NODE_ENV !== "development") {
-    const selfUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "");
-    if (selfUrl) {
-      const pingSelf = async () => {
-        try { await fetch(`${selfUrl}/ping`); console.log("[keep-alive] pinged", selfUrl); }
-        catch (err) { console.warn("[keep-alive] ping failed:", err); }
-      };
-      // Ping every 5 minutes (Render free tier sleeps after 15 min of inactivity)
-      const INTERVAL_MS = 5 * 60 * 1000;
-      setTimeout(pingSelf, 30 * 1000);
-      setInterval(pingSelf, INTERVAL_MS);
-      console.log(`[keep-alive] scheduled every 5 min → ${selfUrl}/ping`);
-    } else {
-      console.warn("[keep-alive] RENDER_EXTERNAL_URL not set — self-ping disabled");
-    }
-  }
-
-  // ── DB Keep-alive: ping database every 4 minutes to prevent sleep ─────────
+  // ── DB Keep-alive: ping database every 4 minutes to keep connection alive ──
   const dbKeepAlive = async () => {
     try {
       const { getDb } = await import('../db');
@@ -797,11 +779,11 @@ async function startServer() {
       console.warn('[db-keepalive] database ping failed:', err);
     }
   };
-  // Start after 2 minutes, then every 4 minutes (before Render's 15min idle timeout)
+  // Start after 30 seconds, then every 4 minutes
   const DB_INTERVAL_MS = 4 * 60 * 1000;
-  setTimeout(dbKeepAlive, 2 * 60 * 1000);
+  setTimeout(dbKeepAlive, 30 * 1000);
   setInterval(dbKeepAlive, DB_INTERVAL_MS);
-  console.log('[db-keepalive] scheduled every 4 min to prevent DB sleep');
+  console.log('[db-keepalive] scheduled every 4 min to keep DB connection alive');
 
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
@@ -823,17 +805,17 @@ async function startServer() {
     server.on("error", reject);
   });
 
-  // 🔒 CRITICAL: Run ensureSchema with a hard timeout to prevent hanging the whole process
-  const SCHEMA_TIMEOUT = 10000;
+  // 🔒 Run ensureSchema with a generous timeout — DB may need time to connect
+  const SCHEMA_TIMEOUT = 120000;
   console.log('[Startup] Running ensureSchema...');
   try {
     await Promise.race([
       ensureSchema(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('SCHEMA_TIMEOUT')), SCHEMA_TIMEOUT))
     ]);
-    console.log('[Startup] ensureSchema finished or timed out');
-  } catch (err) {
-    console.error("[Startup] ensureSchema error or timeout (continuing):", err);
+    console.log('[Startup] ensureSchema completed successfully');
+  } catch (err: any) {
+    console.error("[Startup] ensureSchema error:", err.message);
   }
 }
 
