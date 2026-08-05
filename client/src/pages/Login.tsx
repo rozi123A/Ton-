@@ -113,8 +113,8 @@ export default function Login() {
       });
       
       const timeoutPromise = new Promise((_, reject) => 
-        // Timeout: 15 seconds for registration (Render's free tier can take time)
-        setTimeout(() => reject(new Error('TIMEOUT')), 15000)
+        // Timeout: 10 seconds for registration (Render's free tier can take time)
+        setTimeout(() => reject(new Error('TIMEOUT')), 10000)
       );
 
       const result = await Promise.race([loginPromise, timeoutPromise]) as any;
