@@ -21,12 +21,19 @@ let _db: ReturnType<typeof drizzle> | null = null;
 let _rawClient: ReturnType<typeof postgres> | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  const dbUrl = process.env.DATABASE_URL || "postgresql://connectlive:M9RG7LlV0849URI23RBdPUI9nmrJDKvE@dpg-d90ph580697c73cvd27g-a.oregon-postgres.render.com/connectlive";
+  
+  if (!_db && dbUrl) {
     try {
-      const url = cleanDbUrl(process.env.DATABASE_URL);
-      // connect_timeout: 5s — fail fast if DB hostname is unreachable (prevents
-      // hanging the Render health-check on startup when DATABASE_URL is wrong).
-      _rawClient = postgres(url, { ssl: 'require', max: 10, connect_timeout: 5 });
+      const url = cleanDbUrl(dbUrl);
+      // Force SSL for Render and set a short timeout
+      _rawClient = postgres(url, { 
+        ssl: 'require', 
+        max: 10, 
+        connect_timeout: 5,
+        idle_timeout: 20,
+        max_lifetime: 60 * 30
+      });
       _db = drizzle(_rawClient);
     } catch (error) {
       console.warn('[Database] Failed to connect:', error);

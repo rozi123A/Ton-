@@ -71,17 +71,24 @@ export default function Login() {
     if (!gender) { setError('يرجى اختيار الجنس'); return; }
     setIsLoading(true);
     try {
-      // Re-enable the saved device identity for this login attempt. The
-      // server will reuse it instead of creating a new guest account.
+      // Re-enable the saved device identity for this login attempt.
       localStorage.setItem(GUEST_SESSION_ACTIVE_KEY, '1');
       const browserCountry = detectBrowserCountry();
-      const result = await guestLoginMutation.mutateAsync({
+      
+      // Create a timeout promise to prevent hanging forever
+      const loginPromise = guestLoginMutation.mutateAsync({
         name: name.trim(),
         age: parseInt(age),
         gender: gender as 'male' | 'female' | 'other',
         ...(photo ? { avatar: photo } : {}),
         ...(browserCountry ? { country: browserCountry } : {}),
       });
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('TIMEOUT')), 8000)
+      );
+
+      const result = await Promise.race([loginPromise, timeoutPromise]) as any;
       // Keep only the signed session credential on this device. Profile data,
       // points, friends, and history remain server-side in the guest account.
       if (result.guestToken) {
