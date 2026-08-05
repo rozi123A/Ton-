@@ -112,22 +112,27 @@ export default function Login() {
         ...(browserCountry ? { country: browserCountry } : {}),
       });
       
-      // 🔒 CRITICAL FIX: Robust registration logic
-      const result = await Promise.race([
-        loginPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 20000))
-      ]) as any;
+      // 🔒 SPEED & ROBUSTNESS FIX
+      console.log('[Login] Sending request...');
+      const result = await guestLoginMutation.mutateAsync({
+        name: name.trim(),
+        age: parseInt(age),
+        gender: gender as 'male' | 'female' | 'other',
+        ...(photo ? { avatar: photo } : {}),
+        ...(browserCountry ? { country: browserCountry } : {}),
+      }) as any;
 
-      if (result && result.guestToken) {
-        console.log('[Login] Success, storing token and redirecting...');
-        safeStorageSet('local', GUEST_TOKEN_KEY, result.guestToken);
-        safeStorageSet('session', 'manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
+      if (result && result.success) {
+        console.log('[Login] Success! Token received.');
+        if (result.guestToken) {
+          safeStorageSet('local', GUEST_TOKEN_KEY, result.guestToken);
+          safeStorageSet('session', 'manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
+        }
         
-        // Full page reload to ensure fresh state
-        window.location.href = '/chat';
-        // We don't return here to let finally block run, but we set a flag
+        // Immediate redirect
+        window.location.replace('/chat');
       } else {
-        throw new Error('فشل الحصول على رمز الدخول');
+        throw new Error('فشل التسجيل: استجابة غير متوقعة من السيرفر');
       }
     } catch (err) {
       safeStorageRemove('local', GUEST_SESSION_ACTIVE_KEY);

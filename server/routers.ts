@@ -304,12 +304,9 @@ export const appRouter = router({
             console.warn('[GuestLogin] DB error (non-fatal):', dbErr);
           }
         })();
-        // Race: if DB takes too long, just continue (session token still works)
-        try {
-          await Promise.race([loginPromise, new Promise(r => setTimeout(r, DB_TIMEOUT))]);
-        } catch (e) {
-          console.warn('[GuestLogin] DB timeout or error (continuing anyway):', e);
-        }
+        // 🚀 SPEED FIX: Don't await DB at all for the response. 
+        // Let it run in the background. The session token is generated independently.
+        loginPromise.catch(e => console.error('[GuestLogin] Background DB error:', e));
 
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
         const cookieOptions = getSessionCookieOptions(ctx.req);
