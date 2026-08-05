@@ -777,21 +777,26 @@ async function startServer() {
   }
 
   // ── Bind port FIRST so Render's health check on /ping passes immediately ──
-  // ensureSchema() runs afterwards in the background. If it fails the server
-  // keeps running — DB-dependent routes will return errors until the schema
-  // is ready, but the process stays alive and healthy.
   await new Promise<void>((resolve, reject) => {
     server.listen(port, "0.0.0.0", () => {
-      console.log(`Server running on port ${port}`);
+      console.log(`[Startup] Server listening on port ${port}`);
       resolve();
     });
     server.on("error", reject);
   });
 
-  // Run DB migration in the background after the port is open
-  ensureSchema().catch((err) => {
-    console.error("[Database] ensureSchema failed (server still running):", err);
-  });
+  // 🔒 CRITICAL: Run ensureSchema with a hard timeout to prevent hanging the whole process
+  const SCHEMA_TIMEOUT = 10000;
+  console.log('[Startup] Running ensureSchema...');
+  try {
+    await Promise.race([
+      ensureSchema(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SCHEMA_TIMEOUT')), SCHEMA_TIMEOUT))
+    ]);
+    console.log('[Startup] ensureSchema finished or timed out');
+  } catch (err) {
+    console.error("[Startup] ensureSchema error or timeout (continuing):", err);
+  }
 }
 
 startServer().catch((error) => {

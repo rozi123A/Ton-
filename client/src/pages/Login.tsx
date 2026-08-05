@@ -123,9 +123,9 @@ export default function Login() {
         safeStorageSet('local', GUEST_TOKEN_KEY, result.guestToken);
         safeStorageSet('session', 'manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
         
-        // Full page reload to ensure fresh state and avoid auth issues
-        window.location.replace('/chat');
-        return; 
+        // Full page reload to ensure fresh state
+        window.location.href = '/chat';
+        // We don't return here to let finally block run, but we set a flag
       } else {
         throw new Error('فشل الحصول على رمز الدخول');
       }
