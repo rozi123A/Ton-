@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useAuth } from "./_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -63,19 +64,22 @@ function App() {
   }, [ready]);
 
   // Presence ping — updates lastSignedIn every 2 min so admin online count is accurate
-  // Delayed to not block initial page load
+  // IMPORTANT: only fire when authenticated. users.ping is a protectedProcedure;
+  // firing it while unauthenticated returns UNAUTHORIZED which the global error
+  // handler treats as a redirect signal — sending the user away from /login.
+  const { isAuthenticated } = useAuth();
   const presencePing = trpc.users.ping.useMutation();
   const presencePingRef = useRef(presencePing);
   presencePingRef.current = presencePing;
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !isAuthenticated) return;
     const id = setInterval(() => {
       presencePingRef.current.mutate();
     }, 2 * 60 * 1000);
     // Fire after 3s so it doesn't block initial render
     const initialPing = setTimeout(() => presencePingRef.current.mutate(), 3000);
     return () => { clearInterval(id); clearTimeout(initialPing); };
-  }, [ready]);
+  }, [ready, isAuthenticated]);
 
   return (
     <ErrorBoundary>
