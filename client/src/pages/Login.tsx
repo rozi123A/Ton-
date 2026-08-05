@@ -33,6 +33,30 @@ async function compressImage(file: File, maxPx = 1200): Promise<string> {
   });
 }
 
+// Storage is only used to remember the guest session on this device. Some
+// mobile browsers and embedded WebViews block storage, so a storage error must
+// never turn a successful server login into a registration error.
+type StorageKind = 'local' | 'session';
+
+function safeStorageSet(kind: StorageKind, key: string, value: string): boolean {
+  try {
+    const storage = kind === 'local' ? window.localStorage : window.sessionStorage;
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function safeStorageRemove(kind: StorageKind, key: string) {
+  try {
+    const storage = kind === 'local' ? window.localStorage : window.sessionStorage;
+    storage.removeItem(key);
+  } catch {
+    // Storage can be unavailable in private mode or an embedded browser.
+  }
+}
+
 export default function Login() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading } = useAuth();
@@ -72,7 +96,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       // Re-enable the saved device identity for this login attempt.
-      localStorage.setItem(GUEST_SESSION_ACTIVE_KEY, '1');
+      safeStorageSet('local', GUEST_SESSION_ACTIVE_KEY, '1');
       const browserCountry = detectBrowserCountry();
       
       // Create a timeout promise to prevent hanging forever
@@ -85,18 +109,19 @@ export default function Login() {
       });
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('TIMEOUT')), 8000)
+        // Render's free tier can take a while to wake up after inactivity.
+        setTimeout(() => reject(new Error('TIMEOUT')), 30000)
       );
 
       const result = await Promise.race([loginPromise, timeoutPromise]) as any;
       // Keep only the signed session credential on this device. Profile data,
       // points, friends, and history remain server-side in the guest account.
       if (result.guestToken) {
-        localStorage.setItem(GUEST_TOKEN_KEY, result.guestToken);
+        safeStorageSet('local', GUEST_TOKEN_KEY, result.guestToken);
         // Store in sessionStorage so the Authorization header is sent on the
         // next request even before the cookie is processed by the browser.
         // This avoids waiting for auth.me to confirm the session.
-        sessionStorage.setItem('manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
+        safeStorageSet('session', 'manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
       }
       // Invalidate the auth.me cache so ChatRoom re-fetches in the background.
       // Do NOT await a fetch() here — it blocks on a cold Render server and
@@ -110,9 +135,13 @@ export default function Login() {
       // A full reload starts fresh: token is in localStorage, auth.me runs clean.
       window.location.href = '/chat';
     } catch (err) {
-      localStorage.removeItem(GUEST_SESSION_ACTIVE_KEY);
+      safeStorageRemove('local', GUEST_SESSION_ACTIVE_KEY);
       console.error(err);
-      setError('حدث خطا اثناء التسجيل، يرجى المحاولة مرة اخرى');
+      setError(
+        err instanceof Error && err.message === 'TIMEOUT'
+          ? 'الخادم يستغرق وقتاً أطول من المعتاد، يرجى المحاولة مرة اخرى'
+          : 'حدث خطا اثناء التسجيل، يرجى المحاولة مرة اخرى',
+      );
     } finally {
       setIsLoading(false);
     }
