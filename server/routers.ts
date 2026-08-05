@@ -33,6 +33,25 @@ const aiMessageSchema = z.object({
   content: z.string().min(1).max(20_000),
 });
 
+const ADMIN_STATS_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs = ADMIN_STATS_TIMEOUT_MS): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("Database query timed out")), timeoutMs),
+    ),
+  ]);
+}
+
+function withFallback<T>(
+  promise: Promise<T>,
+  fallback: T,
+  timeoutMs = ADMIN_STATS_TIMEOUT_MS,
+): Promise<T> {
+  return withTimeout(promise, timeoutMs).catch(() => fallback);
+}
+
 // ── Admin HMAC token verification (no session required) ─────────────────
 function verifyAdminHmac(token: string, secret: string): boolean {
   if (!token || !secret) return false;
@@ -637,7 +656,7 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return getNewRegistrations(input.limit ?? 100);
+        return withFallback(getNewRegistrations(input.limit ?? 100), []);
       }),
 
     countryStats: publicProcedure
@@ -645,7 +664,7 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return getCountryStats();
+        return withFallback(getCountryStats(), []);
       }),
 
     totalCount: publicProcedure
@@ -653,7 +672,7 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return getTotalUsersCount();
+        return withFallback(getTotalUsersCount(), 0);
       }),
 
     onlineCount: publicProcedure
@@ -661,7 +680,7 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return getOnlineUsersCount();
+        return withFallback(getOnlineUsersCount(), 0);
       }),
 
     premiumCount: publicProcedure
@@ -669,7 +688,7 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return getPremiumCount();
+        return withFallback(getPremiumCount(), 0);
       }),
 
     searchUsers: publicProcedure
@@ -686,17 +705,17 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        const db = await getDb();
+        const db = await withTimeout(getDb());
         if (!db) {
           return { connected: false, totalUsers: 0, reason: 'DATABASE_URL غير مضبوط أو الاتصال فشل' };
         }
         try {
           // Fetch multiple stats in a single query to reduce latency
-          const [totalResult, premiumResult, onlineResult] = await Promise.all([
+          const [totalResult, premiumResult, onlineResult] = await withTimeout(Promise.all([
             db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
             db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
             db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
-          ]);
+          ]));
           return {
             connected: true,
             totalUsers: totalResult[0]?.count ?? 0,

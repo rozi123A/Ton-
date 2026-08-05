@@ -390,12 +390,31 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 
 // ── Stats Tab Component ───────────────────────────────────────────────────
 function StatsTab({ adminToken }: { adminToken: string }) {
-  const { data: dbStatus, isLoading: dbLoading, isError: dbError } = trpc.admin.dbStatus.useQuery({ adminToken }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
-  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery({ adminToken }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
-  const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery({ adminToken, limit: 100 }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
-  const { data: totalCount, isLoading: totalLoading } = trpc.admin.totalCount.useQuery({ adminToken }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
-  const { data: premiumCount, isLoading: premiumLoading } = trpc.admin.premiumCount.useQuery({ adminToken }, { enabled: !!adminToken, retry: 2, retryDelay: 1000 });
-  const { data: onlineCount, refetch: refetchOnline } = trpc.admin.onlineCount.useQuery({ adminToken }, { enabled: !!adminToken, refetchInterval: 60000, retry: 2, retryDelay: 1000 });
+  const { data: dbStatus, isLoading: dbLoading, isError: dbError, refetch: refetchDbStatus } = trpc.admin.dbStatus.useQuery(
+    { adminToken },
+    { enabled: !!adminToken, retry: false },
+  );
+  const statsEnabled = !!adminToken && dbStatus?.connected === true;
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery(
+    { adminToken },
+    { enabled: statsEnabled, retry: false },
+  );
+  const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery(
+    { adminToken, limit: 100 },
+    { enabled: statsEnabled, retry: false },
+  );
+  const { data: totalCount } = trpc.admin.totalCount.useQuery(
+    { adminToken },
+    { enabled: statsEnabled, retry: false },
+  );
+  const { data: premiumCount } = trpc.admin.premiumCount.useQuery(
+    { adminToken },
+    { enabled: statsEnabled, retry: false },
+  );
+  const { data: onlineCount, refetch: refetchOnline } = trpc.admin.onlineCount.useQuery(
+    { adminToken },
+    { enabled: statsEnabled, refetchInterval: 60000, retry: false },
+  );
 
   // Use dbStatus data if available (it now includes all stats), fallback to individual queries
   const totalUsers = dbStatus?.totalUsers ?? totalCount ?? 0;
@@ -403,20 +422,25 @@ function StatsTab({ adminToken }: { adminToken: string }) {
   const onlineUsers = dbStatus?.onlineUsers ?? onlineCount ?? 0;
 
   // Show loading only while initial queries are still fetching
-  const isLoading = dbLoading || (dbStatus?.connected === true && (statsLoading || recentLoading));
+  const isLoading = dbLoading || (statsEnabled && (statsLoading || recentLoading));
 
-  function refetch() { refetchStats(); refetchOnline(); }
+  function refetch() {
+    refetchDbStatus();
+    refetchStats();
+    refetchOnline();
+  }
 
   if (isLoading) return <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري التحميل...</div>;
 
-  if (dbStatus && !dbStatus.connected) {
+  if (dbError || (dbStatus && !dbStatus.connected)) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
         <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
           <p style={{ color: '#ef4444', fontWeight: 800, fontSize: '16px', margin: '0 0 8px' }}>⚠️ قاعدة البيانات غير متصلة</p>
-          <p style={{ color: '#fca5a5', fontSize: '13px', margin: '0 0 12px' }}>{dbStatus.reason}</p>
+          <p style={{ color: '#fca5a5', fontSize: '13px', margin: '0 0 12px' }}>{dbStatus?.reason || 'انتهت مهلة الاتصال بقاعدة البيانات'}</p>
           <p style={{ color: '#9ca3af', fontSize: '12px', margin: 0 }}>تأكد من ضبط متغير البيئة <code style={{ backgroundColor: '#374151', padding: '2px 6px', borderRadius: '4px' }}>DATABASE_URL</code> في إعدادات الخادم</p>
         </div>
+        <button onClick={refetch} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 700 }}>إعادة المحاولة</button>
       </div>
     );
   }
