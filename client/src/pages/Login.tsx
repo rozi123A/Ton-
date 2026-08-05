@@ -98,10 +98,12 @@ export default function Login() {
         // This avoids waiting for auth.me to confirm the session.
         sessionStorage.setItem('manus-cookie', `${COOKIE_NAME}=${result.guestToken}`);
       }
-      // Refresh auth.me cache with the new token before navigating.
-      // Without this, the stale null-user cache (staleTime=5min) causes ChatRoom
-      // to see isAuthenticated=false and immediately redirect back to login.
-      await utils.auth.me.fetch();
+      // Invalidate the auth.me cache so ChatRoom re-fetches in the background.
+      // Do NOT await a fetch() here — it blocks on a cold Render server and
+      // throws in catch(), which shows a registration error even though the
+      // token was stored correctly. ChatRoom handles a temporarily-null user
+      // without redirecting, and the Authorization header is already set.
+      utils.auth.me.invalidate();
       setLocation('/chat');
     } catch (err) {
       localStorage.removeItem(GUEST_SESSION_ACTIVE_KEY);
