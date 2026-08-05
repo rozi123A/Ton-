@@ -742,6 +742,23 @@ async function startServer() {
     res.json({ ok: true, ts: Date.now() });
   });
 
+  // ── Wake DB endpoint — admin-only DB health check that forces connection ──
+  app.get("/api/wake-db", async (_req, res) => {
+    try {
+      const { getDb } = await import('../db');
+      const db = await getDb();
+      if (!db) {
+        return res.json({ ok: false, status: 'no_connection', message: 'قاعدة البيانات غير متصلة. تأكد من DATABASE_URL في إعدادات Render.' });
+      }
+      // Force a query to wake up the DB
+      const result = await db.execute(sql`SELECT count(*)::int FROM users`);
+      const count = (result as any)?.[0]?.count ?? 0;
+      res.json({ ok: true, status: 'awake', userCount: count });
+    } catch (err: any) {
+      res.json({ ok: false, status: 'error', message: err.message || String(err) });
+    }
+  });
+
   // Version endpoint — returns server start time so clients can detect new deploys
   // Registered BEFORE tRPC middleware so it responds instantly
   const SERVER_VERSION = Date.now().toString();
