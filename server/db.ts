@@ -21,7 +21,7 @@ let _db: ReturnType<typeof drizzle> | null = null;
 let _rawClient: ReturnType<typeof postgres> | null = null;
 
 export async function getDb() {
-  const dbUrl = process.env.DATABASE_URL || "postgresql://connectlive:M9RG7LlV0849URI23RBdPUI9nmrJDKvE@dpg-d90ph580697c73cvd27g-a.oregon-postgres.render.com/connectlive";
+  const dbUrl = process.env.DATABASE_URL;
   
   if (!_db && dbUrl) {
     try {
