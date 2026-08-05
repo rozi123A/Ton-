@@ -390,67 +390,92 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 
 // ── Stats Tab Component ───────────────────────────────────────────────────
 function StatsTab({ adminToken }: { adminToken: string }) {
-  const { data: dbStatus, isLoading: dbLoading, isError: dbError, refetch: refetchDbStatus } = trpc.admin.dbStatus.useQuery(
+  const { data: dbStatus, isLoading: dbLoading, isError: dbError, refetch: refetchDbStatus, isFetching } = trpc.admin.dbStatus.useQuery(
     { adminToken },
-    { enabled: !!adminToken, retry: 1, staleTime: 30_000 },
+    { enabled: !!adminToken, retry: 0, staleTime: 30_000 },
   );
+
+  // Don't block on stats queries — show what we have immediately
   const statsEnabled = !!adminToken && dbStatus?.connected === true;
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery(
     { adminToken },
-    { enabled: statsEnabled, retry: 1, staleTime: 60_000 },
+    { enabled: statsEnabled, retry: 0, staleTime: 60_000 },
   );
   const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery(
     { adminToken, limit: 100 },
-    { enabled: statsEnabled, retry: 1, staleTime: 60_000 },
+    { enabled: statsEnabled, retry: 0, staleTime: 60_000 },
   );
 
-  // Use dbStatus data directly (it now includes all stats in one query)
   const totalUsers = dbStatus?.totalUsers ?? 0;
   const vipCount = dbStatus?.premiumUsers ?? 0;
   const onlineUsers = dbStatus?.onlineUsers ?? 0;
 
-  // Show loading only while initial queries are still fetching
-  const isLoading = dbLoading || (statsEnabled && (statsLoading || recentLoading));
+  // If DB is loading and no data yet, show a brief loading overlay (max 8s)
+  const [showLoading, setShowLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowLoading(false), 8000);
+    return () => clearTimeout(timer);
+  }, []);
 
   function refetch() {
     refetchDbStatus();
     refetchStats();
   }
 
-  if (isLoading) return <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري التحميل...</div>;
-
+  // DB connection error — show immediately
   if (dbError || (dbStatus && !dbStatus.connected)) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
         <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
           <p style={{ color: '#ef4444', fontWeight: 800, fontSize: '16px', margin: '0 0 8px' }}>⚠️ قاعدة البيانات غير متصلة</p>
           <p style={{ color: '#fca5a5', fontSize: '13px', margin: '0 0 12px' }}>{dbStatus?.reason || 'انتهت مهلة الاتصال بقاعدة البيانات'}</p>
-          <p style={{ color: '#9ca3af', fontSize: '12px', margin: 0 }}>تأكد من ضبط متغير البيئة <code style={{ backgroundColor: '#374151', padding: '2px 6px', borderRadius: '4px' }}>DATABASE_URL</code> في إعدادات الخادم</p>
+          <p style={{ color: '#9ca3af', fontSize: '12px', margin: '0 0 16px' }}>قاعدة البيانات في Render free tier تنام بعد 15 دقيقة. اضغط لإعادة المحاولة أو انتظر دقيقة.</p>
         </div>
-        <button onClick={refetch} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 700 }}>إعادة المحاولة</button>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          <button onClick={refetch} disabled={isFetching} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 700, opacity: isFetching ? 0.6 : 1 }}>
+            {isFetching ? 'جاري الاتصال...' : 'إعادة المحاولة'}
+          </button>
+          <button onClick={() => { setShowLoading(true); setTimeout(() => refetch(), 1000); }} style={{ backgroundColor: '#1f2937', color: '#9ca3af', border: '1px solid #374151', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 700 }}>
+            انتظر 30 ثانية ثم أعد
+          </button>
+        </div>
       </div>
     );
   }
 
-  if (statsError && dbStatus?.connected && recent === undefined) {
+  // DB still loading — show loading with auto-refetch hint
+  if (dbLoading) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>
-        <p style={{ fontWeight: 700, marginBottom: '8px' }}>فشل تحميل الإحصائيات</p>
-        <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '16px' }}>تأكد من صحة كلمة المرور أو أعد تسجيل الدخول</p>
-        <button onClick={refetch} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 700 }}>إعادة المحاولة</button>
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <div style={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '16px', padding: '32px', marginBottom: '16px' }}>
+          <p style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '15px', margin: '0 0 8px' }}>جاري الاتصال بقاعدة البيانات...</p>
+          <p style={{ color: '#6b7280', fontSize: '12px', margin: 0 }}>قاعدة البيانات المجانية تحتاج 15-30 ثانية للصحوة</p>
+          {!showLoading && (
+            <button onClick={refetch} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '10px 20px', cursor: 'pointer', fontWeight: 700, marginTop: '16px' }}>
+              إعادة المحاولة
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* DB Status Warning (non-blocking) */}
-      {dbStatus && !dbStatus.connected && (
-        <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '16px', padding: '16px', marginBottom: '8px' }}>
-          <p style={{ color: '#ef4444', fontWeight: 700, fontSize: '14px', margin: '0 0 4px' }}>⚠️ قاعدة البيانات غير متصلة</p>
-          <p style={{ color: '#fca5a5', fontSize: '12px', margin: 0 }}>{dbStatus.reason}</p>
+      {/* Refresh button bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <p style={{ color: '#6b7280', fontSize: '12px', margin: 0 }}>
+          {isFetching ? 'جاري تحديث البيانات...' : `آخر تحديث: ${new Date().toLocaleTimeString('ar')}`}
+        </p>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <ResetVipsButton />
+          <button onClick={() => refetch()} disabled={isFetching} style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: isFetching ? 'wait' : 'pointer', opacity: isFetching ? 0.5 : 1 }}>
+            <RefreshCw style={{ width: '16px', animation: isFetching ? 'spin 1s linear infinite' : 'none' }} />
+          </button>
         </div>
-      )}
+      </div>
+
+      {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <div style={{ backgroundColor: '#1e1b4b', border: '1px solid #3730a3', borderRadius: '20px', padding: '20px', textAlign: 'center' }}>
           <Users style={{ width: '24px', height: '24px', color: '#818cf8', margin: '0 auto 8px' }} />
@@ -472,18 +497,17 @@ function StatsTab({ adminToken }: { adminToken: string }) {
         <div style={{ backgroundColor: '#1a0a0a', border: '1px solid #4a1515', borderRadius: '20px', padding: '16px', textAlign: 'center' }}>
           <Users style={{ width: '20px', height: '20px', color: '#f87171', margin: '0 auto 6px' }} />
           <h4 style={{ margin: 0, color: '#fca5a5', fontSize: '12px', fontWeight: 700 }}>آخر تسجيلات</h4>
-          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '24px', fontWeight: 900 }}>{recent?.length ?? 0}</p>
+          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '24px', fontWeight: 900 }}>{recent?.length ?? '---'}</p>
         </div>
       </div>
 
+      {/* Country Stats */}
       <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '20px', padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>المستخدمين حسب الدولة</h3>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <ResetVipsButton />
-            <button onClick={() => refetch()} style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer' }}><RefreshCw style={{ width: '16px' }} /></button>
-          </div>
         </div>
+        {statsLoading && <p style={{ color: '#6b7280', fontSize: '13px', textAlign: 'center' }}>جاري التحميل...</p>}
+        {stats?.length === 0 && !statsLoading && <p style={{ color: '#6b7280', fontSize: '13px', textAlign: 'center' }}>لا توجد بيانات</p>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {stats?.map(s => (
             <div key={s.country} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#1f2937', borderRadius: '12px' }}>
@@ -494,8 +518,11 @@ function StatsTab({ adminToken }: { adminToken: string }) {
         </div>
       </div>
 
+      {/* Recent Registrations */}
       <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '20px', padding: '20px' }}>
         <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, marginBottom: '16px' }}>آخر التسجيلات</h3>
+        {recentLoading && <p style={{ color: '#6b7280', fontSize: '13px', textAlign: 'center' }}>جاري التحميل...</p>}
+        {recent?.length === 0 && !recentLoading && <p style={{ color: '#6b7280', fontSize: '13px', textAlign: 'center' }}>لا توجد تسجيلات</p>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {recent?.map(u => (
             <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderBottom: '1px solid #1e293b' }}>

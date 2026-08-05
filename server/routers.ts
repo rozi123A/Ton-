@@ -657,7 +657,8 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return withFallback(getNewRegistrations(input.limit ?? 100), []);
+        const result = await withTimeout(getNewRegistrations(input.limit ?? 100));
+        return result;
       }),
 
     countryStats: publicProcedure
@@ -665,7 +666,8 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return withFallback(getCountryStats(), []);
+        const result = await withTimeout(getCountryStats());
+        return result;
       }),
 
     totalCount: publicProcedure
@@ -673,7 +675,8 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return withFallback(getTotalUsersCount(), 0);
+        const result = await withTimeout(getTotalUsersCount());
+        return result;
       }),
 
     onlineCount: publicProcedure
@@ -681,7 +684,8 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return withFallback(getOnlineUsersCount(), 0);
+        const result = await withTimeout(getOnlineUsersCount());
+        return result;
       }),
 
     premiumCount: publicProcedure
@@ -689,7 +693,8 @@ export const appRouter = router({
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-        return withFallback(getPremiumCount(), 0);
+        const result = await withTimeout(getPremiumCount());
+        return result;
       }),
 
     searchUsers: publicProcedure
@@ -700,36 +705,37 @@ export const appRouter = router({
         return searchUsers(input.query);
       }),
 
-    /** DB health check — returns connection status and row counts */
+    /** DB health check — returns connection status and REAL row counts from DB */
     dbStatus: publicProcedure
       .input(z.object({ adminToken: z.string() }))
       .query(async ({ input }) => {
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
+
+        // 1. Get connection
         const db = await withTimeout(getDb());
         if (!db) {
-          return { connected: false, totalUsers: 0, reason: 'DATABASE_URL غير مضبوط أو الاتصال فشل' };
+          return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason: 'DATABASE_URL غير مضبوط أو الاتصال فشل' };
         }
+
         try {
-          // Fetch all stats in a SINGLE raw SQL query to minimize latency
-          const result = await withTimeout(
-            db.execute(sql`SELECT
-              (SELECT count(*)::int FROM users) AS "totalUsers",
-              (SELECT count(*)::int FROM users WHERE "isPremium" = true) AS "premiumUsers",
-              (SELECT count(*)::int FROM users WHERE "lastSignedIn" > now() - interval '5 minutes') AS "onlineUsers"
-            `)
-          );
-          const row = (result as any)?.[0] ?? { totalUsers: 0, premiumUsers: 0, onlineUsers: 0 };
+          // 2. Fetch REAL counts using proven drizzle queries (not raw SQL)
+          const [totalResult, premiumResult, onlineResult] = await Promise.all([
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
+          ]);
+
           return {
             connected: true,
-            totalUsers: Number(row.totalUsers ?? 0),
-            premiumUsers: Number(row.premiumUsers ?? 0),
-            onlineUsers: Number(row.onlineUsers ?? 0),
+            totalUsers: totalResult[0]?.count ?? 0,
+            premiumUsers: premiumResult[0]?.count ?? 0,
+            onlineUsers: onlineResult[0]?.count ?? 0,
             reason: null,
           };
         } catch (err: any) {
           const reason = err?.cause?.message ?? err?.message ?? String(err);
-          return { connected: false, totalUsers: 0, reason: String(reason) };
+          return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason: String(reason) };
         }
       }),
 
