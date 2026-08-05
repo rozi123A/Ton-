@@ -15,6 +15,7 @@ import { ensureSchema } from "../db";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { validateEnv } from "./env";
+import { sql } from "drizzle-orm";
 
 // ── Signaling via Server-Sent Events (SSE) ────────────────────────────────────
 
@@ -749,6 +750,7 @@ async function startServer() {
     res.json({ version: SERVER_VERSION });
   });
 
+  // ── Keep-alive: self-ping to prevent Render from sleeping ─────────────────
   if (process.env.NODE_ENV !== "development") {
     const selfUrl = process.env.RENDER_EXTERNAL_URL?.replace(/\/$/, "");
     if (selfUrl) {
@@ -756,14 +758,33 @@ async function startServer() {
         try { await fetch(`${selfUrl}/ping`); console.log("[keep-alive] pinged", selfUrl); }
         catch (err) { console.warn("[keep-alive] ping failed:", err); }
       };
-      const INTERVAL_MS = 10 * 60 * 1000;
+      // Ping every 5 minutes (Render free tier sleeps after 15 min of inactivity)
+      const INTERVAL_MS = 5 * 60 * 1000;
       setTimeout(pingSelf, 30 * 1000);
       setInterval(pingSelf, INTERVAL_MS);
-      console.log(`[keep-alive] scheduled every 10 min → ${selfUrl}/ping`);
+      console.log(`[keep-alive] scheduled every 5 min → ${selfUrl}/ping`);
     } else {
       console.warn("[keep-alive] RENDER_EXTERNAL_URL not set — self-ping disabled");
     }
   }
+
+  // ── DB Keep-alive: ping database every 4 minutes to prevent sleep ─────────
+  const dbKeepAlive = async () => {
+    try {
+      const { getDb } = await import('../db');
+      const db = await getDb();
+      if (!db) { console.warn('[db-keepalive] no DB connection'); return; }
+      await db.execute(sql`SELECT 1`);
+      console.log('[db-keepalive] database ping OK');
+    } catch (err) {
+      console.warn('[db-keepalive] database ping failed:', err);
+    }
+  };
+  // Start after 2 minutes, then every 4 minutes (before Render's 15min idle timeout)
+  const DB_INTERVAL_MS = 4 * 60 * 1000;
+  setTimeout(dbKeepAlive, 2 * 60 * 1000);
+  setInterval(dbKeepAlive, DB_INTERVAL_MS);
+  console.log('[db-keepalive] scheduled every 4 min to prevent DB sleep');
 
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
