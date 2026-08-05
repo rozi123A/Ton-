@@ -103,8 +103,12 @@ export default function Login() {
       // throws in catch(), which shows a registration error even though the
       // token was stored correctly. ChatRoom handles a temporarily-null user
       // without redirecting, and the Authorization header is already set.
-      utils.auth.me.invalidate();
-      setLocation('/chat');
+      // Use full page reload instead of SPA navigation.
+      // Reason: SPA nav keeps a stale null in auth.me cache, which causes the
+      // App-level presence ping (protectedProcedure) to fire while unauthenticated
+      // → UNAUTHORIZED error → global handler redirects back to "/".
+      // A full reload starts fresh: token is in localStorage, auth.me runs clean.
+      window.location.href = '/chat';
     } catch (err) {
       localStorage.removeItem(GUEST_SESSION_ACTIVE_KEY);
       console.error(err);
