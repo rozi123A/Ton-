@@ -34,7 +34,7 @@ const aiMessageSchema = z.object({
 });
 
 // Render free PostgreSQL instances may need time to wake from sleep.
-const ADMIN_STATS_TIMEOUT_MS = 30_000;
+const ADMIN_STATS_TIMEOUT_MS = 60_000;
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs = ADMIN_STATS_TIMEOUT_MS): Promise<T> {
   return Promise.race([
@@ -711,17 +711,20 @@ export const appRouter = router({
           return { connected: false, totalUsers: 0, reason: 'DATABASE_URL غير مضبوط أو الاتصال فشل' };
         }
         try {
-          // Fetch multiple stats in a single query to reduce latency
-          const [totalResult, premiumResult, onlineResult] = await withTimeout(Promise.all([
-            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
-            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
-            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
-          ]));
+          // Fetch all stats in a SINGLE raw SQL query to minimize latency
+          const result = await withTimeout(
+            db.execute(sql`SELECT
+              (SELECT count(*)::int FROM users) AS "totalUsers",
+              (SELECT count(*)::int FROM users WHERE "isPremium" = true) AS "premiumUsers",
+              (SELECT count(*)::int FROM users WHERE "lastSignedIn" > now() - interval '5 minutes') AS "onlineUsers"
+            `)
+          );
+          const row = (result as any)?.[0] ?? { totalUsers: 0, premiumUsers: 0, onlineUsers: 0 };
           return {
             connected: true,
-            totalUsers: totalResult[0]?.count ?? 0,
-            premiumUsers: premiumResult[0]?.count ?? 0,
-            onlineUsers: onlineResult[0]?.count ?? 0,
+            totalUsers: Number(row.totalUsers ?? 0),
+            premiumUsers: Number(row.premiumUsers ?? 0),
+            onlineUsers: Number(row.onlineUsers ?? 0),
             reason: null,
           };
         } catch (err: any) {

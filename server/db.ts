@@ -29,11 +29,11 @@ export async function getDb() {
       // Force SSL for Render and set a short timeout
       _rawClient = postgres(url, { 
         ssl: { rejectUnauthorized: false }, // Better compatibility for Render/Neon/Supabase
-        max: 10, 
-        // Render's free PostgreSQL instance can take several seconds to wake
-        // from sleep. Keep this longer than the admin health-check timeout.
-        connect_timeout: 30,
-        idle_timeout: 30,
+        max: 5, // Reduced pool size for free tier
+        // Render's free PostgreSQL instance can take 30-60 seconds to wake
+        // from sleep. Keep this much longer than the admin health-check timeout.
+        connect_timeout: 90,
+        idle_timeout: 60,
         max_lifetime: 60 * 30
       });
       _db = drizzle(_rawClient);

@@ -392,34 +392,22 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 function StatsTab({ adminToken }: { adminToken: string }) {
   const { data: dbStatus, isLoading: dbLoading, isError: dbError, refetch: refetchDbStatus } = trpc.admin.dbStatus.useQuery(
     { adminToken },
-    { enabled: !!adminToken, retry: false },
+    { enabled: !!adminToken, retry: 1, staleTime: 30_000 },
   );
   const statsEnabled = !!adminToken && dbStatus?.connected === true;
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = trpc.admin.countryStats.useQuery(
     { adminToken },
-    { enabled: statsEnabled, retry: false },
+    { enabled: statsEnabled, retry: 1, staleTime: 60_000 },
   );
   const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery(
     { adminToken, limit: 100 },
-    { enabled: statsEnabled, retry: false },
-  );
-  const { data: totalCount } = trpc.admin.totalCount.useQuery(
-    { adminToken },
-    { enabled: statsEnabled, retry: false },
-  );
-  const { data: premiumCount } = trpc.admin.premiumCount.useQuery(
-    { adminToken },
-    { enabled: statsEnabled, retry: false },
-  );
-  const { data: onlineCount, refetch: refetchOnline } = trpc.admin.onlineCount.useQuery(
-    { adminToken },
-    { enabled: statsEnabled, refetchInterval: 60000, retry: false },
+    { enabled: statsEnabled, retry: 1, staleTime: 60_000 },
   );
 
-  // Use dbStatus data if available (it now includes all stats), fallback to individual queries
-  const totalUsers = dbStatus?.totalUsers ?? totalCount ?? 0;
-  const vipCount = dbStatus?.premiumUsers ?? premiumCount ?? 0;
-  const onlineUsers = dbStatus?.onlineUsers ?? onlineCount ?? 0;
+  // Use dbStatus data directly (it now includes all stats in one query)
+  const totalUsers = dbStatus?.totalUsers ?? 0;
+  const vipCount = dbStatus?.premiumUsers ?? 0;
+  const onlineUsers = dbStatus?.onlineUsers ?? 0;
 
   // Show loading only while initial queries are still fetching
   const isLoading = dbLoading || (statsEnabled && (statsLoading || recentLoading));
@@ -427,7 +415,6 @@ function StatsTab({ adminToken }: { adminToken: string }) {
   function refetch() {
     refetchDbStatus();
     refetchStats();
-    refetchOnline();
   }
 
   if (isLoading) return <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري التحميل...</div>;
@@ -445,7 +432,7 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     );
   }
 
-  if (statsError && totalCount === undefined && recent === undefined) {
+  if (statsError && dbStatus?.connected && recent === undefined) {
     return (
       <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444' }}>
         <p style={{ fontWeight: 700, marginBottom: '8px' }}>فشل تحميل الإحصائيات</p>
