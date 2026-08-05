@@ -28,9 +28,9 @@ export async function getDb() {
       const url = cleanDbUrl(dbUrl);
       // Force SSL for Render and set a short timeout
       _rawClient = postgres(url, { 
-        ssl: 'require', 
+        ssl: { rejectUnauthorized: false }, // Better compatibility for Render/Neon/Supabase
         max: 10, 
-        connect_timeout: 5,
+        connect_timeout: 10, // Increased timeout
         idle_timeout: 20,
         max_lifetime: 60 * 30
       });
