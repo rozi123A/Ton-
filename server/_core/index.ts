@@ -697,7 +697,7 @@ async function startServer() {
   // 🔒 Rate limiting on sensitive endpoints
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 100, // Increased from 20 — users need multiple attempts on cold-start servers
     message: { error: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
