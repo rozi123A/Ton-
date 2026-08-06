@@ -78,8 +78,10 @@ async function saveGuestRegistrationWithRetry(input: {
   console.error('[GuestLogin] Could not save registration after all retries:', lastError);
 }
 
-// Keep the admin health check bounded; the admin shell does not wait for it.
-const ADMIN_STATS_TIMEOUT_MS = 5_000;
+// Render free DB can take 30-60 s to wake from sleep — keep timeout above that.
+// General queries use ADMIN_STATS_TIMEOUT_MS; first-connection uses DB_CONNECT_TIMEOUT_MS.
+const ADMIN_STATS_TIMEOUT_MS = 70_000;
+const DB_CONNECT_TIMEOUT_MS  = 75_000; // slightly longer than postgres connect_timeout (90 s would also be fine)
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs = ADMIN_STATS_TIMEOUT_MS): Promise<T> {
   return Promise.race([
@@ -749,8 +751,8 @@ export const appRouter = router({
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
 
-        // 1. Get connection
-        const db = await withTimeout(getDb());
+        // 1. Get connection — use the extended timeout so Render's free DB has time to wake.
+        const db = await withTimeout(getDb(), DB_CONNECT_TIMEOUT_MS);
         if (!db) {
           return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason: 'DATABASE_URL غير مضبوط أو الاتصال فشل' };
         }
