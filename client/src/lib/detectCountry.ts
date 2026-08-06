@@ -107,7 +107,14 @@ function detectFromTimeZone(): string | undefined {
   return undefined;
 }
 
-/** Best-effort browser-side country detection: language region, then time zone. */
+/**
+ * Best-effort browser-side country detection.
+ *
+ * The time zone belongs to the device and stays consistent when the same
+ * phone opens the app in another browser. Prefer it over browser language:
+ * a browser can be configured in English (US) while the phone is physically
+ * in Algeria, Morocco, or another country.
+ */
 export function detectBrowserCountry(): string | undefined {
-  return detectFromLanguages() ?? detectFromTimeZone();
+  return detectFromTimeZone() ?? detectFromLanguages();
 }

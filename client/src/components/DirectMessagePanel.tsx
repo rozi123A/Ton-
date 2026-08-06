@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { playMessageSound } from '@/lib/notificationSound';
+import { toast } from 'sonner';
 
 interface DirectMessagePanelProps {
   friendId: number;
@@ -29,6 +30,9 @@ export default function DirectMessagePanel({ friendId, friendName, friendAvatar,
       setText('');
       refetch();
     },
+    onError: (error) => {
+      toast.error(error.message || 'تعذر إرسال الرسالة، حاول مرة أخرى.');
+    },
   });
 
   // Mark messages from this friend as read when panel opens
@@ -53,7 +57,7 @@ export default function DirectMessagePanel({ friendId, friendName, friendAvatar,
 
   const handleSend = () => {
     const content = text.trim();
-    if (!content) return;
+    if (!content || sendMutation.isPending) return;
     sendMutation.mutate({ receiverId: friendId, content });
   };
 

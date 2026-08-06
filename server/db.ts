@@ -395,11 +395,18 @@ export async function saveMessage(senderId: number, receiverId: number, content:
   const db = await getDb();
   if (!db) {
     console.warn('[Database] Cannot save message: database not available');
-    return;
+    throw new Error('قاعدة البيانات غير متاحة حالياً، تعذر إرسال الرسالة.');
   }
 
   try {
-    await db.insert(messages).values({ senderId, receiverId, content, isRead: false });
+    const result = await db
+      .insert(messages)
+      .values({ senderId, receiverId, content, isRead: false })
+      .returning({ id: messages.id });
+    if (!result[0]) {
+      throw new Error('تعذر حفظ الرسالة.');
+    }
+    return result[0];
   } catch (error) {
     console.error('[Database] Failed to save message:', error);
     throw error;
@@ -410,7 +417,7 @@ export async function getMessages(userId1: number, userId2: number) {
   const db = await getDb();
   if (!db) {
     console.warn('[Database] Cannot get messages: database not available');
-    return [];
+    throw new Error('قاعدة البيانات غير متاحة حالياً، تعذر تحميل الرسائل.');
   }
 
   try {
