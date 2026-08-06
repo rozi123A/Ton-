@@ -80,8 +80,10 @@ async function saveGuestRegistrationWithRetry(input: {
 
 // Render free DB can take 30-60 s to wake from sleep — keep timeout above that.
 // General queries use ADMIN_STATS_TIMEOUT_MS; first-connection uses DB_CONNECT_TIMEOUT_MS.
-const ADMIN_STATS_TIMEOUT_MS = 70_000;
-const DB_CONNECT_TIMEOUT_MS  = 75_000; // slightly longer than postgres connect_timeout (90 s would also be fine)
+const ADMIN_STATS_TIMEOUT_MS = 25_000; // Render free tier drops HTTP after ~30 s — stay under that
+// postgres.js keeps the TCP connection alive in background after we return, so the DB wakes up
+// between retries. DB_CONNECT_TIMEOUT_MS is kept shorter than Render HTTP limit too.
+const DB_CONNECT_TIMEOUT_MS  = 25_000;
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs = ADMIN_STATS_TIMEOUT_MS): Promise<T> {
   return Promise.race([
