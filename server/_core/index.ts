@@ -785,6 +785,26 @@ async function startServer() {
   setInterval(dbKeepAlive, DB_INTERVAL_MS);
   console.log('[db-keepalive] scheduled every 4 min to keep DB connection alive');
 
+  // ── Server Self-ping: prevents Render free tier from spinning down the service ──
+  // Render spins down free web services after 15 min of no inbound traffic.
+  // By pinging our own public URL every 10 minutes we count as inbound traffic
+  // and the server never sleeps. RENDER_EXTERNAL_URL is set automatically by Render.
+  const SELF_PING_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+  const selfPing = async () => {
+    const externalUrl = process.env.RENDER_EXTERNAL_URL;
+    if (!externalUrl) return; // only active on Render
+    try {
+      const res = await fetch(`${externalUrl}/ping`, { signal: AbortSignal.timeout(10_000) });
+      console.log(`[self-ping] ${res.status} — server staying awake`);
+    } catch (err) {
+      console.warn('[self-ping] failed (will retry next interval):', (err as Error).message);
+    }
+  };
+  // First self-ping after 2 minutes (give server time to fully start), then every 10 min
+  setTimeout(selfPing, 2 * 60 * 1000);
+  setInterval(selfPing, SELF_PING_INTERVAL_MS);
+  console.log('[self-ping] scheduled every 10 min to keep Render service awake');
+
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
