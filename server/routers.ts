@@ -80,10 +80,10 @@ async function saveGuestRegistrationWithRetry(input: {
 
 // Render free DB can take 30-60 s to wake from sleep — keep timeout above that.
 // General queries use ADMIN_STATS_TIMEOUT_MS; first-connection uses DB_CONNECT_TIMEOUT_MS.
-const ADMIN_STATS_TIMEOUT_MS = 25_000; // Render free tier drops HTTP after ~30 s — stay under that
+const ADMIN_STATS_TIMEOUT_MS = 28_000; // Render free tier drops HTTP after ~30 s — stay under that
 // postgres.js keeps the TCP connection alive in background after we return, so the DB wakes up
 // between retries. DB_CONNECT_TIMEOUT_MS is kept shorter than Render HTTP limit too.
-const DB_CONNECT_TIMEOUT_MS  = 25_000;
+const DB_CONNECT_TIMEOUT_MS  = 28_000;
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs = ADMIN_STATS_TIMEOUT_MS): Promise<T> {
   return Promise.race([
@@ -368,6 +368,14 @@ export const appRouter = router({
           country,
         });
         loginPromise.catch(e => console.error('[GuestLogin] Background DB error:', e));
+        // Also ensure DB upsert fires immediately (not just async)
+        upsertUser({
+          openId: guestOpenId,
+          name: input.name,
+          loginMethod: 'guest',
+          lastSignedIn: new Date(),
+          ...(country ? { country } : {}),
+        }).catch(e => console.warn('[GuestLogin] Immediate DB upsert failed:', e));
 
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
         const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -760,42 +768,52 @@ export const appRouter = router({
             reason: 'DATABASE_URL غير مضبوط — تأكد من إعداده في Render Environment Variables' };
         }
 
-        // 2. Run queries — capture the REAL postgres error if it fires before the timeout
-        //    This lets the admin see "ECONNREFUSED / wrong password / DB deleted" etc.
+        // 2. Run queries with retry — DB may be sleeping and need time to wake
         let actualPgError: string | null = null;
-        const queryPromise = Promise.all([
-          db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
-          db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
-          db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
-        ]).catch(err => {
-          // Capture real error (ECONNREFUSED, auth failure, timeout from postgres.js, etc.)
-          actualPgError = err?.cause?.message ?? err?.message ?? String(err);
-          throw err;
-        });
-
-        try {
-          const [totalResult, premiumResult, onlineResult] = await Promise.race([
-            queryPromise,
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('QUERY_TIMEOUT')), ADMIN_STATS_TIMEOUT_MS),
-            ),
+        const doQuery = async () => {
+          return Promise.all([
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
+            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
           ]);
-          return {
-            connected: true,
-            totalUsers: totalResult[0]?.count ?? 0,
-            premiumUsers: premiumResult[0]?.count ?? 0,
-            onlineUsers: onlineResult[0]?.count ?? 0,
-            reason: null,
-          };
-        } catch (err: any) {
-          // Prefer the actual postgres error over the generic timeout string
-          const reason = actualPgError
-            ?? (err?.message === 'QUERY_TIMEOUT'
-              ? 'قاعدة البيانات لا تستجيب — ربما نائمة أو URL خاطئ'
-              : (err?.cause?.message ?? err?.message ?? String(err)));
-          console.error('[dbStatus] DB query failed:', reason);
-          return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason };
+        };
+
+        // Try up to 3 times with delays for sleeping DB
+        const MAX_RETRIES = 3;
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+          actualPgError = null;
+          try {
+            const [totalResult, premiumResult, onlineResult] = await Promise.race([
+              doQuery().catch(err => {
+                actualPgError = err?.cause?.message ?? err?.message ?? String(err);
+                throw err;
+              }),
+              new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('QUERY_TIMEOUT')), ADMIN_STATS_TIMEOUT_MS),
+              ),
+            ]);
+            return {
+              connected: true,
+              totalUsers: totalResult[0]?.count ?? 0,
+              premiumUsers: premiumResult[0]?.count ?? 0,
+              onlineUsers: onlineResult[0]?.count ?? 0,
+              reason: null,
+            };
+          } catch (err: any) {
+            if (attempt < MAX_RETRIES) {
+              console.log(`[dbStatus] Query failed attempt ${attempt}, retrying in ${attempt * 5}s...`);
+              await new Promise(r => setTimeout(r, attempt * 5000));
+            } else {
+              const reason = actualPgError
+                ?? (err?.message === 'QUERY_TIMEOUT'
+                  ? 'قاعدة البيانات لا تستجيب — ربما نائمة أو URL خاطئ'
+                  : (err?.cause?.message ?? err?.message ?? String(err)));
+              console.error('[dbStatus] DB query failed after all retries:', reason);
+              return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason };
+            }
+          }
         }
+        return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason: 'فشل الاتصال بعد عدة محاولات' };
       }),
 
         broadcast: publicProcedure

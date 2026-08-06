@@ -392,7 +392,13 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 function StatsTab({ adminToken }: { adminToken: string }) {
   const { data: dbStatus, isLoading: dbLoading, isError: dbError, refetch: refetchDbStatus, isFetching } = trpc.admin.dbStatus.useQuery(
     { adminToken },
-    { enabled: !!adminToken, retry: 2, retryDelay: 4_000, staleTime: 10_000, refetchInterval: 8_000 },
+    { 
+      enabled: !!adminToken, 
+      retry: 3, 
+      retryDelay: 5_000, 
+      staleTime: 10_000, 
+      refetchInterval: 10_000 
+    },
   );
 
   const statsEnabled = !!adminToken && dbStatus?.connected === true;

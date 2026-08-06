@@ -17,6 +17,39 @@ function cleanDbUrl(url: string): string {
   }
 }
 
+/** Retry DB connection with exponential backoff */
+let connectionAttempts = 0;
+const MAX_CONNECTION_ATTEMPTS = 5;
+
+async function connectWithRetry(url: string): Promise<ReturnType<typeof postgres>> {
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= MAX_CONNECTION_ATTEMPTS; attempt++) {
+    try {
+      connectionAttempts = attempt;
+      const client = postgres(url, {
+        ssl: { rejectUnauthorized: false },
+        max: 5,
+        connect_timeout: 90,
+        idle_timeout: 60,
+        max_lifetime: 60 * 30,
+        onnotice: () => {},
+      });
+      // Force a real query to verify connection (not just pool creation)
+      await client`SELECT 1`;
+      console.log(`[Database] Connected successfully (attempt ${attempt})`);
+      connectionAttempts = 0;
+      return client;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[Database] Connection attempt ${attempt}/${MAX_CONNECTION_ATTEMPTS} failed:`, err.message);
+      if (attempt < MAX_CONNECTION_ATTEMPTS) {
+        await new Promise(r => setTimeout(r, Math.min(2000 * attempt, 10000)));
+      }
+    }
+  }
+  throw lastError!;
+}
+
 let _db: ReturnType<typeof drizzle> | null = null;
 let _rawClient: ReturnType<typeof postgres> | null = null;
 
@@ -26,19 +59,10 @@ export async function getDb() {
   if (!_db && dbUrl) {
     try {
       const url = cleanDbUrl(dbUrl);
-      // Force SSL for Render and set a short timeout
-      _rawClient = postgres(url, { 
-        ssl: { rejectUnauthorized: false }, // Better compatibility for Render/Neon/Supabase
-        max: 5, // Reduced pool size for free tier
-        // Render's free PostgreSQL instance can take 30-60 seconds to wake
-        // from sleep. Keep this much longer than the admin health-check timeout.
-        connect_timeout: 90,
-        idle_timeout: 60,
-        max_lifetime: 60 * 30
-      });
+      _rawClient = await connectWithRetry(url);
       _db = drizzle(_rawClient);
     } catch (error) {
-      console.warn('[Database] Failed to connect:', error);
+      console.warn('[Database] Failed to connect after all retries:', error);
       _db = null;
     }
   }
@@ -893,13 +917,46 @@ export async function searchUsers(query: string): Promise<Array<{
 
 export async function broadcastNotificationToAll(title: string, message: string): Promise<number> {
   const db = await getDb();
-  if (!db) return 0;
+  if (!db) {
+    console.warn('[Database] broadcastNotificationToAll: no DB connection');
+    return 0;
+  }
   try {
     const allUsers = await db.select({ id: users.id }).from(users).where(ne(users.role, 'admin'));
-    if (allUsers.length === 0) return 0;
+    if (allUsers.length === 0) {
+      console.log('[Database] broadcastNotificationToAll: no users found');
+      return 0;
+    }
+    // Insert notifications into DB for persistence
     await db.insert(notifications).values(
       allUsers.map(u => ({ userId: u.id, type: 'system', title, message, isRead: false }))
     );
+    console.log(`[Database] broadcastNotificationToAll: inserted ${allUsers.length} notifications`);
+
+    // Push live via SSE endpoint so connected users see it immediately
+    try {
+      const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 3000}`;
+      for (const u of allUsers) {
+        try {
+          await fetch(`${serverUrl}/api/notify/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: String(u.id),
+              type: 'system',
+              title,
+              message,
+              ts: Date.now(),
+            }),
+            signal: AbortSignal.timeout(3000),
+          }).catch(() => {});
+        } catch {}
+      }
+      console.log(`[Database] broadcastNotificationToAll: SSE push attempted for ${allUsers.length} users`);
+    } catch (sseErr) {
+      console.warn('[Database] SSE broadcast push failed (non-critical):', sseErr);
+    }
+
     return allUsers.length;
   } catch (err) {
     console.error('[Database] broadcastNotificationToAll failed:', err);

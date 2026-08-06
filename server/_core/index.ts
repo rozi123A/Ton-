@@ -744,17 +744,32 @@ async function startServer() {
 
   // ── Wake DB endpoint — admin-only DB health check that forces connection ──
   app.get("/api/wake-db", async (_req, res) => {
+    // Extended timeout for this endpoint since it may need to wake the DB
+    const timeout = setTimeout(() => {
+      res.json({ ok: false, status: 'timeout', message: 'قاعدة البيانات لم تستجب خلال 60 ثانية. قد تكون نائمة أو URL خاطئ.' });
+    }, 60_000);
     try {
       const { getDb } = await import('../db');
       const db = await getDb();
       if (!db) {
-        return res.json({ ok: false, status: 'no_connection', message: 'قاعدة البيانات غير متصلة. تأكد من DATABASE_URL في إعدادات Render.' });
+        clearTimeout(timeout);
+        return res.json({ ok: false, status: 'no_connection', message: 'قاعدة البيانات غير متصلة. تأكد من DATABASE_URL في إعدادات Render. DATABASE_URL: ' + (process.env.DATABASE_URL ? '✅ موجود' : '❌ غير مضبوط') });
       }
-      // Force a query to wake up the DB
-      const result = await db.execute(sql`SELECT count(*)::int FROM users`);
-      const count = (result as any)?.[0]?.count ?? 0;
+      // Force a query to wake up the DB with retry
+      let count = 0;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const result = await db.execute(sql`SELECT count(*)::int FROM users`);
+          count = (result as any)?.[0]?.count ?? 0;
+          break;
+        } catch {
+          if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 5000));
+        }
+      }
+      clearTimeout(timeout);
       res.json({ ok: true, status: 'awake', userCount: count });
     } catch (err: any) {
+      clearTimeout(timeout);
       res.json({ ok: false, status: 'error', message: err.message || String(err) });
     }
   });
@@ -767,23 +782,26 @@ async function startServer() {
     res.json({ version: SERVER_VERSION });
   });
 
-  // ── DB Keep-alive: ping database every 4 minutes to keep connection alive ──
+  // ── DB Keep-alive: ping database every 3 minutes to keep connection alive ──
   const dbKeepAlive = async () => {
     try {
       const { getDb } = await import('../db');
       const db = await getDb();
-      if (!db) { console.warn('[db-keepalive] no DB connection'); return; }
+      if (!db) { 
+        console.warn('[db-keepalive] no DB connection, will retry next interval'); 
+        return; 
+      }
       await db.execute(sql`SELECT 1`);
       console.log('[db-keepalive] database ping OK');
     } catch (err) {
-      console.warn('[db-keepalive] database ping failed:', err);
+      console.warn('[db-keepalive] database ping failed (DB may be sleeping):', err?.message || String(err));
     }
   };
-  // Start after 30 seconds, then every 4 minutes
-  const DB_INTERVAL_MS = 4 * 60 * 1000;
-  setTimeout(dbKeepAlive, 30 * 1000);
+  // Start after 15 seconds, then every 3 minutes
+  const DB_INTERVAL_MS = 3 * 60 * 1000;
+  setTimeout(dbKeepAlive, 15 * 1000);
   setInterval(dbKeepAlive, DB_INTERVAL_MS);
-  console.log('[db-keepalive] scheduled every 4 min to keep DB connection alive');
+  console.log('[db-keepalive] scheduled every 3 min to keep DB connection alive');
 
   // ── Server Self-ping: prevents Render free tier from spinning down the service ──
   // Render spins down free web services after 15 min of no inbound traffic.
@@ -826,17 +844,27 @@ async function startServer() {
     server.on("error", reject);
   });
 
-  // 🔒 Run ensureSchema with a generous timeout — DB may need time to connect
+  // 🔒 Run ensureSchema with generous timeout and retries — DB may need time to connect
+  // Render/Neon databases can take 30-90 seconds to wake from sleep
   const SCHEMA_TIMEOUT = 120000;
-  console.log('[Startup] Running ensureSchema...');
-  try {
-    await Promise.race([
-      ensureSchema(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('SCHEMA_TIMEOUT')), SCHEMA_TIMEOUT))
-    ]);
-    console.log('[Startup] ensureSchema completed successfully');
-  } catch (err: any) {
-    console.error("[Startup] ensureSchema error:", err.message);
+  const MAX_SCHEMA_RETRIES = 3;
+  console.log('[Startup] Running ensureSchema (with retry)...');
+  for (let attempt = 1; attempt <= MAX_SCHEMA_RETRIES; attempt++) {
+    try {
+      await Promise.race([
+        ensureSchema(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('SCHEMA_TIMEOUT')), SCHEMA_TIMEOUT))
+      ]);
+      console.log('[Startup] ensureSchema completed successfully');
+      break;
+    } catch (err: any) {
+      console.error(`[Startup] ensureSchema attempt ${attempt} failed:`, err.message);
+      if (attempt < MAX_SCHEMA_RETRIES) {
+        const delay = 5000 * attempt;
+        console.log(`[Startup] Retrying in ${delay / 1000}s...`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
   }
 }
 

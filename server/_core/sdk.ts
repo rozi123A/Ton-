@@ -294,11 +294,20 @@ class SDKServer {
       const guestLookup = db.getUserByOpenId(sessionUserId).catch(() => undefined);
       user = await Promise.race([
         guestLookup,
-        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 800)),
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 2000)),
       ]);
 
       if (!user) {
-        return buildVirtualGuestUser(sessionUserId, (session as any).name || "زائر");
+        // Create a virtual guest user but also ensure DB save happens
+        const virtualUser = buildVirtualGuestUser(sessionUserId, (session as any).name || "زائر");
+        // Fire-and-forget DB upsert to persist the guest for counting
+        void db.upsertUser({
+          openId: sessionUserId,
+          name: (session as any).name || "زائر",
+          loginMethod: 'guest',
+          lastSignedIn: signedInAt,
+        }).catch(() => {});
+        return virtualUser;
       }
     } else {
       user = await db.getUserByOpenId(sessionUserId);

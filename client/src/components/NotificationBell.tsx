@@ -71,6 +71,7 @@ export default function NotificationBell() {
 
   const { data: dbNotifs, refetch: refetchNotifs } = trpc.notifications.get.useQuery(undefined, {
     enabled: isAuthenticated && !!userId,
+    refetchInterval: 15_000, // Poll DB every 15s for new notifications
   });
 
   useEffect(() => {
