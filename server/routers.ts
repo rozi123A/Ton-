@@ -33,6 +33,51 @@ const aiMessageSchema = z.object({
   content: z.string().min(1).max(20_000),
 });
 
+const GUEST_SAVE_RETRY_DELAYS_MS = [0, 10_000, 30_000, 60_000];
+
+async function saveGuestRegistrationWithRetry(input: {
+  openId: string;
+  name: string;
+  age: number;
+  gender: 'male' | 'female' | 'other';
+  avatar: string;
+  country?: string;
+}) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < GUEST_SAVE_RETRY_DELAYS_MS.length; attempt++) {
+    const delay = GUEST_SAVE_RETRY_DELAYS_MS[attempt];
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+
+    try {
+      await upsertUser({
+        openId: input.openId,
+        name: input.name,
+        loginMethod: 'guest',
+        lastSignedIn: new Date(),
+        ...(input.country ? { country: input.country } : {}),
+      });
+
+      const user = await getUserByOpenId(input.openId);
+      if (!user) throw new Error('Guest was not found after database upsert');
+
+      await saveUserProfile(user.id, {
+        name: input.name,
+        age: input.age,
+        gender: input.gender,
+        avatar: input.avatar,
+      });
+      console.log(`[GuestLogin] Registration saved on attempt ${attempt + 1}:`, user.id);
+      return;
+    } catch (error) {
+      lastError = error;
+      console.warn(`[GuestLogin] Database save attempt ${attempt + 1} failed; will retry`, error);
+    }
+  }
+
+  console.error('[GuestLogin] Could not save registration after all retries:', lastError);
+}
+
 // Keep the admin health check bounded; the admin shell does not wait for it.
 const ADMIN_STATS_TIMEOUT_MS = 5_000;
 
@@ -308,24 +353,16 @@ export const appRouter = router({
         // Country from client (no server IP lookup — too slow)
         const country = input.country?.toUpperCase() || undefined;
 
-        // DB operations with timeout — never block login
-        const DB_TIMEOUT = 2000; // Reduced from 3000ms to 2000ms for faster response
-        const loginPromise = (async () => {
-          try {
-            console.log('[GuestLogin] Starting DB upsert for:', guestOpenId);
-            await upsertUser({ openId: guestOpenId, name: input.name, loginMethod: 'guest', lastSignedIn: new Date(), ...(country ? { country } : {}) });
-            const user = await getUserByOpenId(guestOpenId);
-            if (user) {
-              console.log('[GuestLogin] Saving profile for user:', user.id);
-              await saveUserProfile(user.id, { name: input.name, age: input.age, gender: input.gender, avatar: avatarUrl });
-            }
-            console.log('[GuestLogin] DB operations completed successfully');
-          } catch (dbErr) {
-            console.warn('[GuestLogin] DB error (non-fatal):', dbErr);
-          }
-        })();
-        // 🚀 SPEED FIX: Don't await DB at all for the response. 
-        // Let it run in the background. The session token is generated independently.
+        // Save asynchronously so login remains instant, but retry until a
+        // sleeping Render database wakes up and confirms the row exists.
+        const loginPromise = saveGuestRegistrationWithRetry({
+          openId: guestOpenId,
+          name: input.name,
+          age: input.age,
+          gender: input.gender,
+          avatar: avatarUrl,
+          country,
+        });
         loginPromise.catch(e => console.error('[GuestLogin] Background DB error:', e));
 
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
