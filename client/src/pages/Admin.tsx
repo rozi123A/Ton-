@@ -408,6 +408,10 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     { adminToken },
     { enabled: !!adminToken, retry: 3, retryDelay: 2_000, staleTime: 10_000, refetchInterval: 10_000 },
   );
+  const { data: onlineCount } = trpc.admin.onlineCount.useQuery(
+    { adminToken },
+    { enabled: !!adminToken, retry: 3, retryDelay: 2_000, staleTime: 5_000, refetchInterval: 5_000 },
+  );
 
   const statsEnabled = !!adminToken;
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.countryStats.useQuery(
@@ -423,7 +427,7 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     ? dbStatus.totalUsers
     : totalCount ?? dbStatus?.totalUsers ?? 0;
   const vipCount = dbStatus?.premiumUsers ?? 0;
-  const onlineUsers = dbStatus?.onlineUsers ?? 0;
+  const onlineUsers = onlineCount ?? dbStatus?.onlineUsers ?? 0;
 
   function refetchAll() {
     refetchDbStatus();

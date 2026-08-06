@@ -357,25 +357,26 @@ export const appRouter = router({
         // Country from client (no server IP lookup — too slow)
         const country = input.country?.toUpperCase() || undefined;
 
-        // Save asynchronously so login remains instant, but retry until a
-        // sleeping Render database wakes up and confirms the row exists.
-        const loginPromise = saveGuestRegistrationWithRetry({
+        // Persist the identity before returning the session. The old
+        // fire-and-forget flow could redirect to /chat while the user row was
+        // still missing, so both the presence ping and admin online count saw
+        // zero. Profile fields are completed by the retrying background task.
+        await upsertUser({
+          openId: guestOpenId,
+          name: input.name,
+          loginMethod: 'guest',
+          lastSignedIn: new Date(),
+          ...(country ? { country } : {}),
+        });
+
+        void saveGuestRegistrationWithRetry({
           openId: guestOpenId,
           name: input.name,
           age: input.age,
           gender: input.gender,
           avatar: avatarUrl,
           country,
-        });
-        loginPromise.catch(e => console.error('[GuestLogin] Background DB error:', e));
-        // Also ensure DB upsert fires immediately (not just async)
-        upsertUser({
-          openId: guestOpenId,
-          name: input.name,
-          loginMethod: 'guest',
-          lastSignedIn: new Date(),
-          ...(country ? { country } : {}),
-        }).catch(e => console.warn('[GuestLogin] Immediate DB upsert failed:', e));
+        }).catch(e => console.error('[GuestLogin] Background DB error:', e));
 
         const sessionToken = await sdk.createSessionToken(guestOpenId, { name: input.name, expiresInMs: ONE_YEAR_MS });
         const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -465,7 +466,7 @@ export const appRouter = router({
     /** Presence ping — updates lastSignedIn and isOnline so admin stats are accurate */
     ping: protectedProcedure
       .mutation(async ({ ctx }) => {
-        await updateUserPresence(ctx.user.id);
+        await updateUserPresence(ctx.user.id, ctx.user.openId, ctx.user.name);
         return { success: true };
       }),
   }),

@@ -870,16 +870,12 @@ export async function getOnlineUsersCount(): Promise<number> {
     return 0;
   }
   try {
-    // A user is online only while their presence flag is active and their
-    // heartbeat has been seen recently. lastSeen is updated on login and by
-    // the authenticated client heartbeat.
+    // A user is online while recent activity is recorded. Keep the
+    // lastSignedIn fallback for rows created before lastSeen was added.
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(and(
-        eq(users.isOnline, true),
-        sql`${users.lastSeen} > ${fiveMinutesAgo}`,
-      ));
+      .where(sql`(${users.lastSeen} > ${fiveMinutesAgo} OR ${users.lastSignedIn} > ${fiveMinutesAgo})`);
     return result[0]?.count ?? 0;
   } catch (err) {
     console.error('[Database] getOnlineUsersCount failed:', err);
@@ -978,13 +974,31 @@ export async function broadcastNotificationToAll(title: string, message: string)
   }
 }
 
-export async function updateUserPresence(userId: number): Promise<void> {
+export async function updateUserPresence(
+  userId: number,
+  openId: string,
+  name?: string | null,
+): Promise<void> {
   const db = await getDb();
   if (!db) return;
   try {
-    await db.update(users)
-      .set({ isOnline: true, lastSignedIn: new Date(), lastSeen: new Date() })
-      .where(eq(users.id, userId));
+    const now = new Date();
+    const updated = await db.update(users)
+      .set({ isOnline: true, lastSignedIn: now, lastSeen: now })
+      .where(userId > 0 ? eq(users.id, userId) : eq(users.openId, openId))
+      .returning({ id: users.id });
+
+    // Guest authentication can briefly return a virtual user with id -1
+    // while the background registration is still being written. In that
+    // case update by openId and create the row if it is not there yet.
+    if (updated.length === 0) {
+      await upsertUser({
+        openId,
+        ...(name ? { name } : {}),
+        ...(openId.startsWith('guest_') ? { loginMethod: 'guest' as const } : {}),
+        lastSignedIn: now,
+      });
+    }
   } catch (err) {
     console.error('[Database] updateUserPresence failed:', err);
   }
