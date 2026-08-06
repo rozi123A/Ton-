@@ -787,23 +787,24 @@ async function startServer() {
 
   // ── Server Self-ping: prevents Render free tier from spinning down the service ──
   // Render spins down free web services after 15 min of no inbound traffic.
-  // By pinging our own public URL every 10 minutes we count as inbound traffic
-  // and the server never sleeps. RENDER_EXTERNAL_URL is set automatically by Render.
-  const SELF_PING_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+  // By pinging our own public URL every 8 minutes we count as inbound traffic
+  // and the server NEVER sleeps. RENDER_EXTERNAL_URL is set automatically by Render.
+  const SELF_PING_INTERVAL_MS = 8 * 60 * 1000; // 8 min — well under Render's 15-min limit
   const selfPing = async () => {
     const externalUrl = process.env.RENDER_EXTERNAL_URL;
-    if (!externalUrl) return; // only active on Render
+    if (!externalUrl) return; // only active on Render (env var not set locally)
     try {
-      const res = await fetch(`${externalUrl}/ping`, { signal: AbortSignal.timeout(10_000) });
-      console.log(`[self-ping] ${res.status} — server staying awake`);
+      const res = await fetch(`${externalUrl}/ping`, { signal: AbortSignal.timeout(15_000) });
+      console.log(`[self-ping] ${res.status} — server staying awake (${new Date().toISOString()})`);
     } catch (err) {
       console.warn('[self-ping] failed (will retry next interval):', (err as Error).message);
     }
   };
-  // First self-ping after 2 minutes (give server time to fully start), then every 10 min
-  setTimeout(selfPing, 2 * 60 * 1000);
+  // First self-ping after 15 seconds (minimise the startup window where server could sleep),
+  // then every 8 minutes permanently.
+  setTimeout(selfPing, 15_000);
   setInterval(selfPing, SELF_PING_INTERVAL_MS);
-  console.log('[self-ping] scheduled every 10 min to keep Render service awake');
+  console.log('[self-ping] scheduled: first in 15 s, then every 8 min — Render service stays awake');
 
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

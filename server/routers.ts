@@ -753,20 +753,33 @@ export const appRouter = router({
         const { ENV } = await import('./_core/env');
         if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
 
-        // 1. Get connection — use the extended timeout so Render's free DB has time to wake.
-        const db = await withTimeout(getDb(), DB_CONNECT_TIMEOUT_MS);
+        // 1. Get drizzle instance (postgres.js connects lazily on first query)
+        const db = await getDb();
         if (!db) {
-          return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason: 'DATABASE_URL غير مضبوط أو الاتصال فشل' };
+          return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0,
+            reason: 'DATABASE_URL غير مضبوط — تأكد من إعداده في Render Environment Variables' };
         }
 
-        try {
-          // 2. Fetch REAL counts using proven drizzle queries (not raw SQL)
-          const [totalResult, premiumResult, onlineResult] = await withTimeout(Promise.all([
-            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
-            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
-            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
-          ]));
+        // 2. Run queries — capture the REAL postgres error if it fires before the timeout
+        //    This lets the admin see "ECONNREFUSED / wrong password / DB deleted" etc.
+        let actualPgError: string | null = null;
+        const queryPromise = Promise.all([
+          db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
+          db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
+          db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
+        ]).catch(err => {
+          // Capture real error (ECONNREFUSED, auth failure, timeout from postgres.js, etc.)
+          actualPgError = err?.cause?.message ?? err?.message ?? String(err);
+          throw err;
+        });
 
+        try {
+          const [totalResult, premiumResult, onlineResult] = await Promise.race([
+            queryPromise,
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('QUERY_TIMEOUT')), ADMIN_STATS_TIMEOUT_MS),
+            ),
+          ]);
           return {
             connected: true,
             totalUsers: totalResult[0]?.count ?? 0,
@@ -775,8 +788,13 @@ export const appRouter = router({
             reason: null,
           };
         } catch (err: any) {
-          const reason = err?.cause?.message ?? err?.message ?? String(err);
-          return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason: String(reason) };
+          // Prefer the actual postgres error over the generic timeout string
+          const reason = actualPgError
+            ?? (err?.message === 'QUERY_TIMEOUT'
+              ? 'قاعدة البيانات لا تستجيب — ربما نائمة أو URL خاطئ'
+              : (err?.cause?.message ?? err?.message ?? String(err)));
+          console.error('[dbStatus] DB query failed:', reason);
+          return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason };
         }
       }),
 
