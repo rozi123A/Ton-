@@ -757,11 +757,11 @@ export const appRouter = router({
 
         try {
           // 2. Fetch REAL counts using proven drizzle queries (not raw SQL)
-          const [totalResult, premiumResult, onlineResult] = await Promise.all([
+          const [totalResult, premiumResult, onlineResult] = await withTimeout(Promise.all([
             db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
             db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
             db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
-          ]);
+          ]));
 
           return {
             connected: true,
