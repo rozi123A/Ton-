@@ -33,8 +33,8 @@ const aiMessageSchema = z.object({
   content: z.string().min(1).max(20_000),
 });
 
-// Render free PostgreSQL instances may need time to wake from sleep.
-const ADMIN_STATS_TIMEOUT_MS = 60_000;
+// Keep the admin health check bounded; the admin shell does not wait for it.
+const ADMIN_STATS_TIMEOUT_MS = 5_000;
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs = ADMIN_STATS_TIMEOUT_MS): Promise<T> {
   return Promise.race([

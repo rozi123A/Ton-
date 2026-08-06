@@ -414,38 +414,25 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     refetchStats();
   }
 
-  // DB still loading — brief message
-  if (dbLoading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ backgroundColor: '#111827', border: '1px solid #3730a3', borderRadius: '16px', padding: '32px' }}>
-          <div style={{ width: '40px', height: '40px', border: '4px solid #3730a3', borderTop: '4px solid #7c3aed', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ color: '#a5b4fc', fontWeight: 700, fontSize: '15px', margin: '0 0 8px' }}>جاري تحميل الإحصائيات...</p>
-          <p style={{ color: '#6b7280', fontSize: '12px', margin: 0 }}>الرجاء الانتظار</p>
-        </div>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  // DB error
-  if (dbError || (dbStatus && !dbStatus.connected)) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-          <p style={{ color: '#ef4444', fontWeight: 800, fontSize: '16px', margin: '0 0 8px' }}>⚠️ قاعدة البيانات غير متصلة</p>
-          <p style={{ color: '#fca5a5', fontSize: '13px', margin: '0 0 12px' }}>{dbStatus?.reason || 'خطأ في الاتصال بقاعدة البيانات'}</p>
-          <p style={{ color: '#9ca3af', fontSize: '12px', margin: 0 }}>تأكد من ضبط DATABASE_URL في إعدادات Fly.io (Secrets)</p>
-        </div>
-        <button onClick={refetchAll} disabled={isFetching} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '12px 24px', cursor: 'pointer', fontWeight: 700, opacity: isFetching ? 0.6 : 1 }}>
-          {isFetching ? 'جاري الاتصال...' : 'إعادة المحاولة'}
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* The admin shell must not wait for PostgreSQL. The health check runs
+          in the background and only controls whether real values are filled. */}
+      {dbLoading && !dbStatus && (
+        <div style={{ backgroundColor: '#172554', border: '1px solid #1d4ed8', borderRadius: '12px', padding: '12px 14px' }}>
+          <p style={{ color: '#bfdbfe', fontSize: '12px', margin: 0 }}>⏳ جارِ التحقق من قاعدة البيانات في الخلفية...</p>
+        </div>
+      )}
+      {(dbError || (dbStatus && !dbStatus.connected)) && (
+        <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '12px', padding: '12px 14px' }}>
+          <p style={{ color: '#ef4444', fontWeight: 700, fontSize: '13px', margin: '0 0 5px' }}>⚠️ قاعدة البيانات غير متصلة</p>
+          <p style={{ color: '#fca5a5', fontSize: '12px', margin: '0 0 9px' }}>{dbStatus?.reason || 'تعذر الاتصال بقاعدة البيانات'}</p>
+          <button onClick={refetchAll} disabled={isFetching} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '7px', padding: '7px 12px', cursor: 'pointer', fontWeight: 700, opacity: isFetching ? 0.6 : 1 }}>
+            {isFetching ? 'جارِ المحاولة...' : 'إعادة المحاولة'}
+          </button>
+        </div>
+      )}
+
       {/* Status bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={{ color: '#6b7280', fontSize: '12px', margin: 0 }}>
