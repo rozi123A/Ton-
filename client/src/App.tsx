@@ -63,7 +63,9 @@ function App() {
     return () => clearInterval(id);
   }, [ready]);
 
-  // Presence ping — updates lastSignedIn every 2 min so admin online count is accurate
+  // Presence ping — refresh the user's lastSeen every minute so the admin
+  // online count reflects separate browsers/devices without waiting for a
+  // later navigation or login request.
   // IMPORTANT: only fire when authenticated. users.ping is a protectedProcedure;
   // firing it while unauthenticated returns UNAUTHORIZED which the global error
   // handler treats as a redirect signal — sending the user away from /login.
@@ -73,12 +75,23 @@ function App() {
   presencePingRef.current = presencePing;
   useEffect(() => {
     if (!ready || !isAuthenticated) return;
+    const ping = () => {
+      if (document.visibilityState === "visible") {
+        presencePingRef.current.mutate();
+      }
+    };
     const id = setInterval(() => {
-      presencePingRef.current.mutate();
-    }, 2 * 60 * 1000);
-    // Fire after 3s so it doesn't block initial render
-    const initialPing = setTimeout(() => presencePingRef.current.mutate(), 3000);
-    return () => { clearInterval(id); clearTimeout(initialPing); };
+      ping();
+    }, 60 * 1000);
+    const initialPing = setTimeout(ping, 1000);
+    document.addEventListener("visibilitychange", ping);
+    window.addEventListener("focus", ping);
+    return () => {
+      clearInterval(id);
+      clearTimeout(initialPing);
+      document.removeEventListener("visibilitychange", ping);
+      window.removeEventListener("focus", ping);
+    };
   }, [ready, isAuthenticated]);
 
   return (

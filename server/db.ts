@@ -255,6 +255,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     const insertValues: InsertUser = {
       openId: user.openId,
       isOnline: true,
+      lastSeen: lastSignedIn,
       lastSignedIn,
       ...(user.name      !== undefined && { name:        user.name      ?? null }),
       ...(user.email     !== undefined && { email:       user.email     ?? null }),
@@ -268,6 +269,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     // avoids any ORM-level double-column emission on conflict branches.
     const conflictSet: Record<string, unknown> = {
       isOnline:     sql`excluded."isOnline"`,
+      lastSeen:     sql`excluded."lastSeen"`,
       lastSignedIn: sql`excluded."lastSignedIn"`,
     };
     if (user.name      !== undefined) conflictSet.name        = sql`excluded.name`;
@@ -868,11 +870,16 @@ export async function getOnlineUsersCount(): Promise<number> {
     return 0;
   }
   try {
-    // Users who were active in the last 5 minutes (lastSignedIn updated by ping)
+    // A user is online only while their presence flag is active and their
+    // heartbeat has been seen recently. lastSeen is updated on login and by
+    // the authenticated client heartbeat.
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(sql`${users.lastSignedIn} > ${fiveMinutesAgo}`);
+      .where(and(
+        eq(users.isOnline, true),
+        sql`${users.lastSeen} > ${fiveMinutesAgo}`,
+      ));
     return result[0]?.count ?? 0;
   } catch (err) {
     console.error('[Database] getOnlineUsersCount failed:', err);

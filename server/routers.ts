@@ -14,7 +14,7 @@ import {
   getUnreadMessageCount, markMessagesRead, updateUserPresence,
   getDb,
 } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
 import { detectCountry } from "./_core/detectCountry";
@@ -798,7 +798,10 @@ export const appRouter = router({
             withTimeout(
               db.select({ count: sql<number>`cast(count(*) as int)` })
                 .from(users)
-                .where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
+                .where(and(
+                  eq(users.isOnline, true),
+                  sql`${users.lastSeen} > ${new Date(Date.now() - 5 * 60 * 1000)}`,
+                )),
             ),
           ]);
 
