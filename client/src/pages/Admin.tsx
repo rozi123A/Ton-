@@ -401,7 +401,15 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     },
   );
 
-  const statsEnabled = !!adminToken && dbStatus?.connected === true;
+  // Load the total independently as a fallback. The DB health response also
+  // contains it, but the dashboard must still show the real count when a
+  // secondary metric is slow or temporarily unavailable.
+  const { data: totalCount, isLoading: totalLoading, refetch: refetchTotalCount } = trpc.admin.totalCount.useQuery(
+    { adminToken },
+    { enabled: !!adminToken, retry: 3, retryDelay: 2_000, staleTime: 10_000, refetchInterval: 10_000 },
+  );
+
+  const statsEnabled = !!adminToken;
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.countryStats.useQuery(
     { adminToken },
     { enabled: statsEnabled, retry: 2, staleTime: 60_000 },
@@ -411,12 +419,15 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     { enabled: statsEnabled, retry: 2, staleTime: 60_000 },
   );
 
-  const totalUsers = dbStatus?.totalUsers ?? 0;
+  const totalUsers = dbStatus?.connected
+    ? dbStatus.totalUsers
+    : totalCount ?? dbStatus?.totalUsers ?? 0;
   const vipCount = dbStatus?.premiumUsers ?? 0;
   const onlineUsers = dbStatus?.onlineUsers ?? 0;
 
   function refetchAll() {
     refetchDbStatus();
+    refetchTotalCount();
     refetchStats();
   }
 
@@ -424,7 +435,7 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* The admin shell must not wait for PostgreSQL. The health check runs
           in the background and only controls whether real values are filled. */}
-      {dbLoading && !dbStatus && (
+      {dbLoading && !dbStatus && totalLoading && (
         <div style={{ backgroundColor: '#172554', border: '1px solid #1d4ed8', borderRadius: '12px', padding: '12px 14px' }}>
           <p style={{ color: '#bfdbfe', fontSize: '12px', margin: 0 }}>⏳ جارِ التحقق من قاعدة البيانات في الخلفية...</p>
         </div>
@@ -457,7 +468,7 @@ function StatsTab({ adminToken }: { adminToken: string }) {
         <div style={{ backgroundColor: '#1e1b4b', border: '1px solid #3730a3', borderRadius: '20px', padding: '20px', textAlign: 'center' }}>
           <Users style={{ width: '24px', height: '24px', color: '#818cf8', margin: '0 auto 8px' }} />
           <h4 style={{ margin: 0, color: '#a5b4fc', fontSize: '12px', fontWeight: 700 }}>إجمالي المستخدمين</h4>
-          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '28px', fontWeight: 900 }}>{isFetching && !dbStatus ? '...' : totalUsers}</p>
+          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '28px', fontWeight: 900 }}>{totalLoading && !dbStatus && totalCount === undefined ? '...' : totalUsers}</p>
         </div>
         <div style={{ backgroundColor: '#1e1b4b', border: '1px solid #3730a3', borderRadius: '20px', padding: '20px', textAlign: 'center' }}>
           <Crown style={{ width: '24px', height: '24px', color: '#fbbf24', margin: '0 auto 8px' }} />

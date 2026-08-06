@@ -771,11 +771,36 @@ export const appRouter = router({
         // 2. Run queries with retry — DB may be sleeping and need time to wake
         let actualPgError: string | null = null;
         const doQuery = async () => {
-          return Promise.all([
+          // The total is the primary admin metric. Run it first so a problem
+          // in a secondary metric cannot make the registered-user count zero.
+          const totalResult = await withTimeout(
             db.select({ count: sql<number>`cast(count(*) as int)` }).from(users),
-            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(eq(users.isPremium, true)),
-            db.select({ count: sql<number>`cast(count(*) as int)` }).from(users).where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
+          );
+
+          const [premiumResult, onlineResult] = await Promise.allSettled([
+            withTimeout(
+              db.select({ count: sql<number>`cast(count(*) as int)` })
+                .from(users)
+                .where(eq(users.isPremium, true)),
+            ),
+            withTimeout(
+              db.select({ count: sql<number>`cast(count(*) as int)` })
+                .from(users)
+                .where(sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`),
+            ),
           ]);
+
+          return {
+            totalResult,
+            premiumUsers:
+              premiumResult.status === 'fulfilled'
+                ? premiumResult.value[0]?.count ?? 0
+                : 0,
+            onlineUsers:
+              onlineResult.status === 'fulfilled'
+                ? onlineResult.value[0]?.count ?? 0
+                : 0,
+          };
         };
 
         // Try up to 3 times with delays for sleeping DB
@@ -783,7 +808,7 @@ export const appRouter = router({
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
           actualPgError = null;
           try {
-            const [totalResult, premiumResult, onlineResult] = await Promise.race([
+            const result = await Promise.race([
               doQuery().catch(err => {
                 actualPgError = err?.cause?.message ?? err?.message ?? String(err);
                 throw err;
@@ -794,9 +819,9 @@ export const appRouter = router({
             ]);
             return {
               connected: true,
-              totalUsers: totalResult[0]?.count ?? 0,
-              premiumUsers: premiumResult[0]?.count ?? 0,
-              onlineUsers: onlineResult[0]?.count ?? 0,
+              totalUsers: result.totalResult[0]?.count ?? 0,
+              premiumUsers: result.premiumUsers,
+              onlineUsers: result.onlineUsers,
               reason: null,
             };
           } catch (err: any) {
