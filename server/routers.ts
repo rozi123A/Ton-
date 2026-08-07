@@ -11,10 +11,10 @@ import {
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
-  getUnreadMessageCount, markMessagesRead, updateUserPresence,
+  getUnreadMessageCount, markMessagesRead, updateUserPresence, updateUserOffline,
   getDb,
 } from "./db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
 import { detectCountry } from "./_core/detectCountry";
