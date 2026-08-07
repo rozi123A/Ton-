@@ -280,7 +280,10 @@ export const appRouter = router({
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      if (ctx.user) {
+        await updateUserOffline(ctx.user.id, ctx.user.openId);
+      }
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
@@ -799,21 +802,20 @@ export const appRouter = router({
             withTimeout(
               db.select({ count: sql<number>`cast(count(*) as int)` })
                 .from(users)
-                .where(sql`(
-                  ${users.isOnline} = true
-                  OR ${users.lastSeen} > ${new Date(Date.now() - 60 * 60 * 1000)}
-                  OR ${users.lastSignedIn} > ${new Date(Date.now() - 60 * 60 * 1000)}
-                  OR ${users.createdAt} > ${new Date(Date.now() - 60 * 60 * 1000)}
-                )`),
+                .where(and(
+                  eq(users.isOnline, true),
+                  or(
+                    sql`${users.lastSeen} > ${new Date(Date.now() - 3 * 60 * 1000)}`,
+                    sql`${users.lastSignedIn} > ${new Date(Date.now() - 3 * 60 * 1000)}`
+                  )
+                )),
             ),
           ]);
 
-          const rawOnline =
+          const onlineUsers =
             onlineResult.status === 'fulfilled'
               ? onlineResult.value[0]?.count ?? 0
               : 0;
-          const totalUsersCount = totalResult[0]?.count ?? 0;
-          const onlineUsers = rawOnline <= 1 && totalUsersCount >= 2 ? Math.min(totalUsersCount, 2) : rawOnline;
 
           return {
             totalResult,

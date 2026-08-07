@@ -438,7 +438,7 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
   const vipCount = dbStatus?.premiumUsers ?? 0;
   // Do not let a temporarily empty secondary query hide a value already
   // returned by the DB status query.
-  const onlineUsers = Math.max(onlineCount ?? 0, dbStatus?.onlineUsers ?? 0);
+  const onlineUsers = dbStatus?.onlineUsers ?? onlineCount ?? 0;
 
   function refetchAll() {
     refetchDbStatus();
@@ -538,9 +538,14 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <img 
-                src={u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'} 
-                style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} 
-                onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'; }}
+                src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || 'user')}`} 
+                style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover', backgroundColor: '#1f2937' }} 
+                onError={(e) => { 
+                  const target = e.target as HTMLImageElement;
+                  if (!target.src.includes('dicebear.com')) {
+                    target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || 'user')}`;
+                  }
+                }}
               />
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'white' }}>{u.name || 'مستخدم جديد'}</p>
@@ -757,11 +762,16 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
 
       {user && (
         <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', textAlign: 'center' }}>
-          <img
-            src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'}
-            style={{ width: '96px', height: '96px', borderRadius: '24px', objectFit: 'cover', border: '3px solid #7c3aed' }}
-            onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'; }}
-          />
+            <img 
+              src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'user')}`} 
+              style={{ width: '60px', height: '60px', borderRadius: '15px', objectFit: 'cover', backgroundColor: '#1f2937' }}
+              onError={(e) => { 
+                const target = e.target as HTMLImageElement;
+                if (!target.src.includes('dicebear.com')) {
+                  target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'user')}`;
+                }
+              }}
+            />
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}>

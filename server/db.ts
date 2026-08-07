@@ -870,18 +870,18 @@ export async function getOnlineUsersCount(): Promise<number> {
     return 0;
   }
   try {
-    // 60 minutes active window or lastSignedIn/lastSeen/createdAt
-    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
+    // 3 minutes active window is enough for "Online Now" with frequent pings
+    const activeWindow = new Date(Date.now() - 3 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(sql`(${users.isOnline} = true OR ${users.lastSeen} > ${sixtyMinutesAgo} OR ${users.lastSignedIn} > ${sixtyMinutesAgo} OR ${users.createdAt} > ${sixtyMinutesAgo})`);
-    const count = result[0]?.count ?? 0;
-    if (count === 0) {
-      const totalRes = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
-      const total = totalRes[0]?.count ?? 0;
-      return total > 0 ? Math.min(total, 2) : 0;
-    }
-    return count;
+      .where(and(
+        eq(users.isOnline, true),
+        or(
+          sql`${users.lastSeen} > ${activeWindow}`,
+          sql`${users.lastSignedIn} > ${activeWindow}`
+        )
+      ));
+    return result[0]?.count ?? 0;
   } catch (err) {
     console.error('[Database] getOnlineUsersCount failed:', err);
     return 0;
@@ -1006,7 +1006,7 @@ export async function updateUserPresence(
   try {
     const now = new Date();
     const updated = await db.update(users)
-      .set({ isOnline: true, lastSignedIn: now, lastSeen: now })
+      .set({ isOnline: true, lastSeen: now })
       .where(userId > 0 ? eq(users.id, userId) : eq(users.openId, openId))
       .returning({ id: users.id });
 
@@ -1023,5 +1023,20 @@ export async function updateUserPresence(
     }
   } catch (err) {
     console.error('[Database] updateUserPresence failed:', err);
+  }
+}
+
+export async function updateUserOffline(
+  userId: number,
+  openId: string,
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(users)
+      .set({ isOnline: false, lastSeen: new Date() })
+      .where(userId > 0 ? eq(users.id, userId) : eq(users.openId, openId));
+  } catch (err) {
+    console.error('[Database] updateUserOffline failed:', err);
   }
 }
