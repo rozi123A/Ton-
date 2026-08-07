@@ -69,11 +69,13 @@ export default function Profile() {
   const walletQuery  = trpc.gifts.getWallet.useQuery(undefined,  { enabled: isAuthenticated });
   const balanceQuery = trpc.gifts.getBalance.useQuery(undefined, { enabled: isAuthenticated });
   
+  const utils = trpc.useUtils();
   const createStory = trpc.stories.create.useMutation({
     onSuccess: () => {
       setShowStoryUpload(false);
       setStoryMedia(null);
       setStoryCaption("");
+      utils.stories.getActive.invalidate();
       alert("تم نشر القصة بنجاح!");
     },
   });

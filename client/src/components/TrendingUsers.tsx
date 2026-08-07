@@ -167,11 +167,12 @@ export default function TrendingUsers() {
   const [activeStoryUserId, setActiveStoryUserId] = useState<number | null>(null);
 
   const { data: activeStories } = trpc.stories.getActive.useQuery(undefined, {
-    refetchInterval: 30000,
+    refetchInterval: 5000, // Refresh every 5s for better real-time feel
+    staleTime: 0,
   });
 
   const { data: realUsers, isPending, isError } = trpc.users.getRecent.useQuery(20, {
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000, // Reduce stale time to see new users/stories faster
     retry: false,
   });
 
