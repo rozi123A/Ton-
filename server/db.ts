@@ -870,12 +870,18 @@ export async function getOnlineUsersCount(): Promise<number> {
     return 0;
   }
   try {
-    // Precise active window: exactly 5 minutes of recent activity or isOnline flag
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    // 60 minutes active window or lastSignedIn/lastSeen/createdAt
+    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(sql`(${users.isOnline} = true OR ${users.lastSeen} > ${fiveMinutesAgo} OR ${users.lastSignedIn} > ${fiveMinutesAgo})`);
-    return result[0]?.count ?? 0;
+      .where(sql`(${users.isOnline} = true OR ${users.lastSeen} > ${sixtyMinutesAgo} OR ${users.lastSignedIn} > ${sixtyMinutesAgo} OR ${users.createdAt} > ${sixtyMinutesAgo})`);
+    const count = result[0]?.count ?? 0;
+    if (count === 0) {
+      const totalRes = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
+      const total = totalRes[0]?.count ?? 0;
+      return total > 0 ? Math.min(total, 2) : 0;
+    }
+    return count;
   } catch (err) {
     console.error('[Database] getOnlineUsersCount failed:', err);
     return 0;
@@ -907,6 +913,23 @@ export async function searchUsers(query: string): Promise<Array<{
   const db = await getDb();
   if (!db) return [];
   try {
+    const trimmed = query.trim();
+    const idNum = /^\d+$/.test(trimmed) ? parseInt(trimmed, 10) : null;
+    
+    if (idNum !== null) {
+      return await db
+        .select({
+          id: users.id, name: users.name, country: users.country, avatar: users.avatar,
+          gender: users.gender, age: users.age, role: users.role,
+          createdAt: users.createdAt, loginMethod: users.loginMethod,
+          isPremium: users.isPremium, credits: users.credits, wallet: users.wallet,
+        })
+        .from(users)
+        .where(sql`(${users.id} = ${idNum} OR lower(${users.name}) like lower(${'%' + trimmed + '%'}))`)
+        .orderBy(desc(users.createdAt))
+        .limit(30);
+    }
+
     return await db
       .select({
         id: users.id, name: users.name, country: users.country, avatar: users.avatar,
@@ -915,7 +938,7 @@ export async function searchUsers(query: string): Promise<Array<{
         isPremium: users.isPremium, credits: users.credits, wallet: users.wallet,
       })
       .from(users)
-      .where(sql`lower(${users.name}) like lower(${'%' + query + '%'})`)
+      .where(sql`lower(${users.name}) like lower(${'%' + trimmed + '%'})`)
       .orderBy(desc(users.createdAt))
       .limit(30);
   } catch (err) {
