@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, MessageCircle, Eye, Send } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, MessageCircle, Eye, Send, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
@@ -41,6 +41,14 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const DURATION = 5000; // 5 seconds per story
 
   const recordView = trpc.stories.recordView.useMutation();
+  const deleteStory = trpc.stories.delete.useMutation({
+    onSuccess: () => {
+      utils.stories.getActive.invalidate();
+      utils.stories.getUserStories.invalidate({ userId: user?.id });
+      utils.users.getRecent.invalidate();
+      onClose();
+    }
+  });
   const addComment = trpc.stories.addComment.useMutation({
     onSuccess: () => {
       setCommentText("");
@@ -137,6 +145,18 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
             <Eye className="w-3 h-3" />
             <span>{story.viewCount || 0}</span>
           </div>
+          {isOwner && (
+            <button 
+              onClick={() => {
+                if (confirm("هل أنت متأكد من حذف هذه القصة؟")) {
+                  deleteStory.mutate({ storyId: story.id });
+                }
+              }} 
+              className="text-red-400 p-2 hover:bg-red-500/20 rounded-full"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          )}
           <button onClick={onClose} className="text-white p-2 hover:bg-white/10 rounded-full">
             <X className="w-6 h-6" />
           </button>

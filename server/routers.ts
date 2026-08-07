@@ -14,7 +14,8 @@ import {
   getUnreadMessageCount,   markMessagesRead, updateUserPresence, updateUserOffline,
   saveStory, getActiveStories, getUserStories,
   saveStoryComment, getStoryComments, recordStoryView,
-  getDb,
+  deleteStory, getStoryById,
+  getDb, createNotification, saveMessage,
 } from "./db";
 import { and, eq, or, sql } from "drizzle-orm";
 import { users } from "../drizzle/schema";
@@ -347,16 +348,15 @@ export const appRouter = router({
         content: z.string().min(1).max(500),
       }))
       .mutation(async ({ ctx, input }) => {
-        // Get the story to check the owner
         const db = await getDb();
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         
-        const story = await db.select().from(stories).where(eq(stories.id, input.storyId)).limit(1);
-        if (story.length === 0) {
+        const story = await getStoryById(input.storyId);
+        if (!story) {
           throw new TRPCError({ code: "NOT_FOUND", message: "القصة غير موجودة" });
         }
 
-        if (story[0].userId === ctx.user.id) {
+        if (story.userId === ctx.user.id) {
           throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك التعليق على قصتك الخاصة" });
         }
 
@@ -365,6 +365,27 @@ export const appRouter = router({
           userId: ctx.user.id,
           content: input.content,
         });
+
+        // 🔔 Send notification to story owner
+        await createNotification({
+          userId: story.userId,
+          type: "new-message", // Using new-message type for better visibility
+          title: "تعليق جديد على قصتك",
+          message: `${ctx.user.name || 'مستخدم'}: ${input.content}`,
+          fromName: ctx.user.name,
+          fromAvatar: ctx.user.avatar,
+        });
+
+        // 💬 Also send as a direct message
+        await saveMessage(ctx.user.id, story.userId, `[تعليق على القصة]: ${input.content}`);
+
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ storyId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await deleteStory(input.storyId, ctx.user.id);
         return { success: true };
       }),
 

@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import {
   Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
   User, Calendar, Zap, Crown, Camera,
-  Award, TrendingUp, Shield, PlusCircle, Play, Image as ImageIcon, X, Eye, MessageCircle
+  Award, TrendingUp, Shield, PlusCircle, Play, Image as ImageIcon, X, Eye, MessageCircle, Trash2
 } from "lucide-react";
 
 async function compressImage(file: File, maxPx = 1200): Promise<string> {
@@ -92,6 +92,14 @@ export default function Profile() {
     onError: (error) => {
       alert("خطأ: " + (error.message || "تعذر نشر القصة"));
     },
+  });
+
+  const deleteStory = trpc.stories.delete.useMutation({
+    onSuccess: async () => {
+      await utils.stories.getActive.invalidate();
+      await utils.stories.getUserStories.invalidate({ userId: u?.id });
+      await utils.users.getRecent.invalidate();
+    }
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -340,16 +348,29 @@ export default function Profile() {
                   ) : (
                     <img src={story.mediaUrl} className="w-full h-full object-cover" />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2">
-                    <div className="flex gap-2 text-xs text-white">
-                      <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
-                        <Eye className="w-3 h-3" /> {story.viewCount || 0}
-                      </span>
-                      <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
-                        <MessageCircle className="w-3 h-3" /> {story.commentCount || 0}
-                      </span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-2 text-xs text-white">
+                          <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                            <Eye className="w-3 h-3" /> {story.viewCount || 0}
+                          </span>
+                          <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                            <MessageCircle className="w-3 h-3" /> {story.commentCount || 0}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("هل أنت متأكد من حذف هذه القصة؟")) {
+                              deleteStory.mutate({ storyId: story.id });
+                            }
+                          }}
+                          className="bg-red-500/80 p-1.5 rounded-full text-white hover:bg-red-600 transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
                 </div>
               ))}
             </div>

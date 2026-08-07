@@ -1159,6 +1159,32 @@ export async function recordStoryView(storyId: number, userId: number) {
   }
 }
 
+export async function deleteStory(storyId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.delete(stories).where(and(eq(stories.id, storyId), eq(stories.userId, userId)));
+    // Also cleanup comments and views
+    await db.delete(storyComments).where(eq(storyComments.storyId, storyId));
+    await db.delete(storyViews).where(eq(storyViews.storyId, storyId));
+  } catch (err) {
+    console.error('[Database] deleteStory failed:', err);
+    throw err;
+  }
+}
+
+export async function getStoryById(storyId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  try {
+    const result = await db.select().from(stories).where(eq(stories.id, storyId)).limit(1);
+    return result[0];
+  } catch (err) {
+    console.error('[Database] getStoryById failed:', err);
+    return undefined;
+  }
+}
+
 export async function updateUserPresence(
   userId: number,
   openId: string,
