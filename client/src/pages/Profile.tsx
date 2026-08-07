@@ -76,6 +76,7 @@ export default function Profile() {
 
   const walletQuery  = trpc.gifts.getWallet.useQuery(undefined,  { enabled: isAuthenticated });
   const balanceQuery = trpc.gifts.getBalance.useQuery(undefined, { enabled: isAuthenticated });
+  const myStoriesQuery = trpc.stories.getUserStories.useQuery({ userId: u?.id }, { enabled: !!u?.id });
   
   const utils = trpc.useUtils();
   const createStory = trpc.stories.create.useMutation({
@@ -84,6 +85,7 @@ export default function Profile() {
       setStoryMedia(null);
       setStoryCaption("");
       await utils.stories.getActive.invalidate();
+      await utils.stories.getUserStories.invalidate({ userId: u?.id });
       await utils.users.getRecent.invalidate();
       alert("تم نشر القصة بنجاح!");
     },
@@ -325,37 +327,34 @@ export default function Profile() {
         </section>
 
         {/* ── My Active Stories ────────────────────────────────────────── */}
-        {(() => {
-          const { data: myStories } = trpc.stories.getUserStories.useQuery({ userId: u?.id }, { enabled: !!u?.id });
-          return myStories && myStories.length > 0 ? (
-            <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
-              <h2 className="font-bold text-white flex items-center gap-2 mb-4">
-                <Play className="w-4 h-4 text-pink-400" /> قصصي النشطة
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {myStories.map((story: any) => (
-                  <div key={story.id} className="relative rounded-xl overflow-hidden bg-black aspect-[9/16]">
-                    {story.mediaType === "video" ? (
-                      <video src={story.mediaUrl} className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={story.mediaUrl} className="w-full h-full object-cover" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2">
-                      <div className="flex gap-2 text-xs text-white">
-                        <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
-                          <Eye className="w-3 h-3" /> {story.viewCount || 0}
-                        </span>
-                        <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
-                          <MessageCircle className="w-3 h-3" /> {story.commentCount || 0}
-                        </span>
-                      </div>
+        {myStoriesQuery.data && myStoriesQuery.data.length > 0 && (
+          <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
+            <h2 className="font-bold text-white flex items-center gap-2 mb-4">
+              <Play className="w-4 h-4 text-pink-400" /> قصصي النشطة
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              {myStoriesQuery.data.map((story: any) => (
+                <div key={story.id} className="relative rounded-xl overflow-hidden bg-black aspect-[9/16]">
+                  {story.mediaType === "video" ? (
+                    <video src={story.mediaUrl} className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={story.mediaUrl} className="w-full h-full object-cover" />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2">
+                    <div className="flex gap-2 text-xs text-white">
+                      <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                        <Eye className="w-3 h-3" /> {story.viewCount || 0}
+                      </span>
+                      <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                        <MessageCircle className="w-3 h-3" /> {story.commentCount || 0}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-          ) : null;
-        })()}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Profile completion ────────────────────────────────────────── */}
         {completionPct < 100 && (
