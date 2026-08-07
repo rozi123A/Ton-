@@ -46,6 +46,7 @@ export default function Profile() {
   const [avatar, setAvatar] = useState(u?.avatar || "");
   const [gender, setGender] = useState<"male"|"female"|"other">(u?.gender || "other");
   const [saved,  setSaved]  = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [showBuy, setShowBuy] = useState(false);
   const [showStoryUpload, setShowStoryUpload] = useState(false);
   const [storyMedia, setStoryMedia] = useState<string | null>(null);
@@ -63,7 +64,14 @@ export default function Profile() {
   }, [u?.name, u?.age, u?.bio, u?.avatar, u?.gender]);
 
   const saveProfile = trpc.users.saveProfile.useMutation({
-    onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2500); },
+    onSuccess: () => {
+      setSaveError("");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    },
+    onError: (error) => {
+      setSaveError(error.message || "تعذر حفظ التغييرات. حاول مرة أخرى.");
+    },
   });
 
   const walletQuery  = trpc.gifts.getWallet.useQuery(undefined,  { enabled: isAuthenticated });
@@ -384,7 +392,10 @@ export default function Profile() {
           </div>
 
           <button
-            onClick={() => saveProfile.mutate({ name, age, gender, bio, avatar: avatar || undefined })}
+            onClick={() => {
+              setSaveError("");
+              saveProfile.mutate({ name, age, gender, bio, avatar: avatar || undefined });
+            }}
             disabled={saveProfile.isPending}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60 shadow-lg"
           >
@@ -394,6 +405,11 @@ export default function Profile() {
               <><Save className="w-4 h-4" /> حفظ التغييرات</>
             )}
           </button>
+          {saveError && (
+            <p role="alert" className="text-center text-sm text-red-300">
+              {saveError}
+            </p>
+          )}
         </section>
 
         {/* ── Credits & Stars ───────────────────────────────────────────── */}

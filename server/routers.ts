@@ -29,6 +29,13 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
 
+const avatarSchema = z.union([
+  z.string().url().max(512),
+  z.string()
+    .regex(/^data:image\/(?:jpeg|jpg|png|webp);base64,/i)
+    .max(5_000_000),
+]);
+
 const aiMessageSchema = z.object({
   role: z.enum(["system", "user", "assistant"]),
   content: z.string().min(1).max(20_000),
@@ -428,7 +435,7 @@ export const appRouter = router({
         name: z.string().max(100).optional(),
         age: z.number().min(13).max(120).optional(),
         gender: z.enum(['male', 'female', 'other']).optional(),
-        avatar: z.string().url().max(512).optional(),
+        avatar: avatarSchema.optional(),
         bio: z.string().max(500).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
