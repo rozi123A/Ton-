@@ -288,6 +288,7 @@ function PaymentsTab() {
 export default function Admin() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'stats'|'calls'|'recordings'|'payments'|'search'|'broadcast'>('stats');
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isVerified, setIsVerified] = useState(false);
   const token = sessionStorage.getItem(ADMIN_SESSION_KEY);
 
@@ -339,7 +340,13 @@ export default function Admin() {
         </div>
 
         {/* Content */}
-        {activeTab === 'stats' && <StatsTab adminToken={token!} />}
+        {activeTab === 'stats' && (
+          selectedUserId ? (
+            <UserProfileView userId={selectedUserId} adminToken={token!} onBack={() => setSelectedUserId(null)} />
+          ) : (
+            <StatsTab adminToken={token!} onSelectUser={setSelectedUserId} />
+          )
+        )}
         {activeTab === 'payments' && <PaymentsTab />}
         {activeTab === 'calls' && <CallsTab token={token!} />}
         {activeTab === 'recordings' && <RecordingsTab token={token!} />}
@@ -520,7 +527,16 @@ function StatsTab({ adminToken }: { adminToken: string }) {
         {recent?.length === 0 && !recentLoading && <p style={{ color: '#6b7280', fontSize: '13px', textAlign: 'center' }}>لا توجد تسجيلات</p>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {recent?.map(u => (
-            <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderBottom: '1px solid #1e293b' }}>
+            <div 
+              key={u.id} 
+              onClick={() => {
+                // Navigate to user profile view or trigger selection
+                setSelectedUserId(u.id);
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderBottom: '1px solid #1e293b', cursor: 'pointer', borderRadius: '10px', transition: 'background 0.2s' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
               <img 
                 src={u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'} 
                 style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} 
@@ -703,6 +719,95 @@ function SearchTab({ adminToken }: { adminToken: string }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   User Profile View Component (For clicking recent registrations)
+══════════════════════════════════════════════════════════ */
+function UserProfileView({ userId, adminToken, onBack }: { userId: number; adminToken: string; onBack: () => void }) {
+  const { data: results, isLoading } = trpc.admin.searchUsers.useQuery(
+    { adminToken, query: String(userId) },
+    { enabled: !!adminToken && userId > 0 }
+  );
+
+  const user = results?.find(u => u.id === userId) || results?.[0];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <button
+        onClick={onBack}
+        style={{
+          alignSelf: 'flex-start', backgroundColor: '#1f2937', color: 'white',
+          border: '1px solid #374151', borderRadius: '12px', padding: '10px 16px',
+          fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
+        }}
+      >
+        <ArrowRight style={{ width: '16px', height: '16px' }} /> العودة إلى لوحة التحكم
+      </button>
+
+      {isLoading && <div style={{ color: '#9ca3af', textAlign: 'center', padding: '40px' }}>جاري تحميل بيانات المستخدم...</div>}
+
+      {!isLoading && !user && (
+        <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '20px', padding: '40px', textAlign: 'center', color: '#9ca3af' }}>
+          لم يتم العثور على بيانات هذا المستخدم
+        </div>
+      )}
+
+      {user && (
+        <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', textAlign: 'center' }}>
+          <img
+            src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'}
+            style={{ width: '96px', height: '96px', borderRadius: '24px', objectFit: 'cover', border: '3px solid #7c3aed' }}
+            onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'; }}
+          />
+
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: 'white' }}>{user.name || 'مستخدم جديد'}</h2>
+              {user.isPremium && <Crown style={{ width: '18px', color: '#fbbf24' }} />}
+              {user.role === 'admin' && <Shield style={{ width: '18px', color: '#818cf8' }} />}
+            </div>
+            <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>
+              معرف المستخدم (ID): #{user.id} • طريقة الدخول: {user.loginMethod || 'غير محدد'}
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{ backgroundColor: '#1f2937', padding: '14px', borderRadius: '16px' }}>
+              <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>الجنس • العمر</p>
+              <p style={{ color: 'white', fontSize: '14px', fontWeight: 800, margin: 0 }}>
+                {user.gender === 'male' ? 'ذكر' : user.gender === 'female' ? 'أنثى' : 'غير محدد'} {user.age ? `(${user.age})` : ''}
+              </p>
+            </div>
+            <div style={{ backgroundColor: '#1f2937', padding: '14px', borderRadius: '16px' }}>
+              <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>الدولة</p>
+              <p style={{ color: 'white', fontSize: '14px', fontWeight: 800, margin: 0 }}>
+                {COUNTRY_NAMES[user.country || ''] || user.country || 'غير محدد'}
+              </p>
+            </div>
+            <div style={{ backgroundColor: '#1f2937', padding: '14px', borderRadius: '16px' }}>
+              <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>الرصيد</p>
+              <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 800, margin: 0 }}>
+                {user.credits} نقطة
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '10px' }}>
+            <button
+              onClick={() => alert(`معرف المستخدم: ${user.id}\nالاسم: ${user.name}\nالإيميل: ${user.email || 'غير متوفر'}`)}
+              style={{
+                flex: 1, backgroundColor: '#7c3aed', color: 'white', border: 'none',
+                borderRadius: '12px', padding: '12px', fontWeight: 700, fontSize: '14px', cursor: 'pointer'
+              }}
+            >
+              عرض التفاصيل الكاملة
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

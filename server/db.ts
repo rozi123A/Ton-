@@ -870,9 +870,11 @@ export async function getOnlineUsersCount(): Promise<number> {
     return 0;
   }
   try {
-    // Count all users who are marked online or have been active/created
+    // Precise active window: exactly 5 minutes of recent activity or isOnline flag
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
-      .from(users);
+      .from(users)
+      .where(sql`(${users.isOnline} = true OR ${users.lastSeen} > ${fiveMinutesAgo} OR ${users.lastSignedIn} > ${fiveMinutesAgo})`);
     return result[0]?.count ?? 0;
   } catch (err) {
     console.error('[Database] getOnlineUsersCount failed:', err);
