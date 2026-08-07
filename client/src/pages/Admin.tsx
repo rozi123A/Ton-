@@ -395,36 +395,33 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     { 
       enabled: !!adminToken, 
       retry: 3, 
-      retryDelay: 5_000, 
-      staleTime: 10_000, 
-      refetchInterval: 10_000 
+      retryDelay: 2_000, 
+      staleTime: 0, 
+      refetchInterval: 3000 
     },
   );
 
-  // Load the total independently as a fallback. The DB health response also
-  // contains it, but the dashboard must still show the real count when a
-  // secondary metric is slow or temporarily unavailable.
   const { data: totalCount, isLoading: totalLoading, refetch: refetchTotalCount } = trpc.admin.totalCount.useQuery(
     { adminToken },
-    { enabled: !!adminToken, retry: 3, retryDelay: 2_000, staleTime: 10_000, refetchInterval: 10_000 },
+    { enabled: !!adminToken, retry: 3, retryDelay: 1_000, staleTime: 0, refetchInterval: 3000 },
   );
   const { data: onlineCount } = trpc.admin.onlineCount.useQuery(
     { adminToken },
-    { enabled: !!adminToken, retry: 3, retryDelay: 2_000, staleTime: 5_000, refetchInterval: 5_000 },
+    { enabled: !!adminToken, retry: 3, retryDelay: 1_000, staleTime: 0, refetchInterval: 3000 },
   );
 
   const statsEnabled = !!adminToken;
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.countryStats.useQuery(
     { adminToken },
-    { enabled: statsEnabled, retry: 2, staleTime: 60_000 },
+    { enabled: statsEnabled, retry: 2, staleTime: 0, refetchInterval: 5000 },
   );
   const { data: recent, isLoading: recentLoading, refetch: refetchRecent } = trpc.admin.newRegistrations.useQuery(
     { adminToken, limit: 100 },
     {
       enabled: statsEnabled,
       retry: 2,
-      staleTime: 10_000,
-      refetchInterval: 15_000,
+      staleTime: 0,
+      refetchInterval: 3000,
     },
   );
 
@@ -497,7 +494,7 @@ function StatsTab({ adminToken }: { adminToken: string }) {
         <div style={{ backgroundColor: '#1a0a0a', border: '1px solid #4a1515', borderRadius: '20px', padding: '16px', textAlign: 'center' }}>
           <Users style={{ width: '20px', height: '20px', color: '#f87171', margin: '0 auto 6px' }} />
           <h4 style={{ margin: 0, color: '#fca5a5', fontSize: '12px', fontWeight: 700 }}>آخر تسجيلات</h4>
-          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '24px', fontWeight: 900 }}>{recent?.length ?? '...'}</p>
+          <p style={{ margin: '4px 0 0', color: 'white', fontSize: '24px', fontWeight: 900 }}>{recent?.length ?? totalUsers}</p>
         </div>
       </div>
 
