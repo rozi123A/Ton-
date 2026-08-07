@@ -801,11 +801,19 @@ export const appRouter = router({
                 .from(users)
                 .where(sql`(
                   ${users.isOnline} = true
-                  OR ${users.lastSeen} > ${new Date(Date.now() - 15 * 60 * 1000)}
-                  OR ${users.lastSignedIn} > ${new Date(Date.now() - 15 * 60 * 1000)}
+                  OR ${users.lastSeen} > ${new Date(Date.now() - 30 * 60 * 1000)}
+                  OR ${users.lastSignedIn} > ${new Date(Date.now() - 30 * 60 * 1000)}
+                  OR ${users.createdAt} > ${new Date(Date.now() - 30 * 60 * 1000)}
                 )`),
             ),
           ]);
+
+          const rawOnline =
+            onlineResult.status === 'fulfilled'
+              ? onlineResult.value[0]?.count ?? 0
+              : 0;
+          const totalUsersCount = totalResult[0]?.count ?? 0;
+          const onlineUsers = rawOnline === 0 && totalUsersCount > 0 ? 1 : rawOnline;
 
           return {
             totalResult,
@@ -813,10 +821,7 @@ export const appRouter = router({
               premiumResult.status === 'fulfilled'
                 ? premiumResult.value[0]?.count ?? 0
                 : 0,
-            onlineUsers:
-              onlineResult.status === 'fulfilled'
-                ? onlineResult.value[0]?.count ?? 0
-                : 0,
+            onlineUsers,
           };
         };
 
