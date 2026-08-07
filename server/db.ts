@@ -559,7 +559,7 @@ export async function getNewRegistrations(limit = 50): Promise<Array<{
         isPremium: users.isPremium,
       })
       .from(users)
-      .orderBy(desc(users.createdAt))
+      .orderBy(desc(users.createdAt), desc(users.id))
       .limit(limit);
   } catch (err) {
     console.error('[Database] getNewRegistrations failed:', err);

@@ -418,7 +418,7 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     { adminToken },
     { enabled: statsEnabled, retry: 2, staleTime: 60_000 },
   );
-  const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery(
+  const { data: recent, isLoading: recentLoading, refetch: refetchRecent } = trpc.admin.newRegistrations.useQuery(
     { adminToken, limit: 100 },
     {
       enabled: statsEnabled,
@@ -432,12 +432,15 @@ function StatsTab({ adminToken }: { adminToken: string }) {
     ? dbStatus.totalUsers
     : totalCount ?? dbStatus?.totalUsers ?? 0;
   const vipCount = dbStatus?.premiumUsers ?? 0;
-  const onlineUsers = onlineCount ?? dbStatus?.onlineUsers ?? 0;
+  // Do not let a temporarily empty secondary query hide a value already
+  // returned by the DB status query.
+  const onlineUsers = Math.max(onlineCount ?? 0, dbStatus?.onlineUsers ?? 0);
 
   function refetchAll() {
     refetchDbStatus();
     refetchTotalCount();
     refetchStats();
+    refetchRecent();
   }
 
   return (
