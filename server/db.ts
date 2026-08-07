@@ -870,8 +870,8 @@ export async function getOnlineUsersCount(): Promise<number> {
     return 0;
   }
   try {
-    // 3 minutes active window is enough for "Online Now" with frequent pings
-    const activeWindow = new Date(Date.now() - 3 * 60 * 1000);
+    // 5 minutes active window provides better stability for varying connection speeds
+    const activeWindow = new Date(Date.now() - 5 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
       .where(and(

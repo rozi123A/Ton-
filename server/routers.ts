@@ -805,8 +805,8 @@ export const appRouter = router({
                 .where(and(
                   eq(users.isOnline, true),
                   or(
-                    sql`${users.lastSeen} > ${new Date(Date.now() - 3 * 60 * 1000)}`,
-                    sql`${users.lastSignedIn} > ${new Date(Date.now() - 3 * 60 * 1000)}`
+                    sql`${users.lastSeen} > ${new Date(Date.now() - 5 * 60 * 1000)}`,
+                    sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`
                   )
                 )),
             ),

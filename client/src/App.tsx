@@ -76,22 +76,31 @@ function App() {
   useEffect(() => {
     if (!isAuthenticated) return;
     const ping = () => {
+      // Send ping regardless of visibility on the first load to ensure admin sees them
+      presencePingRef.current.mutate();
+    };
+    
+    // Immediate ping when authenticated
+    ping();
+
+    const id = setInterval(() => {
       if (document.visibilityState === "visible") {
         presencePingRef.current.mutate();
       }
+    }, 45 * 1000); // Slightly faster ping (45s) for better accuracy
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        ping();
+      }
     };
-    // Mark the user online as soon as the authenticated session is ready.
-    // Waiting for the first interval made a freshly opened browser invisible
-    // to the admin dashboard for up to a minute.
-    ping();
-    const id = setInterval(() => {
-      ping();
-    }, 60 * 1000);
-    document.addEventListener("visibilitychange", ping);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", ping);
+    
     return () => {
       clearInterval(id);
-      document.removeEventListener("visibilitychange", ping);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", ping);
     };
   }, [isAuthenticated]);
