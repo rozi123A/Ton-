@@ -132,3 +132,16 @@ export const paymentRequests = pgTable("payment_requests", {
 
 export type PaymentRequest = typeof paymentRequests.$inferSelect;
 export type InsertPaymentRequest = typeof paymentRequests.$inferInsert;
+
+export const stories = pgTable("stories", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  mediaUrl: text("mediaUrl").notNull(),
+  mediaType: varchar("mediaType", { length: 20 }).notNull(), // image, video
+  caption: text("caption"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+});
+
+export type Story = typeof stories.$inferSelect;
+export type InsertStory = typeof stories.$inferInsert;

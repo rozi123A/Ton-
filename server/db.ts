@@ -1,7 +1,7 @@
-import { and, desc, eq, isNotNull, ne, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, ne, or, sql, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests } from '../drizzle/schema';
+import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests, stories, InsertStory } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
 /** Strip query params unsupported by postgres.js (e.g. channel_binding from Neon) */
@@ -190,8 +190,17 @@ export async function ensureSchema(): Promise<void> {
        "updatedAt"     TIMESTAMP NOT NULL DEFAULT now()
      )`,
     // 🔒 FIX: Unique index to block duplicate transaction IDs
-    `CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_txid_unique ON payment_requests ("transactionId")`,
-  ];
+	    `CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_txid_unique ON payment_requests ("transactionId")`,
+	    `CREATE TABLE IF NOT EXISTS stories (
+	       id           SERIAL PRIMARY KEY,
+	       "userId"     INTEGER NOT NULL,
+	       "mediaUrl"   TEXT NOT NULL,
+	       "mediaType"  VARCHAR(20) NOT NULL,
+	       caption      TEXT,
+	       "createdAt"  TIMESTAMP NOT NULL DEFAULT now(),
+	       "expiresAt"  TIMESTAMP NOT NULL
+	     )`,
+	  ];
 
   for (const stmt of tables) {
     try {
@@ -998,6 +1007,59 @@ export async function broadcastNotificationToAll(title: string, message: string)
   } catch (err) {
     console.error('[Database] broadcastNotificationToAll failed:', err);
     return 0;
+  }
+}
+
+export async function saveStory(story: InsertStory) {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(stories).values(story);
+  } catch (err) {
+    console.error('[Database] saveStory failed:', err);
+    throw err;
+  }
+}
+
+export async function getActiveStories() {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const now = new Date();
+    return await db
+      .select({
+        id: stories.id,
+        userId: stories.userId,
+        mediaUrl: stories.mediaUrl,
+        mediaType: stories.mediaType,
+        caption: stories.caption,
+        createdAt: stories.createdAt,
+        userName: users.name,
+        userAvatar: users.avatar,
+      })
+      .from(stories)
+      .innerJoin(users, eq(stories.userId, users.id))
+      .where(gt(stories.expiresAt, now))
+      .orderBy(desc(stories.createdAt));
+  } catch (err) {
+    console.error('[Database] getActiveStories failed:', err);
+    return [];
+  }
+}
+
+export async function getUserStories(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const now = new Date();
+    return await db
+      .select()
+      .from(stories)
+      .where(and(eq(stories.userId, userId), gt(stories.expiresAt, now)))
+      .orderBy(desc(stories.createdAt));
+  } catch (err) {
+    console.error('[Database] getUserStories failed:', err);
+    return [];
   }
 }
 

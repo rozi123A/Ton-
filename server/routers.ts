@@ -11,7 +11,8 @@ import {
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
-  getUnreadMessageCount, markMessagesRead, updateUserPresence, updateUserOffline,
+  getUnreadMessageCount,   markMessagesRead, updateUserPresence, updateUserOffline,
+  saveStory, getActiveStories, getUserStories,
   getDb,
 } from "./db";
 import { and, eq, or, sql } from "drizzle-orm";
@@ -299,6 +300,37 @@ export const appRouter = router({
           await upsertUser({ openId: ctx.user.openId, country });
         }
         return { country };
+      }),
+  }),
+
+  stories: router({
+    create: protectedProcedure
+      .input(z.object({
+        mediaUrl: z.string().url(),
+        mediaType: z.enum(["image", "video"]),
+        caption: z.string().max(200).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        await saveStory({
+          userId: ctx.user.id,
+          mediaUrl: input.mediaUrl,
+          mediaType: input.mediaType,
+          caption: input.caption,
+          expiresAt,
+        });
+        return { success: true };
+      }),
+
+    getActive: publicProcedure
+      .query(async () => {
+        return await getActiveStories();
+      }),
+
+    getUserStories: publicProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        return await getUserStories(input.userId);
       }),
 
     /**

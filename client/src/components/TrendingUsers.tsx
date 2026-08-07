@@ -1,9 +1,10 @@
-import { Heart, UserCheck, Loader2 } from "lucide-react";
+import { Heart, UserCheck, Loader2, Play } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import UserProfileModal from "@/components/UserProfileModal";
+import StoryViewer from "@/components/StoryViewer";
 
 /** Convert ISO country code → emoji flag */
 function countryFlag(code: string | null | undefined): string {
@@ -41,9 +42,14 @@ type DisplayUser = {
   profileViews: number;
   avatar: string;
   country: string | null;
+  hasStory?: boolean;
 };
 
-function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: (id: number) => void }) {
+function UserCard({ user, onViewProfile, onOpenStory }: { 
+  user: DisplayUser; 
+  onViewProfile?: (id: number) => void;
+  onOpenStory?: (userId: number) => void;
+}) {
   const { t: translate } = useTranslation(); const t = (key: string) => translate(key);
   const cardRef = useRef<HTMLDivElement>(null);
   const viewedRef = useRef(false);
@@ -81,19 +87,32 @@ function UserCard({ user, onViewProfile }: { user: DisplayUser; onViewProfile?: 
       <div className="relative p-6 flex flex-col items-center text-center">
         <div
           className={`relative mb-4 ${user.id > 0 ? 'cursor-pointer' : ''}`}
-          onClick={() => user.id > 0 && onViewProfile?.(user.id)}
-          title={user.id > 0 ? t('profile.view_profile') || "View Profile" : undefined}
+          onClick={() => {
+            if (user.hasStory && onOpenStory) {
+              onOpenStory(user.id);
+            } else if (user.id > 0 && onViewProfile) {
+              onViewProfile(user.id);
+            }
+          }}
+          title={user.hasStory ? "شاهد القصة" : (user.id > 0 ? t('profile.view_profile') || "View Profile" : undefined)}
         >
-          <img
-            src={user.avatar}
-            alt={user.name}
-            className="w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover bg-white group-hover:scale-110 transition-transform duration-500"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name)}`;
-            }}
-          />
-          <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white shadow-lg ${user.online ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`rounded-full p-1 ${user.hasStory ? 'bg-gradient-to-tr from-purple-600 via-pink-500 to-yellow-400 animate-gradient-xy' : ''}`}>
+            <img
+              src={user.avatar}
+              alt={user.name}
+              className={`w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover bg-white transition-transform duration-500 ${user.hasStory ? 'group-hover:scale-105' : 'group-hover:scale-110'}`}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src =
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name)}`;
+              }}
+            />
+          </div>
+          {user.hasStory && (
+            <div className="absolute -top-1 -right-1 bg-pink-500 text-white p-1.5 rounded-full shadow-lg animate-bounce">
+              <Play className="w-3 h-3 fill-current" />
+            </div>
+          )}
+          <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-2 border-white shadow-lg ${user.online ? 'bg-green-500' : 'bg-red-500'}`} />
         </div>
 
         <h3
@@ -145,6 +164,11 @@ export default function TrendingUsers() {
   const { user: currentUser } = useAuth();
   const utils = trpc.useUtils();
   const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);
+  const [activeStoryUserId, setActiveStoryUserId] = useState<number | null>(null);
+
+  const { data: activeStories } = trpc.stories.getActive.useQuery(undefined, {
+    refetchInterval: 30000,
+  });
 
   const { data: realUsers, isPending, isError } = trpc.users.getRecent.useQuery(20, {
     staleTime: 5 * 60 * 1000,
@@ -182,8 +206,11 @@ export default function TrendingUsers() {
         profileViews: u.profileViews ?? 0,
         avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || String(u.id))}`,
         country: u.country ?? null,
+        hasStory: activeStories?.some(s => s.userId === u.id),
       }))
     : MOCK_USERS;
+
+  const currentStories = activeStories?.filter(s => s.userId === activeStoryUserId) || [];
 
   return (
     <section className="py-20 bg-gradient-to-b from-white to-gray-50">
@@ -201,7 +228,12 @@ export default function TrendingUsers() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayUsers.map((user) => (
-            <UserCard key={user.id} user={user} onViewProfile={setViewProfileUserId} />
+            <UserCard 
+              key={user.id} 
+              user={user} 
+              onViewProfile={setViewProfileUserId} 
+              onOpenStory={setActiveStoryUserId}
+            />
           ))}
         </div>
 
@@ -218,6 +250,13 @@ export default function TrendingUsers() {
         <UserProfileModal
           userId={viewProfileUserId}
           onClose={() => setViewProfileUserId(null)}
+        />
+      )}
+
+      {activeStoryUserId && currentStories.length > 0 && (
+        <StoryViewer 
+          stories={currentStories}
+          onClose={() => setActiveStoryUserId(null)}
         />
       )}
     </section>

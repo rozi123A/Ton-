@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import {
   Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
   User, Calendar, Zap, Crown, Camera,
-  Award, TrendingUp, Shield
+  Award, TrendingUp, Shield, PlusCircle, Play, Image as ImageIcon, X
 } from "lucide-react";
 
 async function compressImage(file: File, maxPx = 1200): Promise<string> {
@@ -47,7 +47,12 @@ export default function Profile() {
   const [gender, setGender] = useState<"male"|"female"|"other">(u?.gender || "other");
   const [saved,  setSaved]  = useState(false);
   const [showBuy, setShowBuy] = useState(false);
+  const [showStoryUpload, setShowStoryUpload] = useState(false);
+  const [storyMedia, setStoryMedia] = useState<string | null>(null);
+  const [storyType, setStoryType] = useState<"image" | "video">("image");
+  const [storyCaption, setStoryCaption] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const storyFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (u?.name)   setName(u.name);
@@ -63,6 +68,15 @@ export default function Profile() {
 
   const walletQuery  = trpc.gifts.getWallet.useQuery(undefined,  { enabled: isAuthenticated });
   const balanceQuery = trpc.gifts.getBalance.useQuery(undefined, { enabled: isAuthenticated });
+  
+  const createStory = trpc.stories.create.useMutation({
+    onSuccess: () => {
+      setShowStoryUpload(false);
+      setStoryMedia(null);
+      setStoryCaption("");
+      alert("تم نشر القصة بنجاح!");
+    },
+  });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,6 +85,29 @@ export default function Profile() {
       const compressed = await compressImage(file);
       setAvatar(compressed);
     } catch { /* ignore */ }
+    e.target.value = "";
+  };
+
+  const handleStoryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.type.startsWith("video/")) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert("حجم الفيديو كبير جداً. الحد الأقصى هو 10 ميجابايت.");
+        return;
+      }
+      setStoryType("video");
+      const reader = new FileReader();
+      reader.onload = (ev) => setStoryMedia(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else if (file.type.startsWith("image/")) {
+      setStoryType("image");
+      try {
+        const compressed = await compressImage(file);
+        setStoryMedia(compressed);
+      } catch { /* ignore */ }
+    }
     e.target.value = "";
   };
 
@@ -101,6 +138,7 @@ export default function Profile() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir="rtl">
 
       <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
+      <input ref={storyFileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleStoryFileChange} />
 
       {/* Header */}
       <header className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800">
@@ -132,6 +170,68 @@ export default function Profile() {
       </header>
 
       <div className="container mx-auto px-4 py-6 max-w-lg space-y-4">
+        
+        {/* ── Story Upload Modal ─────────────────────────────────────────── */}
+        {showStoryUpload && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-slate-800 w-full max-w-md rounded-3xl border border-slate-700 overflow-hidden shadow-2xl">
+              <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+                <h3 className="text-white font-bold">إضافة قصة جديدة</h3>
+                <button onClick={() => { setShowStoryUpload(false); setStoryMedia(null); }} className="text-white/50 hover:text-white">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                {!storyMedia ? (
+                  <div 
+                    onClick={() => storyFileRef.current?.click()}
+                    className="aspect-[9/16] bg-slate-900 rounded-2xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-purple-500 transition-colors"
+                  >
+                    <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center">
+                      <PlusCircle className="w-8 h-8 text-purple-400" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-medium">اختر صورة أو فيديو</p>
+                      <p className="text-white/40 text-xs mt-1">الحد الأقصى 10 ميجابايت</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="relative aspect-[9/16] bg-black rounded-2xl overflow-hidden">
+                      {storyType === "image" ? (
+                        <img src={storyMedia} className="w-full h-full object-contain" />
+                      ) : (
+                        <video src={storyMedia} className="w-full h-full object-contain" controls />
+                      )}
+                      <button 
+                        onClick={() => setStoryMedia(null)}
+                        className="absolute top-2 right-2 bg-black/50 p-2 rounded-full text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <input 
+                      value={storyCaption}
+                      onChange={(e) => setStoryCaption(e.target.value)}
+                      placeholder="أضف وصفاً للقصة..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500"
+                    />
+                    
+                    <button
+                      onClick={() => createStory.mutate({ mediaUrl: storyMedia, mediaType: storyType, caption: storyCaption })}
+                      disabled={createStory.isPending}
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl shadow-lg disabled:opacity-50"
+                    >
+                      {createStory.isPending ? "جاري النشر..." : "نشر القصة الآن"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Hero card ─────────────────────────────────────────────────── */}
         <section className="bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden">
@@ -145,25 +245,30 @@ export default function Profile() {
 
           <div className="px-6 pb-6">
             <div className="flex items-end gap-4 -mt-12 mb-4">
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-slate-900 shadow-xl flex-shrink-0 focus:outline-none active:scale-95 transition-transform"
-              >
-                {avatar ? (
-                  <img src={avatar} alt="صورتك" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-500/60 to-pink-500/60 flex items-center justify-center">
-                    <User className="w-10 h-10 text-white/70" />
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-slate-900 shadow-xl flex-shrink-0 focus:outline-none active:scale-95 transition-transform"
+                >
+                  {avatar ? (
+                    <img src={avatar} alt="صورتك" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-500/60 to-pink-500/60 flex items-center justify-center">
+                      <User className="w-10 h-10 text-white/70" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera className="w-6 h-6 text-white" />
                   </div>
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Camera className="w-6 h-6 text-white" />
-                </div>
-                <div className="absolute bottom-1 right-1 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center shadow border-2 border-slate-900">
-                  <Camera className="w-3 h-3 text-white" />
-                </div>
-              </button>
+                </button>
+                <button 
+                  onClick={() => setShowStoryUpload(true)}
+                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-900 hover:scale-110 transition-transform"
+                >
+                  <PlusCircle className="w-5 h-5 text-white" />
+                </button>
+              </div>
 
               <div className="flex-1 pt-14">
                 <p className="text-white font-bold text-lg leading-tight">{name || "مستخدم"}</p>
