@@ -556,7 +556,7 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
                   width: '10px',
                   height: '10px',
                   borderRadius: '50%',
-                  backgroundColor: (u as any).isOnline && (new Date().getTime() - new Date((u as any).lastSeen || (u as any).lastSignedIn).getTime() < 5 * 60 * 1000) ? '#10b981' : '#ef4444',
+                  backgroundColor: (u as any).isOnline && (new Date().getTime() - new Date((u as any).lastSeen || (u as any).lastSignedIn || (u as any).createdAt).getTime() < 5 * 60 * 1000) ? '#10b981' : '#ef4444',
                   border: '2px solid #111827'
                 }} />
               </div>
@@ -793,7 +793,7 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
                 width: '14px',
                 height: '14px',
                 borderRadius: '50%',
-                backgroundColor: (user as any).isOnline && (new Date().getTime() - new Date((user as any).lastSeen || (user as any).lastSignedIn).getTime() < 5 * 60 * 1000) ? '#10b981' : '#ef4444',
+                backgroundColor: (user as any).isOnline && (new Date().getTime() - new Date((user as any).lastSeen || (user as any).lastSignedIn || (user as any).createdAt).getTime() < 5 * 60 * 1000) ? '#10b981' : '#ef4444',
                 border: '3px solid #111827'
               }} />
             </div>
