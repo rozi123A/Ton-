@@ -51,7 +51,11 @@ export default function Profile() {
   const [storyMedia, setStoryMedia] = useState<string | null>(null);
   const [storyType, setStoryType] = useState<"image" | "video">("image");
   const [storyCaption, setStoryCaption] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraStarting, setCameraStarting] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
   const storyFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -61,6 +65,12 @@ export default function Profile() {
     if (u?.avatar) setAvatar(u.avatar);
     if (u?.gender) setGender(u.gender);
   }, [u?.name, u?.age, u?.bio, u?.avatar, u?.gender]);
+
+  useEffect(() => {
+    return () => {
+      cameraStreamRef.current?.getTracks().forEach(track => track.stop());
+    };
+  }, []);
 
   const saveProfile = trpc.users.saveProfile.useMutation({
     onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 2500); },
@@ -80,14 +90,62 @@ export default function Profile() {
     },
   });
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const closeCamera = () => {
+    cameraStreamRef.current?.getTracks().forEach(track => track.stop());
+    cameraStreamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setShowCamera(false);
+    setCameraStarting(false);
+    setCameraError("");
+  };
+
+  const openCamera = async () => {
+    setShowCamera(true);
+    setCameraStarting(true);
+    setCameraError("");
+
     try {
-      const compressed = await compressImage(file);
-      setAvatar(compressed);
-    } catch { /* ignore */ }
-    e.target.value = "";
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("unsupported");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
+      });
+      cameraStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch {
+      setCameraError("تعذر تشغيل الكاميرا. تأكد من السماح بالوصول إليها ثم حاول مرة أخرى.");
+      cameraStreamRef.current?.getTracks().forEach(track => track.stop());
+      cameraStreamRef.current = null;
+    } finally {
+      setCameraStarting(false);
+    }
+  };
+
+  const captureProfilePhoto = async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      try {
+        const compressed = await compressImage(new File([blob], "profile-photo.jpg", { type: "image/jpeg" }));
+        setAvatar(compressed);
+        closeCamera();
+      } catch {
+        setCameraError("تعذر تجهيز الصورة. حاول التقاطها مرة أخرى.");
+      }
+    }, "image/jpeg", 0.92);
   };
 
   const handleStoryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,7 +197,6 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir="rtl">
 
-      <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
       <input ref={storyFileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleStoryFileChange} />
 
       {/* Header */}
@@ -172,6 +229,66 @@ export default function Profile() {
       </header>
 
       <div className="container mx-auto px-4 py-6 max-w-lg space-y-4">
+
+        {showCamera && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-700 bg-slate-800 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-700 p-4">
+                <h3 className="font-bold text-white">التقاط صورة شخصية</h3>
+                <button
+                  type="button"
+                  onClick={closeCamera}
+                  className="rounded-full p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label="إغلاق الكاميرا"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4 p-4">
+                <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-slate-950">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="h-full w-full object-cover"
+                    style={{ transform: "scaleX(-1)" }}
+                  />
+                  {cameraStarting && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950 text-white">
+                      <div className="h-10 w-10 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
+                      <p className="text-sm text-white/70">جاري تشغيل الكاميرا...</p>
+                    </div>
+                  )}
+                  {!cameraStarting && cameraError && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-white">
+                      <Camera className="h-10 w-10 text-pink-400" />
+                      <p className="text-sm text-white/80">{cameraError}</p>
+                      <button
+                        type="button"
+                        onClick={openCamera}
+                        className="rounded-xl bg-purple-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-purple-500"
+                      >
+                        المحاولة مرة أخرى
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={captureProfilePhoto}
+                  disabled={cameraStarting || !!cameraError}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 py-3 font-bold text-white shadow-lg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Camera className="h-5 w-5" />
+                  التقاط الصورة
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* ── Story Upload Modal ─────────────────────────────────────────── */}
         {showStoryUpload && (
@@ -250,7 +367,7 @@ export default function Profile() {
               <div className="relative group">
                 <button
                   type="button"
-                  onClick={() => fileRef.current?.click()}
+                  onClick={openCamera}
                   className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-slate-900 shadow-xl flex-shrink-0 focus:outline-none active:scale-95 transition-transform"
                 >
                   {avatar ? (
