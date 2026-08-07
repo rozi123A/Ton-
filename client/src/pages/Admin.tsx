@@ -438,7 +438,7 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
   const vipCount = dbStatus?.premiumUsers ?? 0;
   // Do not let a temporarily empty secondary query hide a value already
   // returned by the DB status query.
-  const onlineUsers = dbStatus?.onlineUsers ?? onlineCount ?? 0;
+  const onlineUsers = Math.max(onlineCount ?? 0, dbStatus?.onlineUsers ?? 0);
 
   function refetchAll() {
     refetchDbStatus();

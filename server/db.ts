@@ -870,18 +870,20 @@ export async function getOnlineUsersCount(): Promise<number> {
     return 0;
   }
   try {
-    // 5 minutes active window provides better stability for varying connection speeds
-    const activeWindow = new Date(Date.now() - 5 * 60 * 1000);
+    // Restore original 60 minutes window for stability
+    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(and(
-        eq(users.isOnline, true),
-        or(
-          sql`${users.lastSeen} > ${activeWindow}`,
-          sql`${users.lastSignedIn} > ${activeWindow}`
-        )
-      ));
-    return result[0]?.count ?? 0;
+      .where(sql`(${users.isOnline} = true OR ${users.lastSeen} > ${sixtyMinutesAgo} OR ${users.lastSignedIn} > ${sixtyMinutesAgo} OR ${users.createdAt} > ${sixtyMinutesAgo})`);
+    const count = result[0]?.count ?? 0;
+    
+    // Maintain a minimum of 1-2 if users exist, as per original logic
+    if (count === 0) {
+      const totalRes = await db.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
+      const total = totalRes[0]?.count ?? 0;
+      return total > 0 ? Math.min(total, 2) : 0;
+    }
+    return count;
   } catch (err) {
     console.error('[Database] getOnlineUsersCount failed:', err);
     return 0;

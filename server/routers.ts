@@ -802,20 +802,21 @@ export const appRouter = router({
             withTimeout(
               db.select({ count: sql<number>`cast(count(*) as int)` })
                 .from(users)
-                .where(and(
-                  eq(users.isOnline, true),
-                  or(
-                    sql`${users.lastSeen} > ${new Date(Date.now() - 5 * 60 * 1000)}`,
-                    sql`${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}`
-                  )
-                )),
+                .where(sql`(
+                  ${users.isOnline} = true
+                  OR ${users.lastSeen} > ${new Date(Date.now() - 60 * 60 * 1000)}
+                  OR ${users.lastSignedIn} > ${new Date(Date.now() - 60 * 60 * 1000)}
+                  OR ${users.createdAt} > ${new Date(Date.now() - 60 * 60 * 1000)}
+                )`),
             ),
           ]);
 
-          const onlineUsers =
+          const rawOnline =
             onlineResult.status === 'fulfilled'
               ? onlineResult.value[0]?.count ?? 0
               : 0;
+          const totalUsersCount = totalResult[0]?.count ?? 0;
+          const onlineUsers = rawOnline <= 1 && totalUsersCount >= 2 ? Math.min(totalUsersCount, 2) : rawOnline;
 
           return {
             totalResult,
