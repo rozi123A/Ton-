@@ -420,7 +420,12 @@ function StatsTab({ adminToken }: { adminToken: string }) {
   );
   const { data: recent, isLoading: recentLoading } = trpc.admin.newRegistrations.useQuery(
     { adminToken, limit: 100 },
-    { enabled: statsEnabled, retry: 2, staleTime: 60_000 },
+    {
+      enabled: statsEnabled,
+      retry: 2,
+      staleTime: 10_000,
+      refetchInterval: 15_000,
+    },
   );
 
   const totalUsers = dbStatus?.connected

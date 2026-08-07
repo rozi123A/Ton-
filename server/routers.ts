@@ -799,10 +799,10 @@ export const appRouter = router({
             withTimeout(
               db.select({ count: sql<number>`cast(count(*) as int)` })
                 .from(users)
-                .where(and(
-                  eq(users.isOnline, true),
-                  sql`${users.lastSeen} > ${new Date(Date.now() - 5 * 60 * 1000)}`,
-                )),
+                .where(sql`(
+                  ${users.lastSeen} > ${new Date(Date.now() - 5 * 60 * 1000)}
+                  OR ${users.lastSignedIn} > ${new Date(Date.now() - 5 * 60 * 1000)}
+                )`),
             ),
           ]);
 

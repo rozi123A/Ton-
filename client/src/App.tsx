@@ -74,25 +74,27 @@ function App() {
   const presencePingRef = useRef(presencePing);
   presencePingRef.current = presencePing;
   useEffect(() => {
-    if (!ready || !isAuthenticated) return;
+    if (!isAuthenticated) return;
     const ping = () => {
       if (document.visibilityState === "visible") {
         presencePingRef.current.mutate();
       }
     };
+    // Mark the user online as soon as the authenticated session is ready.
+    // Waiting for the first interval made a freshly opened browser invisible
+    // to the admin dashboard for up to a minute.
+    ping();
     const id = setInterval(() => {
       ping();
     }, 60 * 1000);
-    const initialPing = setTimeout(ping, 1000);
     document.addEventListener("visibilitychange", ping);
     window.addEventListener("focus", ping);
     return () => {
       clearInterval(id);
-      clearTimeout(initialPing);
       document.removeEventListener("visibilitychange", ping);
       window.removeEventListener("focus", ping);
     };
-  }, [ready, isAuthenticated]);
+  }, [isAuthenticated]);
 
   return (
     <ErrorBoundary>
