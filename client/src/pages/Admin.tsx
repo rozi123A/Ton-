@@ -537,16 +537,29 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              <img 
-                src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || 'user')}`} 
-                style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover', backgroundColor: '#1f2937' }} 
-                onError={(e) => { 
-                  const target = e.target as HTMLImageElement;
-                  if (!target.src.includes('dicebear.com')) {
-                    target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || 'user')}`;
-                  }
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <img 
+                  src={u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || 'user')}`} 
+                  style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover', backgroundColor: '#1f2937' }} 
+                  onError={(e) => { 
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('dicebear.com')) {
+                      target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || 'user')}`;
+                    }
+                  }}
+                />
+                {/* Status Dot */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-2px',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  backgroundColor: (u as any).isOnline && (new Date().getTime() - new Date((u as any).lastSeen || (u as any).lastSignedIn).getTime() < 5 * 60 * 1000) ? '#10b981' : '#ef4444',
+                  border: '2px solid #111827'
+                }} />
+              </div>
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'white' }}>{u.name || 'مستخدم جديد'}</p>
                 <p style={{ margin: 0, fontSize: '11px', color: '#6b7280' }}>
@@ -762,16 +775,28 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
 
       {user && (
         <div style={{ backgroundColor: '#111827', border: '1px solid #1e293b', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', textAlign: 'center' }}>
-            <img 
-              src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'user')}`} 
-              style={{ width: '60px', height: '60px', borderRadius: '15px', objectFit: 'cover', backgroundColor: '#1f2937' }}
-              onError={(e) => { 
-                const target = e.target as HTMLImageElement;
-                if (!target.src.includes('dicebear.com')) {
-                  target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'user')}`;
-                }
-              }}
-            />
+            <div style={{ position: 'relative' }}>
+              <img 
+                src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'user')}`} 
+                style={{ width: '60px', height: '60px', borderRadius: '15px', objectFit: 'cover', backgroundColor: '#1f2937' }}
+                onError={(e) => { 
+                  const target = e.target as HTMLImageElement;
+                  if (!target.src.includes('dicebear.com')) {
+                    target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || 'user')}`;
+                  }
+                }}
+              />
+              <div style={{
+                position: 'absolute',
+                bottom: '0',
+                right: '0',
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                backgroundColor: (user as any).isOnline && (new Date().getTime() - new Date((user as any).lastSeen || (user as any).lastSignedIn).getTime() < 5 * 60 * 1000) ? '#10b981' : '#ef4444',
+                border: '3px solid #111827'
+              }} />
+            </div>
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}>

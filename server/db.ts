@@ -543,7 +543,8 @@ export async function saveGift(senderId: number, receiverId: number, giftType: s
 export async function getNewRegistrations(limit = 50): Promise<Array<{
   id: number; name: string | null; country: string | null; avatar: string | null;
   gender: string | null; age: number | null; role: 'user' | 'admin';
-  createdAt: Date; loginMethod: string | null; isPremium: boolean;
+  createdAt: Date; lastSignedIn: Date; loginMethod: string | null; isPremium: boolean;
+  isOnline: boolean; lastSeen: Date;
 }>> {
   const db = await getDb();
   if (!db) {
@@ -557,6 +558,8 @@ export async function getNewRegistrations(limit = 50): Promise<Array<{
         gender: users.gender, age: users.age, role: users.role,
         createdAt: users.createdAt, lastSignedIn: users.lastSignedIn, loginMethod: users.loginMethod,
         isPremium: users.isPremium,
+        isOnline: users.isOnline,
+        lastSeen: users.lastSeen,
       })
       .from(users)
       .orderBy(desc(users.lastSignedIn), desc(users.createdAt), desc(users.id))
