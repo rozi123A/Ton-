@@ -76,7 +76,6 @@ function App() {
   useEffect(() => {
     if (!isAuthenticated) return;
     const ping = () => {
-      // Send ping regardless of visibility on the first load to ensure admin sees them
       presencePingRef.current.mutate();
     };
     
@@ -84,10 +83,11 @@ function App() {
     ping();
 
     const id = setInterval(() => {
+      // Always ping if tab is active to keep session alive
       if (document.visibilityState === "visible") {
-        presencePingRef.current.mutate();
+        ping();
       }
-    }, 45 * 1000); // Slightly faster ping (45s) for better accuracy
+    }, 30 * 1000); // 30s ping for high accuracy
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {

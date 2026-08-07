@@ -368,7 +368,7 @@ export async function getRecentUsers(limit = 20) {
         country: users.country,
       })
       .from(users)
-      .where(and(isNotNull(users.name), ne(users.role, 'admin')))
+      .where(isNotNull(users.name))
       .orderBy(desc(users.lastSignedIn))
       .limit(limit);
   } catch (error) {
@@ -871,10 +871,10 @@ export async function getOnlineUsersCount(): Promise<number> {
   }
   try {
     // Restore original 60 minutes window for stability
-    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const activeThreshold = new Date(Date.now() - 15 * 60 * 1000); // 15 minutes is a good balance
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(sql`(${users.isOnline} = true OR ${users.lastSeen} > ${sixtyMinutesAgo} OR ${users.lastSignedIn} > ${sixtyMinutesAgo} OR ${users.createdAt} > ${sixtyMinutesAgo})`);
+      .where(sql`(${users.isOnline} = true OR ${users.lastSeen} > ${activeThreshold} OR ${users.lastSignedIn} > ${activeThreshold})`);
     const count = result[0]?.count ?? 0;
     
     // Maintain a minimum of 1-2 if users exist, as per original logic
