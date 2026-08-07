@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull, ne, or, sql, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests, stories, InsertStory } from '../drizzle/schema';
+import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests, stories, InsertStory, storyComments, storyViews, InsertStoryComment, InsertStoryView } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
 /** Strip query params unsupported by postgres.js (e.g. channel_binding from Neon) */
@@ -191,16 +191,29 @@ export async function ensureSchema(): Promise<void> {
      )`,
     // 🔒 FIX: Unique index to block duplicate transaction IDs
 	    `CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_txid_unique ON payment_requests ("transactionId")`,
-	    `CREATE TABLE IF NOT EXISTS stories (
-	       id           SERIAL PRIMARY KEY,
-	       "userId"     INTEGER NOT NULL,
-	       "mediaUrl"   TEXT NOT NULL,
-	       "mediaType"  VARCHAR(20) NOT NULL,
-	       caption      TEXT,
-	       "createdAt"  TIMESTAMP NOT NULL DEFAULT now(),
-	       "expiresAt"  TIMESTAMP NOT NULL
-	     )`,
-	  ];
+		    `CREATE TABLE IF NOT EXISTS stories (
+		       id           SERIAL PRIMARY KEY,
+		       "userId"     INTEGER NOT NULL,
+		       "mediaUrl"   TEXT NOT NULL,
+		       "mediaType"  VARCHAR(20) NOT NULL,
+		       caption      TEXT,
+		       "createdAt"  TIMESTAMP NOT NULL DEFAULT now(),
+		       "expiresAt"  TIMESTAMP NOT NULL
+		     )`,
+		    `CREATE TABLE IF NOT EXISTS story_comments (
+		       id           SERIAL PRIMARY KEY,
+		       "storyId"    INTEGER NOT NULL,
+		       "userId"     INTEGER NOT NULL,
+		       content      TEXT NOT NULL,
+		       "createdAt"  TIMESTAMP NOT NULL DEFAULT now()
+		     )`,
+		    `CREATE TABLE IF NOT EXISTS story_views (
+		       id           SERIAL PRIMARY KEY,
+		       "storyId"    INTEGER NOT NULL,
+		       "userId"     INTEGER NOT NULL,
+		       "createdAt"  TIMESTAMP NOT NULL DEFAULT now()
+		     )`,
+		  ];
 
   for (const stmt of tables) {
     try {
@@ -1026,7 +1039,9 @@ export async function getActiveStories() {
   if (!db) return [];
   try {
     const now = new Date();
-    return await db
+    
+    // Get all active stories with user info
+    const activeStories = await db
       .select({
         id: stories.id,
         userId: stories.userId,
@@ -1041,6 +1056,20 @@ export async function getActiveStories() {
       .innerJoin(users, eq(stories.userId, users.id))
       .where(gt(stories.expiresAt, now))
       .orderBy(desc(stories.createdAt));
+
+    // For each story, get view count and comment count
+    const storiesWithStats = await Promise.all(activeStories.map(async (story) => {
+      const views = await db.select({ count: sql`count(*)` }).from(storyViews).where(eq(storyViews.storyId, story.id));
+      const comments = await db.select({ count: sql`count(*)` }).from(storyComments).where(eq(storyComments.storyId, story.id));
+      
+      return {
+        ...story,
+        viewCount: Number(views[0]?.count || 0),
+        commentCount: Number(comments[0]?.count || 0),
+      };
+    }));
+
+    return storiesWithStats;
   } catch (err) {
     console.error('[Database] getActiveStories failed:', err);
     return [];
@@ -1052,14 +1081,81 @@ export async function getUserStories(userId: number) {
   if (!db) return [];
   try {
     const now = new Date();
-    return await db
+    const userStories = await db
       .select()
       .from(stories)
       .where(and(eq(stories.userId, userId), gt(stories.expiresAt, now)))
       .orderBy(desc(stories.createdAt));
+
+    // Add stats to user stories too
+    const storiesWithStats = await Promise.all(userStories.map(async (story) => {
+      const views = await db.select({ count: sql`count(*)` }).from(storyViews).where(eq(storyViews.storyId, story.id));
+      const comments = await db.select({ count: sql`count(*)` }).from(storyComments).where(eq(storyComments.storyId, story.id));
+      
+      return {
+        ...story,
+        viewCount: Number(views[0]?.count || 0),
+        commentCount: Number(comments[0]?.count || 0),
+      };
+    }));
+
+    return storiesWithStats;
   } catch (err) {
     console.error('[Database] getUserStories failed:', err);
     return [];
+  }
+}
+
+export async function saveStoryComment(comment: InsertStoryComment) {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.insert(storyComments).values(comment);
+  } catch (err) {
+    console.error('[Database] saveStoryComment failed:', err);
+    throw err;
+  }
+}
+
+export async function getStoryComments(storyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select({
+        id: storyComments.id,
+        userId: storyComments.userId,
+        content: storyComments.content,
+        createdAt: storyComments.createdAt,
+        userName: users.name,
+        userAvatar: users.avatar,
+      })
+      .from(storyComments)
+      .innerJoin(users, eq(storyComments.userId, users.id))
+      .where(eq(storyComments.storyId, storyId))
+      .orderBy(desc(storyComments.createdAt));
+  } catch (err) {
+    console.error('[Database] getStoryComments failed:', err);
+    return [];
+  }
+}
+
+export async function recordStoryView(storyId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    // Check if user already viewed this story to keep it unique
+    const existing = await db
+      .select()
+      .from(storyViews)
+      .where(and(eq(storyViews.storyId, storyId), eq(storyViews.userId, userId)))
+      .limit(1);
+    
+    if (existing.length === 0) {
+      await db.insert(storyViews).values({ storyId, userId });
+    }
+  } catch (err) {
+    console.error('[Database] recordStoryView failed:', err);
   }
 }
 

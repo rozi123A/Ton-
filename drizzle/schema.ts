@@ -145,3 +145,24 @@ export const stories = pgTable("stories", {
 
 export type Story = typeof stories.$inferSelect;
 export type InsertStory = typeof stories.$inferInsert;
+
+export const storyComments = pgTable("story_comments", {
+  id: serial("id").primaryKey(),
+  storyId: integer("storyId").notNull(),
+  userId: integer("userId").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type StoryComment = typeof storyComments.$inferSelect;
+export type InsertStoryComment = typeof storyComments.$inferInsert;
+
+export const storyViews = pgTable("story_views", {
+  id: serial("id").primaryKey(),
+  storyId: integer("storyId").notNull(),
+  userId: integer("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type StoryView = typeof storyViews.$inferSelect;
+export type InsertStoryView = typeof storyViews.$inferInsert;

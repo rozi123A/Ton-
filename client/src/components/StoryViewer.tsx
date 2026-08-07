@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, MessageCircle, Eye, Send } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
+import { ScrollArea } from "./ui/scroll-area";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 
 interface Story {
   id: number;
@@ -9,6 +17,8 @@ interface Story {
   caption?: string | null;
   userName?: string | null;
   userAvatar?: string | null;
+  viewCount?: number;
+  commentCount?: number;
 }
 
 interface StoryViewerProps {
@@ -21,12 +31,38 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  
+  const { user } = useAuth();
   const story = stories[currentIndex];
+  const isOwner = user?.id === story.userId;
 
   const DURATION = 5000; // 5 seconds per story
 
+  const recordView = trpc.stories.recordView.useMutation();
+  const addComment = trpc.stories.addComment.useMutation({
+    onSuccess: () => {
+      setCommentText("");
+      utils.stories.getComments.invalidate({ storyId: story.id });
+    }
+  });
+  
+  const { data: comments = [] } = trpc.stories.getComments.useQuery(
+    { storyId: story.id },
+    { enabled: !!story.id }
+  );
+
+  const utils = trpc.useUtils();
+
   useEffect(() => {
-    if (isPaused) return;
+    if (story.id && user) {
+      recordView.mutate({ storyId: story.id });
+    }
+  }, [currentIndex, story.id, user]);
+
+  useEffect(() => {
+    if (isPaused || showComments) return;
 
     const interval = 50;
     const timer = setInterval(() => {
@@ -45,7 +81,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     }, interval);
 
     return () => clearInterval(timer);
-  }, [currentIndex, isPaused, stories.length, onClose]);
+  }, [currentIndex, isPaused, showComments, stories.length, onClose]);
 
   const next = () => {
     if (currentIndex < stories.length - 1) {
@@ -63,10 +99,16 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     }
   };
 
+  const handleSendComment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim() || isOwner) return;
+    addComment.mutate({ storyId: story.id, content: commentText });
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center select-none" dir="ltr">
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center select-none" dir="rtl">
       {/* Progress Bars */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex gap-1">
+      <div className="absolute top-4 left-4 right-4 z-10 flex gap-1" dir="ltr">
         {stories.map((_, idx) => (
           <div key={idx} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
             <div 
@@ -82,25 +124,31 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
       {/* Header */}
       <div className="absolute top-8 left-4 right-4 z-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img 
-            src={story.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(story.userName || 'user')}`} 
-            className="w-10 h-10 rounded-full border border-white/20 object-cover"
-          />
+          <Avatar className="w-10 h-10 border border-white/20">
+            <AvatarImage src={story.userAvatar || ""} />
+            <AvatarFallback>{story.userName?.charAt(0) || "U"}</AvatarFallback>
+          </Avatar>
           <div>
             <p className="text-white font-bold text-sm">{story.userName || 'مستخدم'}</p>
           </div>
         </div>
-        <button onClick={onClose} className="text-white p-2 hover:bg-white/10 rounded-full">
-          <X className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-white/80 text-xs bg-black/20 px-2 py-1 rounded-full">
+            <Eye className="w-3 h-3" />
+            <span>{story.viewCount || 0}</span>
+          </div>
+          <button onClick={onClose} className="text-white p-2 hover:bg-white/10 rounded-full">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
       </div>
 
       {/* Media Content */}
       <div 
         className="w-full h-full flex items-center justify-center"
-        onMouseDown={() => setIsPaused(true)}
+        onMouseDown={() => !showComments && setIsPaused(true)}
         onMouseUp={() => setIsPaused(false)}
-        onTouchStart={() => setIsPaused(true)}
+        onTouchStart={() => !showComments && setIsPaused(true)}
         onTouchEnd={() => setIsPaused(false)}
       >
         {story.mediaType === "video" ? (
@@ -116,26 +164,100 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
         )}
       </div>
 
-      {/* Caption */}
-      {story.caption && (
-        <div className="absolute bottom-12 left-0 right-0 p-6 text-center bg-gradient-to-t from-black/60 to-transparent">
-          <p className="text-white text-lg">{story.caption}</p>
+      {/* Caption & Stats Overlay */}
+      {!showComments && (
+        <div className="absolute bottom-20 left-0 right-0 p-6 text-center bg-gradient-to-t from-black/80 to-transparent">
+          {story.caption && <p className="text-white text-lg mb-4">{story.caption}</p>}
+          <div className="flex justify-center gap-4">
+            <button 
+              onClick={() => setShowComments(true)}
+              className="flex items-center gap-2 text-white bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full backdrop-blur-sm"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>{comments.length} تعليق</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Comments Panel */}
+      {showComments && (
+        <div className="absolute inset-x-0 bottom-0 top-1/2 bg-white rounded-t-3xl z-20 flex flex-col animate-in slide-in-from-bottom duration-300">
+          <div className="p-4 border-b flex items-center justify-between">
+            <h3 className="font-bold text-lg">التعليقات ({comments.length})</h3>
+            <button onClick={() => setShowComments(false)} className="p-2 hover:bg-gray-100 rounded-full">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {comments.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">لا توجد تعليقات بعد</p>
+              ) : (
+                comments.map((c: any) => (
+                  <div key={c.id} className="flex gap-3">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={c.userAvatar || ""} />
+                      <AvatarFallback>{c.userName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="bg-gray-100 p-3 rounded-2xl rounded-tr-none">
+                        <p className="font-bold text-xs mb-1">{c.userName}</p>
+                        <p className="text-sm">{c.content}</p>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1 mr-2">
+                        {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ar })}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="p-4 border-t bg-gray-50">
+            {isOwner ? (
+              <p className="text-center text-sm text-gray-500 italic">لا يمكنك التعليق على قصتك الخاصة</p>
+            ) : (
+              <form onSubmit={handleSendComment} className="flex gap-2">
+                <Input 
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder="اكتب تعليقاً..."
+                  className="rounded-full bg-white"
+                />
+                <Button 
+                  type="submit" 
+                  size="icon" 
+                  disabled={!commentText.trim() || addComment.isPending}
+                  className="rounded-full"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            )}
+          </div>
         </div>
       )}
 
       {/* Controls */}
-      <button 
-        onClick={prev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white"
-      >
-        <ChevronLeft className="w-10 h-10" />
-      </button>
-      <button 
-        onClick={next}
-        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white"
-      >
-        <ChevronRight className="w-10 h-10" />
-      </button>
+      {!showComments && (
+        <>
+          <button 
+            onClick={prev}
+            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white"
+          >
+            <ChevronLeft className="w-10 h-10" />
+          </button>
+          <button 
+            onClick={next}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white"
+          >
+            <ChevronRight className="w-10 h-10" />
+          </button>
+        </>
+      )}
     </div>
   );
 }

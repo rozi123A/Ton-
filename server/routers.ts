@@ -13,6 +13,7 @@ import {
   createNotification, getNotifications, markNotificationsAsRead,
   getUnreadMessageCount,   markMessagesRead, updateUserPresence, updateUserOffline,
   saveStory, getActiveStories, getUserStories,
+  saveStoryComment, getStoryComments, recordStoryView,
   getDb,
 } from "./db";
 import { and, eq, or, sql } from "drizzle-orm";
@@ -338,6 +339,46 @@ export const appRouter = router({
       .input(z.object({ userId: z.number() }))
       .query(async ({ input }) => {
         return await getUserStories(input.userId);
+      }),
+
+    addComment: protectedProcedure
+      .input(z.object({
+        storyId: z.number(),
+        content: z.string().min(1).max(500),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Get the story to check the owner
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        
+        const story = await db.select().from(stories).where(eq(stories.id, input.storyId)).limit(1);
+        if (story.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "القصة غير موجودة" });
+        }
+
+        if (story[0].userId === ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك التعليق على قصتك الخاصة" });
+        }
+
+        await saveStoryComment({
+          storyId: input.storyId,
+          userId: ctx.user.id,
+          content: input.content,
+        });
+        return { success: true };
+      }),
+
+    getComments: publicProcedure
+      .input(z.object({ storyId: z.number() }))
+      .query(async ({ input }) => {
+        return await getStoryComments(input.storyId);
+      }),
+
+    recordView: protectedProcedure
+      .input(z.object({ storyId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await recordStoryView(input.storyId, ctx.user.id);
+        return { success: true };
       }),
 
     /**
