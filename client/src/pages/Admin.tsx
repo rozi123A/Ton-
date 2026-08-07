@@ -548,11 +548,11 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
                     }
                   }}
                 />
-                {/* Status Dot */}
+                {/* Status Dot - Moved to the left of the image (start of the row) */}
                 <div style={{
                   position: 'absolute',
                   bottom: '-2px',
-                  right: '-2px',
+                  left: '-2px',
                   width: '10px',
                   height: '10px',
                   borderRadius: '50%',
@@ -568,7 +568,7 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
                   {u.country ? ` • ${COUNTRY_NAMES[u.country] || u.country}` : ''}
                 </p>
               </div>
-              <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
                 <p style={{ margin: 0, fontSize: '10px', color: '#4b5563' }}>{timeAgo((u as any).lastSignedIn || u.createdAt)}</p>
                 {u.isPremium && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
