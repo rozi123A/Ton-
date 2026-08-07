@@ -298,16 +298,21 @@ class SDKServer {
       ]);
 
       if (!user) {
-        // Create a virtual guest user but also ensure DB save happens
-        const virtualUser = buildVirtualGuestUser(sessionUserId, (session as any).name || "زائر");
-        // Fire-and-forget DB upsert to persist the guest for counting
-        void db.upsertUser({
-          openId: sessionUserId,
-          name: (session as any).name || "زائر",
-          loginMethod: 'guest',
-          lastSignedIn: signedInAt,
-        }).catch(() => {});
-        return virtualUser;
+        // Persist guest user synchronously so they get a real database ID and appear in stats/online count
+        try {
+          await db.upsertUser({
+            openId: sessionUserId,
+            name: (session as any).name || "زائر",
+            loginMethod: 'guest',
+            lastSignedIn: signedInAt,
+          });
+          user = await db.getUserByOpenId(sessionUserId);
+        } catch (err) {
+          console.warn('[Auth] Failed to persist guest user:', err);
+        }
+        if (!user) {
+          return buildVirtualGuestUser(sessionUserId, (session as any).name || "زائر");
+        }
       }
     } else {
       user = await db.getUserByOpenId(sessionUserId);

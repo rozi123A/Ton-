@@ -524,10 +524,18 @@ function StatsTab({ adminToken }: { adminToken: string }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {recent?.map(u => (
             <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderBottom: '1px solid #1e293b' }}>
-              <img src={u.avatar || ''} style={{ width: '36px', height: '36px', borderRadius: '10px' }} />
+              <img 
+                src={u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'} 
+                style={{ width: '36px', height: '36px', borderRadius: '10px', objectFit: 'cover' }} 
+                onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop'; }}
+              />
               <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>{u.name}</p>
-                <p style={{ margin: 0, fontSize: '11px', color: '#6b7280' }}>{u.gender} • {u.age} سنة • {u.country}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'white' }}>{u.name || 'مستخدم جديد'}</p>
+                <p style={{ margin: 0, fontSize: '11px', color: '#6b7280' }}>
+                  {u.gender ? (u.gender === 'male' ? 'ذكر' : u.gender === 'female' ? 'أنثى' : u.gender) : 'غير محدد'} 
+                  {u.age ? ` • ${u.age} سنة` : ''} 
+                  {u.country ? ` • ${COUNTRY_NAMES[u.country] || u.country}` : ''}
+                </p>
               </div>
               <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
                 <p style={{ margin: 0, fontSize: '10px', color: '#4b5563' }}>{timeAgo(u.createdAt)}</p>

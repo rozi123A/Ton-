@@ -872,10 +872,10 @@ export async function getOnlineUsersCount(): Promise<number> {
   try {
     // A user is online while recent activity is recorded. Keep the
     // lastSignedIn fallback for rows created before lastSeen was added.
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(sql`(${users.lastSeen} > ${fiveMinutesAgo} OR ${users.lastSignedIn} > ${fiveMinutesAgo})`);
+      .where(sql`(${users.isOnline} = true OR ${users.lastSeen} > ${fifteenMinutesAgo} OR ${users.lastSignedIn} > ${fifteenMinutesAgo})`);
     return result[0]?.count ?? 0;
   } catch (err) {
     console.error('[Database] getOnlineUsersCount failed:', err);
