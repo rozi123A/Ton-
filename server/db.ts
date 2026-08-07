@@ -555,11 +555,11 @@ export async function getNewRegistrations(limit = 50): Promise<Array<{
       .select({
         id: users.id, name: users.name, country: users.country, avatar: users.avatar,
         gender: users.gender, age: users.age, role: users.role,
-        createdAt: users.createdAt, loginMethod: users.loginMethod,
+        createdAt: users.createdAt, lastSignedIn: users.lastSignedIn, loginMethod: users.loginMethod,
         isPremium: users.isPremium,
       })
       .from(users)
-      .orderBy(desc(users.createdAt), desc(users.id))
+      .orderBy(desc(users.lastSignedIn), desc(users.createdAt), desc(users.id))
       .limit(limit);
   } catch (err) {
     console.error('[Database] getNewRegistrations failed:', err);

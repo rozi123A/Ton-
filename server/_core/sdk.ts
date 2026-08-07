@@ -340,17 +340,23 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
-    if (user.loginMethod === "guest" || user.openId.startsWith("guest_")) {
-      // Presence updates are best-effort for guests and must not delay auth.
-      void db.upsertUser({
-        openId: user.openId,
-        lastSignedIn: signedInAt,
-      }).catch(() => {});
-    } else {
+    // Always update lastSignedIn, lastSeen, and isOnline synchronously on every request
+    try {
       await db.upsertUser({
         openId: user.openId,
+        name: user.name,
+        loginMethod: user.loginMethod,
         lastSignedIn: signedInAt,
       });
+      // Also update isOnline and lastSeen explicitly in users table
+      const database = await db.getDb();
+      if (database && user.id > 0) {
+        await database.update(users)
+          .set({ isOnline: true, lastSeen: signedInAt, lastSignedIn: signedInAt })
+          .where(eq(users.id, user.id));
+      }
+    } catch (e) {
+      console.warn('[Auth] Failed to update presence/lastSignedIn:', e);
     }
 
     return user;

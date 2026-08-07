@@ -396,7 +396,7 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
 }
 
 // ── Stats Tab Component ───────────────────────────────────────────────────
-function StatsTab({ adminToken }: { adminToken: string }) {
+function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUser: (id: number) => void }) {
   const { data: dbStatus, isLoading: dbLoading, isError: dbError, refetch: refetchDbStatus, isFetching } = trpc.admin.dbStatus.useQuery(
     { adminToken },
     { 
@@ -529,11 +529,11 @@ function StatsTab({ adminToken }: { adminToken: string }) {
           {recent?.map(u => (
             <div 
               key={u.id} 
-              onClick={() => {
-                // Navigate to user profile view or trigger selection
-                setSelectedUserId(u.id);
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectUser(u.id);
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderBottom: '1px solid #1e293b', cursor: 'pointer', borderRadius: '10px', transition: 'background 0.2s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderBottom: '1px solid #1e293b', cursor: 'pointer', borderRadius: '10px', transition: 'background 0.2s', position: 'relative', zIndex: 5 }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
@@ -551,7 +551,7 @@ function StatsTab({ adminToken }: { adminToken: string }) {
                 </p>
               </div>
               <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                <p style={{ margin: 0, fontSize: '10px', color: '#4b5563' }}>{timeAgo(u.createdAt)}</p>
+                <p style={{ margin: 0, fontSize: '10px', color: '#4b5563' }}>{timeAgo((u as any).lastSignedIn || u.createdAt)}</p>
                 {u.isPremium && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Crown style={{ width: '12px', color: '#fbbf24' }} />
