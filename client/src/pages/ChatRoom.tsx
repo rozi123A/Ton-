@@ -233,7 +233,7 @@ export default function ChatRoom() {
 
   useEffect(() => {
     if (notifications) {
-      const alreadyClaimed = notifications.some(n => 
+      const alreadyClaimed = (notifications as any[]).some((n: any) => 
         n.type === 'system' && 
         n.title === 'مكافأة يومية 🎁' && 
         (Date.now() - new Date(n.createdAt).getTime()) < 24 * 60 * 60 * 1000

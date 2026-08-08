@@ -832,7 +832,7 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
 
           <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '10px' }}>
             <button
-              onClick={() => alert(`معرف المستخدم: ${user.id}\nالاسم: ${user.name}\nالإيميل: ${user.email || 'غير متوفر'}`)}
+              onClick={() => alert(`معرف المستخدم: ${user.id}\nالاسم: ${user.name}\nطريقة التسجيل: ${user.loginMethod || 'عادي'}`)}
               style={{
                 flex: 1, backgroundColor: '#7c3aed', color: 'white', border: 'none',
                 borderRadius: '12px', padding: '12px', fontWeight: 700, fontSize: '14px', cursor: 'pointer'

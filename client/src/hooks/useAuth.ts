@@ -40,27 +40,29 @@ export function useAuth(options?: UseAuthOptions) {
       utils.auth.me.setData(undefined, null);
     },
   });
-  const { mutate: rememberGuest } = trpc.auth.rememberGuest.useMutation();
+  const rememberGuestMutation = (trpc.auth as any).rememberGuest?.useMutation?.();
 
   // Existing guests created before persistent guest tokens were added get a
   // recovery token once, while their current cookie session is still valid.
   useEffect(() => {
     const user = meQuery.data;
-    if (!user || user.loginMethod !== "guest") return;
+    if (!user || user.loginMethod !== "guest" || !rememberGuestMutation) return;
     try {
       if (localStorage.getItem(GUEST_TOKEN_KEY)) return;
     } catch {
       return;
     }
 
-    rememberGuest(undefined, {
-      onSuccess: ({ guestToken }) => {
-        try {
-          localStorage.setItem(GUEST_TOKEN_KEY, guestToken);
-        } catch {}
+    rememberGuestMutation.mutate(undefined, {
+      onSuccess: (data: { guestToken?: string }) => {
+        if (data?.guestToken) {
+          try {
+            localStorage.setItem(GUEST_TOKEN_KEY, data.guestToken);
+          } catch {}
+        }
       },
     });
-  }, [meQuery.data, rememberGuest]);
+  }, [meQuery.data, rememberGuestMutation]);
 
   const logout = useCallback(async () => {
     const wasGuest = meQuery.data?.loginMethod === "guest";

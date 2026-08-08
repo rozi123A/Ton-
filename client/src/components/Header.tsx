@@ -17,7 +17,7 @@ export default function Header() {
     enabled: isAuthenticated,
     refetchInterval: 30000,
   });
-  const unreadNotifCount = notifData ? notifData.filter(n => !n.isRead).length : 0;
+  const unreadNotifCount = notifData ? (notifData as any[]).filter((n: any) => !n.isRead && n.type !== 'new-message' && (n.title || n.message || n.fromName)).length : 0;
 
   const handleStartChat = () => setLocation("/chat");
   const handleLogin    = () => setLocation("/login");

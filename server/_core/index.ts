@@ -793,7 +793,7 @@ async function startServer() {
       }
       await db.execute(sql`SELECT 1`);
       console.log('[db-keepalive] database ping OK');
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[db-keepalive] database ping failed (DB may be sleeping):', err?.message || String(err));
     }
   };

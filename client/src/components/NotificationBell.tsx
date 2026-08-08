@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { playFriendSound, playMessageSound } from '@/lib/notificationSound';
 import { trpc } from '@/lib/trpc';
+import { Check } from 'lucide-react';
 
 interface AppNotif {
   id: string;
@@ -77,7 +78,7 @@ export default function NotificationBell() {
   useEffect(() => {
     if (dbNotifs) {
       const formatted = dbNotifs
-        .filter(n => n.type !== 'new-message')
+        .filter(n => n.type !== 'new-message' && (n.title || n.message || n.fromName))
         .map(n => ({
           id: n.id.toString(),
           type: n.type,
@@ -136,6 +137,7 @@ export default function NotificationBell() {
     // Direct messages remain available in the chat UI; they do not belong in
     // the general notification bell.
     if (raw.type === 'new-message') return;
+    if (!raw.title && !raw.message && !raw.fromName) return;
 
     const notif: AppNotif = { ...raw, id: `${raw.ts}-${Math.random()}`, read: false };
     setNotifs(prev => {

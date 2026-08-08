@@ -4,18 +4,18 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_core/trpc";
 import {
-  saveUserProfile, getUsersByGender, getMessages, saveMessage,
+  saveUserProfile, getUsersByGender, getMessages,
   upsertUser, getUserByOpenId, getRecentUsers, incrementProfileViews,
   getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
   getCountryStats, getNewRegistrations, getTotalUsersCount, getOnlineUsersCount, getPremiumCount, searchUsers, broadcastNotificationToAll,
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
-  getUnreadMessageCount,   markMessagesRead, updateUserPresence, updateUserOffline,
+  getUnreadMessageCount, markMessagesRead, updateUserPresence, updateUserOffline,
   saveStory, getActiveStories, getUserStories,
   saveStoryComment, getStoryComments, recordStoryView, getStoryViewers,
   deleteStory, getStoryById,
-  getDb, createNotification, saveMessage,
+  getDb, saveMessage,
 } from "./db";
 import { and, eq, or, sql } from "drizzle-orm";
 import { users } from "../drizzle/schema";

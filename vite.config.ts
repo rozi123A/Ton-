@@ -116,12 +116,9 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-export default defineConfig(async () => {
-  const devPlugins = await getDevPlugins();
-
-  return {
-    plugins: [react(), tailwindcss(), ...devPlugins],
-    resolve: {
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  resolve: {
       alias: {
         "@": path.resolve(import.meta.dirname, "client", "src"),
         "@shared": path.resolve(import.meta.dirname, "shared"),
