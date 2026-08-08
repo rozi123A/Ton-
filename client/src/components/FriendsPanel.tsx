@@ -1,5 +1,5 @@
-import { Heart, X, MessageCircle, Video, UserPlus, Check, Clock, Bell, Eye } from 'lucide-react';
-import { useState } from 'react';
+import { Heart, X, MessageCircle, Video, UserPlus, Check, Clock, Bell, Eye, CheckCheck } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 
@@ -43,9 +43,23 @@ export default function FriendsPanel({
   const onlineFriends = friends.filter(f => f.status === 'online');
   const offlineFriends = friends.filter(f => f.status === 'offline');
 
+  const utils = trpc.useUtils();
+  const markAllReadMutation = trpc.messages.markAllRead.useMutation({
+    onSuccess: () => {
+      toast.success('تم تحديد الكل كمقروء');
+      utils.messages.getUnreadCount.invalidate();
+    },
+    onError: () => toast.error('حدث خطأ أثناء تحديث الرسائل'),
+  });
+
   const { data: incomingRequests, refetch: refetchRequests } = trpc.social.getIncomingRequests.useQuery(undefined, {
     refetchInterval: 15000,
   });
+
+  useEffect(() => {
+    // Auto-clear unread badge when opening the panel
+    markAllReadMutation.mutate();
+  }, []);
 
   const acceptRequestMutation = trpc.social.acceptRequest.useMutation({
     onSuccess: (_data, _variables) => {
@@ -89,9 +103,19 @@ export default function FriendsPanel({
             <Heart className="w-5 h-5 text-red-400" />
             الأصدقاء
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => markAllReadMutation.mutate()}
+              disabled={markAllReadMutation.isPending}
+              className="text-white/50 hover:text-green-400 transition-colors p-1"
+              title="تحديد الكل كمقروء"
+            >
+              <CheckCheck className="w-5 h-5" />
+            </button>
+            <button onClick={onClose} className="text-white/50 hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}

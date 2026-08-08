@@ -616,6 +616,16 @@ export const appRouter = router({
         await markMessagesRead(ctx.user.id, input.senderId);
         return { success: true };
       }),
+
+    markAllRead: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.update(messages)
+          .set({ isRead: true })
+          .where(eq(messages.receiverId, ctx.user.id));
+        return { success: true };
+      }),
   }),
 
   gifts: router({
