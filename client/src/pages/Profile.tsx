@@ -344,34 +344,37 @@ export default function Profile() {
               {isOwnProfile && u?.isPremium && <Shield className="w-5 h-5 text-green-400 mb-1" />}
             </div>
 
-            {isOwnProfile ? (
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Star className="w-3.5 h-3.5 text-yellow-400" />
-                    <span className="text-yellow-400 font-bold text-lg">{walletQuery.data?.wallet ?? 0}</span>
-                  </div>
-                  <p className="text-white/50 text-xs">نجوم</p>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Star className="w-3.5 h-3.5 text-yellow-400" />
+                  <span className={`text-yellow-400 font-bold text-lg ${!isOwnProfile ? 'blur-[4px] select-none' : ''}`}>
+                    {isOwnProfile ? (walletQuery.data?.wallet ?? 0) : (u?.stars ?? 0)}
+                  </span>
                 </div>
-                <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Zap className="w-3.5 h-3.5 text-purple-400" />
-                    <span className="text-purple-400 font-bold text-lg">{balanceQuery.data?.credits ?? 0}</span>
-                  </div>
-                  <p className="text-white/50 text-xs">نقاط</p>
-                </div>
-                <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Award className="w-3.5 h-3.5 text-green-400" />
-                    <span className="text-green-400 font-bold text-lg">{completionPct}%</span>
-                  </div>
-                  <p className="text-white/50 text-xs">اكتمال</p>
-                </div>
+                <p className="text-white/50 text-xs">نجوم</p>
               </div>
-            ) : (
-              <div className="rounded-2xl bg-purple-500/10 border border-purple-400/20 px-4 py-3 text-center">
-                <p className="text-purple-100 text-sm font-semibold">بطاقة المستخدم العامة</p>
-                <p className="text-white/50 text-xs mt-1">العمر والجنس والمحتوى المنشور فقط</p>
+              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Zap className="w-3.5 h-3.5 text-purple-400" />
+                  <span className={`text-purple-400 font-bold text-lg ${!isOwnProfile ? 'blur-[4px] select-none' : ''}`}>
+                    {isOwnProfile ? (balanceQuery.data?.credits ?? 0) : (u?.points ?? 0)}
+                  </span>
+                </div>
+                <p className="text-white/50 text-xs">نقاط</p>
+              </div>
+              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Award className="w-3.5 h-3.5 text-green-400" />
+                  <span className="text-green-400 font-bold text-lg">{isOwnProfile ? completionPct : '??'}%</span>
+                </div>
+                <p className="text-white/50 text-xs">اكتمال</p>
+              </div>
+            </div>
+
+            {!isOwnProfile && (
+              <div className="mt-3 rounded-2xl bg-purple-500/10 border border-purple-400/20 px-4 py-2 text-center">
+                <p className="text-purple-100 text-[10px] font-semibold">بطاقة المستخدم العامة</p>
               </div>
             )}
           </div>

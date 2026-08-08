@@ -115,8 +115,10 @@ export async function ensureSchema(): Promise<void> {
        "isOnline"    BOOLEAN NOT NULL DEFAULT false,
        "lastSeen"    TIMESTAMP NOT NULL DEFAULT now(),
        "loginMethod" VARCHAR(64),
-       role          "role" NOT NULL DEFAULT 'user',
-       "createdAt"   TIMESTAMP NOT NULL DEFAULT now(),
+	       role          "role" NOT NULL DEFAULT 'user',
+	       stars         INTEGER NOT NULL DEFAULT 0,
+	       points        INTEGER NOT NULL DEFAULT 0,
+	       "createdAt"   TIMESTAMP NOT NULL DEFAULT now(),
        "updatedAt"   TIMESTAMP NOT NULL DEFAULT now(),
        "lastSignedIn" TIMESTAMP NOT NULL DEFAULT now()
      )`,
@@ -237,6 +239,8 @@ export async function ensureSchema(): Promise<void> {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "lastSignedIn" TIMESTAMP NOT NULL DEFAULT now()`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "loginMethod" VARCHAR(64)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS role          "role" NOT NULL DEFAULT 'user'`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS stars         INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS points        INTEGER NOT NULL DEFAULT 0`,
   ];
   for (const m of migrations) {
     try { await _rawClient.unsafe(m); } catch { /* column already exists — safe to ignore */ }
@@ -648,14 +652,15 @@ export async function getUserPublicProfile(userId: number) {
       avatar: users.avatar,
       bio: users.bio,
       role: users.role,
+      stars: users.stars,
+      points: users.points,
     }).from(users).where(eq(users.id, userId)).limit(1);
     const profile = rows[0] ?? null;
     // الأدمن لا يمكن رؤية ملفه الشخصي من قِبل أي أحد
     if (profile?.role === 'admin') return null;
     if (!profile) return null;
 
-    // الملف العام يعرض بطاقة المستخدم ومحتواه فقط. لا تُرسل أرصدة أو
-    // إحصاءات أو حالة VIP/الظهور حتى لا تظهر بالخطأ في أي واجهة عامة.
+    // الملف العام يعرض بطاقة المستخدم ومحتواه فقط.
     return {
       id: profile.id,
       name: profile.name,
@@ -663,6 +668,8 @@ export async function getUserPublicProfile(userId: number) {
       gender: profile.gender,
       avatar: profile.avatar,
       bio: profile.bio,
+      stars: profile.stars,
+      points: profile.points,
     };
   } catch (err) {
     console.error('[Database] getUserPublicProfile failed:', err);

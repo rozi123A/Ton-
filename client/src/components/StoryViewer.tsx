@@ -9,6 +9,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
+import UserProfileModal from "./UserProfileModal";
 
 interface Story {
   id: number;
@@ -40,6 +41,7 @@ export default function StoryViewer({
   const [showComments, setShowComments] = useState(false);
   const [showViewers, setShowViewers] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   
   const { user } = useAuth();
   const story = stories[currentIndex];
@@ -210,13 +212,10 @@ export default function StoryViewer({
               </div>
             ) : (
               [...comments].reverse().map((c: any) => (
-                <div key={c.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div key={c.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <Avatar 
                       className="w-10 h-10 border border-white shadow-sm cursor-pointer hover:scale-105 transition-transform"
-                      onClick={() => {
-                        onClose();
-                        setLocation(`/profile?userId=${c.userId}`);
-                      }}
+                      onClick={() => setSelectedUserId(c.userId)}
                     >
                       {c.userAvatar ? (
                         <AvatarImage src={c.userAvatar} className="object-cover" />
@@ -230,10 +229,7 @@ export default function StoryViewer({
                     <div className="bg-white p-3.5 rounded-2xl rounded-tr-none shadow-sm border border-gray-100">
                       <p 
                         className="font-bold text-xs text-purple-600 mb-1 cursor-pointer hover:underline"
-                        onClick={() => {
-                          onClose();
-                          setLocation(`/profile?userId=${c.userId}`);
-                        }}
+                        onClick={() => setSelectedUserId(c.userId)}
                       >
                         {c.userName || 'مستخدم'}
                       </p>
@@ -277,6 +273,14 @@ export default function StoryViewer({
             </form>
           </div>
         </div>
+      )}
+
+      {/* User Profile Modal */}
+      {selectedUserId && (
+        <UserProfileModal 
+          userId={selectedUserId} 
+          onClose={() => setSelectedUserId(null)} 
+        />
       )}
 
       {/* Viewers Panel */}
