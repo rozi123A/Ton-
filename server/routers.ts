@@ -1041,6 +1041,7 @@ export const appRouter = router({
           type: 'friend-request',
           fromName: ctx.user.name || 'مستخدم',
           fromAvatar: ctx.user.avatar || '',
+          fromUserId: ctx.user.id,
           message: 'أرسل لك طلب صداقة جديد',
         });
         return { success: true };
@@ -1055,6 +1056,7 @@ export const appRouter = router({
           type: 'friend-accepted',
           fromName: ctx.user.name || 'مستخدم',
           fromAvatar: ctx.user.avatar || '',
+          fromUserId: ctx.user.id,
           message: 'قبل طلب صداقتك',
         });
         return { success: true };
