@@ -1,4 +1,4 @@
-import { Bell, X, UserPlus, Heart } from 'lucide-react';
+import { Bell, X, UserPlus, Heart, Check } from 'lucide-react';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { playFriendSound, playMessageSound } from '@/lib/notificationSound';
