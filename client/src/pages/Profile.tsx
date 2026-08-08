@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import StoryViewer from "@/components/StoryViewer";
 import {
   Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
   User, Calendar, Zap, Crown, Camera,
@@ -49,6 +50,7 @@ export default function Profile() {
   const [saveError, setSaveError] = useState("");
   const [showBuy, setShowBuy] = useState(false);
   const [showStoryUpload, setShowStoryUpload] = useState(false);
+  const [selectedStoryIndex, setSelectedStoryIndex] = useState<number | null>(null);
   const [storyMedia, setStoryMedia] = useState<string | null>(null);
   const [storyType, setStoryType] = useState<"image" | "video">("image");
   const [storyCaption, setStoryCaption] = useState("");
@@ -341,14 +343,18 @@ export default function Profile() {
               <Play className="w-4 h-4 text-pink-400" /> قصصي النشطة
             </h2>
             <div className="grid grid-cols-2 gap-3">
-              {myStoriesQuery.data.map((story: any) => (
-                <div key={story.id} className="relative rounded-xl overflow-hidden bg-black aspect-[9/16]">
+              {myStoriesQuery.data.map((story: any, index: number) => (
+                <div 
+                  key={story.id} 
+                  onClick={() => setSelectedStoryIndex(index)}
+                  className="relative rounded-xl overflow-hidden bg-black aspect-[9/16] cursor-pointer group"
+                >
                   {story.mediaType === "video" ? (
                     <video src={story.mediaUrl} className="w-full h-full object-cover" />
                   ) : (
                     <img src={story.mediaUrl} className="w-full h-full object-cover" />
                   )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2 opacity-100 group-hover:from-black/80 transition-all">
                       <div className="flex items-center justify-between">
                         <div className="flex gap-2 text-xs text-white">
                           <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
@@ -375,6 +381,19 @@ export default function Profile() {
               ))}
             </div>
           </section>
+        )}
+
+        {/* ── Story Viewer Modal ─────────────────────────────────────────── */}
+        {selectedStoryIndex !== null && myStoriesQuery.data && (
+          <StoryViewer 
+            stories={myStoriesQuery.data.map(s => ({
+              ...s,
+              userName: u.name,
+              userAvatar: u.avatar
+            }))}
+            initialIndex={selectedStoryIndex}
+            onClose={() => setSelectedStoryIndex(null)}
+          />
         )}
 
         {/* ── Profile completion ────────────────────────────────────────── */}
