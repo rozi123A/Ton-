@@ -647,18 +647,23 @@ export async function getUserPublicProfile(userId: number) {
       gender: users.gender,
       avatar: users.avatar,
       bio: users.bio,
-      country: users.country,
-      isPremium: users.isPremium,
-      isOnline: users.isOnline,
-      profileViews: users.profileViews,
-      createdAt: users.createdAt,
       role: users.role,
-      // wallet و credits لا تُرسل للعملاء — مخفية من السيرفر
     }).from(users).where(eq(users.id, userId)).limit(1);
     const profile = rows[0] ?? null;
     // الأدمن لا يمكن رؤية ملفه الشخصي من قِبل أي أحد
     if (profile?.role === 'admin') return null;
-    return profile;
+    if (!profile) return null;
+
+    // الملف العام يعرض بطاقة المستخدم ومحتواه فقط. لا تُرسل أرصدة أو
+    // إحصاءات أو حالة VIP/الظهور حتى لا تظهر بالخطأ في أي واجهة عامة.
+    return {
+      id: profile.id,
+      name: profile.name,
+      age: profile.age,
+      gender: profile.gender,
+      avatar: profile.avatar,
+      bio: profile.bio,
+    };
   } catch (err) {
     console.error('[Database] getUserPublicProfile failed:', err);
     return null;
@@ -1111,6 +1116,29 @@ export async function getUserStories(userId: number) {
     return storiesWithStats;
   } catch (err) {
     console.error('[Database] getUserStories failed:', err);
+    return [];
+  }
+}
+
+export async function getPublicUserStories(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select({
+        id: stories.id,
+        userId: stories.userId,
+        mediaUrl: stories.mediaUrl,
+        mediaType: stories.mediaType,
+        caption: stories.caption,
+        createdAt: stories.createdAt,
+        expiresAt: stories.expiresAt,
+      })
+      .from(stories)
+      .where(and(eq(stories.userId, userId), gt(stories.expiresAt, new Date())))
+      .orderBy(desc(stories.createdAt));
+  } catch (err) {
+    console.error('[Database] getPublicUserStories failed:', err);
     return [];
   }
 }

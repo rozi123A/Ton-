@@ -44,6 +44,7 @@ export default function Profile() {
   const queryParams = new URLSearchParams(window.location.search);
   const targetUserId = queryParams.get("userId") ? parseInt(queryParams.get("userId")!) : null;
   const isOwnProfile = !targetUserId || targetUserId === (user as any)?.id;
+  const isPublicProfile = !!targetUserId && !isOwnProfile;
 
   const { data: publicProfile, isLoading: loadingPublic } = trpc.users.getPublicProfile.useQuery(
     targetUserId || 0,
@@ -87,9 +88,19 @@ export default function Profile() {
     },
   });
 
-  const walletQuery  = trpc.gifts.getWallet.useQuery(undefined,  { enabled: isAuthenticated });
-  const balanceQuery = trpc.gifts.getBalance.useQuery(undefined, { enabled: isAuthenticated });
-  const myStoriesQuery = trpc.stories.getUserStories.useQuery({ userId: u?.id }, { enabled: !!u?.id });
+  // Wallet and points belong to the signed-in user only. Never request them
+  // while a public profile is open.
+  const walletQuery  = trpc.gifts.getWallet.useQuery(undefined,  { enabled: isAuthenticated && isOwnProfile });
+  const balanceQuery = trpc.gifts.getBalance.useQuery(undefined, { enabled: isAuthenticated && isOwnProfile });
+  const publicStoriesQuery = trpc.stories.getPublicUserStories.useQuery(
+    { userId: u?.id ?? 0 },
+    { enabled: isPublicProfile && !!u?.id },
+  );
+  const ownStoriesQuery = trpc.stories.getUserStories.useQuery(
+    { userId: u?.id ?? 0 },
+    { enabled: !isPublicProfile && !!u?.id },
+  );
+  const myStoriesQuery = isPublicProfile ? publicStoriesQuery : ownStoriesQuery;
   
   const utils = trpc.useUtils();
   const createStory = trpc.stories.create.useMutation({
@@ -196,12 +207,12 @@ export default function Profile() {
           <h1 className="text-xl font-bold text-white flex-1">
             {isOwnProfile ? "الملف الشخصي" : `ملف ${u?.name || "مستخدم"}`}
           </h1>
-          {u?.isPremium && (
+          {isOwnProfile && u?.isPremium && (
             <span className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 text-xs px-3 py-1 rounded-full font-bold">
               <Crown className="w-3.5 h-3.5" /> VIP
             </span>
           )}
-          {u?.role === 'admin' && (
+          {isOwnProfile && u?.role === 'admin' && (
             <button
               onClick={() => setLocation("/admin")}
               className="flex items-center gap-1 bg-red-600/80 border border-red-500/60 text-white text-xs px-3 py-1.5 rounded-full font-bold"
@@ -285,7 +296,7 @@ export default function Profile() {
         {/* ── Hero card ─────────────────────────────────────────────────── */}
         <section className="bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden">
           <div className="h-24 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 relative">
-            {u?.isPremium && (
+            {isOwnProfile && u?.isPremium && (
               <div className="absolute top-3 left-3 flex items-center gap-1 bg-yellow-400 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-full shadow">
                 <Crown className="w-3.5 h-3.5" /> عضو VIP
               </div>
@@ -324,47 +335,54 @@ export default function Profile() {
 
               <div className="flex-1 pt-14">
                 <p className="text-white font-bold text-lg leading-tight">{name || "مستخدم"}</p>
-                {memberSince && (
+                {isOwnProfile && memberSince && (
                   <p className="text-white/50 text-xs flex items-center gap-1 mt-0.5">
                     <Calendar className="w-3 h-3" /> عضو منذ {memberSince}
                   </p>
                 )}
               </div>
-              {u?.isPremium && <Shield className="w-5 h-5 text-green-400 mb-1" />}
+              {isOwnProfile && u?.isPremium && <Shield className="w-5 h-5 text-green-400 mb-1" />}
             </div>
 
-            {/* Stats row — tap اكتمال 7 times to reveal admin box */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Star className="w-3.5 h-3.5 text-yellow-400" />
-                  <span className="text-yellow-400 font-bold text-lg">{walletQuery.data?.wallet ?? 0}</span>
+            {isOwnProfile ? (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Star className="w-3.5 h-3.5 text-yellow-400" />
+                    <span className="text-yellow-400 font-bold text-lg">{walletQuery.data?.wallet ?? 0}</span>
+                  </div>
+                  <p className="text-white/50 text-xs">نجوم</p>
                 </div>
-                <p className="text-white/50 text-xs">نجوم</p>
-              </div>
-              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Zap className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="text-purple-400 font-bold text-lg">{balanceQuery.data?.credits ?? 0}</span>
+                <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Zap className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-purple-400 font-bold text-lg">{balanceQuery.data?.credits ?? 0}</span>
+                  </div>
+                  <p className="text-white/50 text-xs">نقاط</p>
                 </div>
-                <p className="text-white/50 text-xs">نقاط</p>
-              </div>
-              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Award className="w-3.5 h-3.5 text-green-400" />
-                  <span className="text-green-400 font-bold text-lg">{completionPct}%</span>
+                <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <Award className="w-3.5 h-3.5 text-green-400" />
+                    <span className="text-green-400 font-bold text-lg">{completionPct}%</span>
+                  </div>
+                  <p className="text-white/50 text-xs">اكتمال</p>
                 </div>
-                <p className="text-white/50 text-xs">اكتمال</p>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-2xl bg-purple-500/10 border border-purple-400/20 px-4 py-3 text-center">
+                <p className="text-purple-100 text-sm font-semibold">بطاقة المستخدم العامة</p>
+                <p className="text-white/50 text-xs mt-1">العمر والجنس والمحتوى المنشور فقط</p>
+              </div>
+            )}
           </div>
         </section>
 
-        {/* ── My Active Stories ────────────────────────────────────────── */}
+        {/* ── Public stories and videos / My active stories ─────────────── */}
         {myStoriesQuery.data && myStoriesQuery.data.length > 0 && (
           <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
             <h2 className="font-bold text-white flex items-center gap-2 mb-4">
-              <Play className="w-4 h-4 text-pink-400" /> قصصي النشطة
+              <Play className="w-4 h-4 text-pink-400" />
+              {isPublicProfile ? "قصص وفيديوهات المستخدم" : "قصصي النشطة"}
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {myStoriesQuery.data.map((story: any, index: number) => (
@@ -380,25 +398,33 @@ export default function Profile() {
                   )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2 opacity-100 group-hover:from-black/80 transition-all">
                       <div className="flex items-center justify-between">
-                        <div className="flex gap-2 text-xs text-white">
-                          <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
-                            <Eye className="w-3 h-3" /> {story.viewCount || 0}
+                        {isOwnProfile ? (
+                          <>
+                            <div className="flex gap-2 text-xs text-white">
+                              <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                                <Eye className="w-3 h-3" /> {story.viewCount || 0}
+                              </span>
+                              <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                                <MessageCircle className="w-3 h-3" /> {story.commentCount || 0}
+                              </span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("هل أنت متأكد من حذف هذه القصة؟")) {
+                                  deleteStory.mutate({ storyId: story.id });
+                                }
+                              }}
+                              className="bg-red-500/80 p-1.5 rounded-full text-white hover:bg-red-600 transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-white/80 bg-black/40 px-2 py-1 rounded-full">
+                            {story.mediaType === "video" ? "فيديو" : "قصة"}
                           </span>
-                          <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
-                            <MessageCircle className="w-3 h-3" /> {story.commentCount || 0}
-                          </span>
-                        </div>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm("هل أنت متأكد من حذف هذه القصة؟")) {
-                              deleteStory.mutate({ storyId: story.id });
-                            }
-                          }}
-                          className="bg-red-500/80 p-1.5 rounded-full text-white hover:bg-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        )}
                       </div>
                     </div>
                 </div>
@@ -417,11 +443,12 @@ export default function Profile() {
             }))}
             initialIndex={selectedStoryIndex}
             onClose={() => setSelectedStoryIndex(null)}
+             showViewCount={isOwnProfile}
           />
         )}
 
         {/* ── Profile completion ────────────────────────────────────────── */}
-        {completionPct < 100 && (
+        {isOwnProfile && completionPct < 100 && (
           <section style={{ backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155', padding: '16px' }}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -449,11 +476,12 @@ export default function Profile() {
           </section>
         )}
 
-        {/* ── Info fields ──────────────────────────────────────────────── */}
-        <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5 space-y-4">
-          <h2 className="font-bold text-white flex items-center gap-2">
-            <User className="w-4 h-4 text-purple-400" /> معلوماتك
-          </h2>
+        {/* ── Private edit fields / public identity card ───────────────── */}
+        {isOwnProfile ? (
+          <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5 space-y-4">
+            <h2 className="font-bold text-white flex items-center gap-2">
+              <User className="w-4 h-4 text-purple-400" /> معلوماتك
+            </h2>
 
           <div>
             <label className="block text-white/70 text-sm font-medium mb-1.5">الاسم</label>
@@ -510,10 +538,34 @@ export default function Profile() {
               {saveError}
             </p>
           )}
-        </section>
+          </section>
+        ) : (
+          <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
+            <h2 className="font-bold text-white flex items-center gap-2 mb-4">
+              <User className="w-4 h-4 text-purple-400" /> بطاقة المستخدم
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-slate-900/70 border border-slate-700 p-3">
+                <p className="text-white/45 text-xs mb-1">العمر</p>
+                <p className="text-white font-bold">{u?.age ? `${u.age} سنة` : "غير محدد"}</p>
+              </div>
+              <div className="rounded-xl bg-slate-900/70 border border-slate-700 p-3">
+                <p className="text-white/45 text-xs mb-1">الجنس</p>
+                <p className="text-white font-bold">
+                  {u?.gender === "male" ? "ذكر" : u?.gender === "female" ? "أنثى" : "غير محدد"}
+                </p>
+              </div>
+            </div>
+            {u?.bio && (
+              <p className="mt-3 rounded-xl bg-slate-900/70 border border-slate-700 p-3 text-white/70 text-sm leading-relaxed">
+                {u.bio}
+              </p>
+            )}
+          </section>
+        )}
 
         {/* ── Credits & Stars ───────────────────────────────────────────── */}
-        <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
+        {isOwnProfile && <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-white flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-400" /> رصيد النجوم
@@ -554,7 +606,7 @@ export default function Profile() {
               ))}
             </div>
           )}
-        </section>
+        </section>}
 
       </div>
     </div>

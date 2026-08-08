@@ -1,4 +1,5 @@
-import { X, Star, Zap, Heart, UserPlus, Check, Clock, MapPin, Users } from 'lucide-react';
+import { X, UserPlus, Check, Clock, Play } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { useTranslation } from "@/contexts/LanguageContext";
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
@@ -8,18 +9,16 @@ interface UserProfileModalProps {
   onClose: () => void;
 }
 
-const COUNTRY_NAMES: Record<string, string> = {
-  SA: 'السعودية', AE: 'الإمارات', KW: 'الكويت', QA: 'قطر', BH: 'البحرين',
-  OM: 'عُمان', EG: 'مصر', JO: 'الأردن', IQ: 'العراق', SY: 'سوريا',
-  LB: 'لبنان', MA: 'المغرب', TN: 'تونس', DZ: 'الجزائر', LY: 'ليبيا',
-  YE: 'اليمن', SD: 'السودان', SO: 'الصومال',
-};
-
 export default function UserProfileModal({ userId, onClose }: UserProfileModalProps) {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const { data: profile, isLoading } = trpc.users.getPublicProfile.useQuery(userId, {
     enabled: userId > 0,
   });
+  const { data: stories = [] } = trpc.stories.getPublicUserStories.useQuery(
+    { userId },
+    { enabled: userId > 0 },
+  );
   const { data: friendStatus, refetch: refetchStatus } = trpc.social.getFriendStatus.useQuery(userId, {
     enabled: userId > 0,
   });
@@ -54,11 +53,6 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
   }
 
   const status = friendStatus?.status ?? 'none';
-  const countryName = profile.country ? (COUNTRY_NAMES[profile.country] ?? profile.country) : null;
-  const memberSince = profile.createdAt
-    ? new Date(profile.createdAt).toLocaleDateString('ar', { year: 'numeric', month: 'long' })
-    : null;
-
   return (
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
@@ -76,11 +70,6 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
           >
             <X className="w-4 h-4" />
           </button>
-          {profile.isPremium && (
-            <div className="absolute top-3 left-3 bg-yellow-400 text-gray-900 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
-              <Star className="w-3 h-3 fill-gray-900" /> VIP
-            </div>
-          )}
         </div>
 
         {/* Avatar + basic info */}
@@ -93,16 +82,12 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
                 alt={profile.name || ''}
                 className="w-20 h-20 rounded-2xl border-4 border-gray-900 object-cover bg-white shadow-xl"
               />
-              {profile.isOnline && (
-                <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-gray-900" />
-              )}
             </div>
             
             {/* Info container - added pt-12 to push text below the gradient banner area */}
             <div className="pt-11 flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-white font-black text-lg leading-tight truncate">{profile.name || 'مستخدم'}</h2>
-                {profile.isPremium && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
               </div>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 {profile.age && (
@@ -112,11 +97,6 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
                   <span className="text-white/40 text-xs">
                     {profile.gender === 'male' ? t('profile.male') : profile.gender === 'female' ? t('profile.female') : ''}
                   </span>
-                )}
-                {profile.isOnline ? (
-                  <span className="text-green-400 text-xs font-bold">{t('profile.online')}</span>
-                ) : (
-                  <span className="text-white/40 text-xs">{t('profile.offline')}</span>
                 )}
               </div>
             </div>
@@ -129,55 +109,41 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
             </p>
           )}
 
-          {/* Stats row */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {/* نجوم — مشوّشة دائماً */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+          {/* Public content preview — no wallet, points, stars, or view stats */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-white/70 text-xs font-bold">قصص وفيديوهات المستخدم</p>
+              {stories.length > 0 && <Play className="w-3.5 h-3.5 text-pink-400" />}
+            </div>
+            {stories.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {stories.slice(0, 3).map((story: any) => (
+                  <button
+                    key={story.id}
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      setLocation(`/profile?userId=${userId}`);
+                    }}
+                    className="relative aspect-[9/12] rounded-xl overflow-hidden bg-black border border-white/10"
+                  >
+                    {story.mediaType === 'video' ? (
+                      <video src={story.mediaUrl} className="w-full h-full object-cover" muted />
+                    ) : (
+                      <img src={story.mediaUrl} alt="" className="w-full h-full object-cover" />
+                    )}
+                    {story.mediaType === 'video' && (
+                      <span className="absolute bottom-1 right-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded-full">
+                        فيديو
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-              <p
-                className="text-white font-black text-base select-none"
-                style={{ filter: 'blur(6px)', userSelect: 'none' }}
-              >
-                ●●●
+            ) : (
+              <p className="text-white/40 text-xs rounded-xl bg-white/5 border border-white/10 p-3 text-center">
+                لا توجد قصص أو فيديوهات نشطة
               </p>
-              <p className="text-white/50 text-[10px] font-bold">{t('profile.stars')}</p>
-            </div>
-            {/* نقاط — مشوّشة دائماً */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <Zap className="w-3.5 h-3.5 text-purple-400" />
-              </div>
-              <p
-                className="text-white font-black text-base select-none"
-                style={{ filter: 'blur(6px)', userSelect: 'none' }}
-              >
-                ●●●
-              </p>
-              <p className="text-white/50 text-[10px] font-bold">{t('profile.points')}</p>
-            </div>
-            {/* مشاهدات — ظاهرة */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-3 text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <Users className="w-3.5 h-3.5 text-blue-400" />
-              </div>
-              <p className="text-white font-black text-base">{profile.profileViews ?? 0}</p>
-              <p className="text-white/50 text-[10px] font-bold">{t('profile.views')}</p>
-            </div>
-          </div>
-
-          {/* Extra info */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {countryName && (
-              <span className="flex items-center gap-1 bg-white/5 border border-white/10 text-white/60 text-xs px-3 py-1.5 rounded-full">
-                <MapPin className="w-3 h-3" /> {countryName}
-              </span>
-            )}
-            {memberSince && (
-              <span className="flex items-center gap-1 bg-white/5 border border-white/10 text-white/60 text-xs px-3 py-1.5 rounded-full">
-                <Heart className="w-3 h-3" /> {t('profile.since')} {memberSince}
-              </span>
             )}
           </div>
 

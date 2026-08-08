@@ -12,7 +12,7 @@ import {
   getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
   getUnreadMessageCount,   markMessagesRead, updateUserPresence, updateUserOffline,
-  saveStory, getActiveStories, getUserStories,
+  saveStory, getActiveStories, getUserStories, getPublicUserStories,
   saveStoryComment, getStoryComments, recordStoryView, getStoryViewers,
   deleteStory, getStoryById,
   getDb,
@@ -338,8 +338,20 @@ export const appRouter = router({
 
     getUserStories: publicProcedure
       .input(z.object({ userId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
+        if (!ctx.user || ctx.user.id !== input.userId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "لا يمكن عرض إحصاءات قصص مستخدم آخر",
+          });
+        }
         return await getUserStories(input.userId);
+      }),
+
+    getPublicUserStories: publicProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        return await getPublicUserStories(input.userId);
       }),
 
     addComment: protectedProcedure

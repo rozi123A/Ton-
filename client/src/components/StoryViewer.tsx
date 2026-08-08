@@ -26,9 +26,15 @@ interface StoryViewerProps {
   stories: Story[];
   initialIndex?: number;
   onClose: () => void;
+  showViewCount?: boolean;
 }
 
-export default function StoryViewer({ stories, initialIndex = 0, onClose }: StoryViewerProps) {
+export default function StoryViewer({
+  stories,
+  initialIndex = 0,
+  onClose,
+  showViewCount = true,
+}: StoryViewerProps) {
   const [, setLocation] = useLocation();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
@@ -121,17 +127,19 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-white/80 text-xs bg-black/20 px-2 py-1 rounded-full">
-            <Eye className="w-3 h-3" />
-            <span>{story.viewCount || 0}</span>
-          </div>
+          {showViewCount && (
+            <div className="flex items-center gap-1 text-white/80 text-xs bg-black/20 px-2 py-1 rounded-full">
+              <Eye className="w-3 h-3" />
+              <span>{story.viewCount || 0}</span>
+            </div>
+          )}
           {isOwner && (
-            <button 
+            <button
               onClick={() => {
                 if (confirm("هل أنت متأكد من حذف هذه القصة؟")) {
                   deleteStory.mutate({ storyId: story.id });
                 }
-              }} 
+              }}
               className="text-red-400 p-2 hover:bg-red-500/20 rounded-full"
             >
               <Trash2 className="w-5 h-5" />
