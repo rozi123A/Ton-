@@ -375,6 +375,7 @@ export const appRouter = router({
           message: input.content,
           fromName: ctx.user.name || 'مستخدم',
           fromAvatar: ctx.user.avatar || '',
+          fromUserId: ctx.user.id,
         });
 
         return { success: true };

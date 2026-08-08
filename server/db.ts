@@ -849,6 +849,7 @@ export async function createNotification(userId: number, data: {
   message?: string;
   fromName?: string;
   fromAvatar?: string;
+  fromUserId?: number;
 }) {
   const db = await getDb();
   if (!db) return;

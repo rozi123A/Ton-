@@ -110,6 +110,7 @@ export const notifications = pgTable("notifications", {
   message: text("message"),
   fromName: text("fromName"),
   fromAvatar: text("fromAvatar"),
+  fromUserId: integer("fromUserId"),
   isRead: boolean("isRead").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

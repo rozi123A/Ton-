@@ -1,5 +1,6 @@
 import { Bell, X, UserPlus, Heart, Check } from 'lucide-react';
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { playFriendSound, playMessageSound } from '@/lib/notificationSound';
 import { trpc } from '@/lib/trpc';
@@ -11,6 +12,7 @@ interface AppNotif {
   message?: string;
   fromName?: string;
   fromAvatar?: string;
+  fromUserId?: number;
   ts: number;
   read: boolean;
 }
@@ -62,6 +64,7 @@ function NotifIcon({ type }: { type: string }) {
 }
 
 export default function NotificationBell() {
+  const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const userId = (user as { id?: number } | null)?.id;
   const [notifs, setNotifs] = useState<AppNotif[]>(loadStored);
@@ -85,6 +88,7 @@ export default function NotificationBell() {
           message: n.message || undefined,
           fromName: n.fromName || undefined,
           fromAvatar: n.fromAvatar || undefined,
+          fromUserId: (n as any).fromUserId || undefined,
           ts: n.createdAt instanceof Date ? n.createdAt.getTime() : new Date(n.createdAt).getTime(),
           read: n.isRead
         }));
@@ -177,6 +181,7 @@ export default function NotificationBell() {
             message: data.message,
             fromName: data.fromName,
             fromAvatar: data.fromAvatar,
+            fromUserId: data.fromUserId,
             ts: data.ts || Date.now(),
           });
         } catch {}
@@ -286,7 +291,13 @@ export default function NotificationBell() {
               notifs.map(n => (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${!n.read ? 'bg-purple-50/50' : ''}`}
+                  onClick={() => {
+                    if (n.fromUserId) {
+                      setOpen(false);
+                      setLocation(`/profile?userId=${n.fromUserId}`);
+                    }
+                  }}
+                  className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer ${!n.read ? 'bg-purple-50/50' : ''}`}
                 >
                   {/* Avatar or icon */}
                   <div className="flex-shrink-0 mt-0.5">
