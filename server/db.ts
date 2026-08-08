@@ -449,7 +449,10 @@ export async function getMessages(userId1: number, userId2: number) {
       or(
         and(eq(messages.senderId, userId1), eq(messages.receiverId, userId2)),
         and(eq(messages.senderId, userId2), eq(messages.receiverId, userId1))
-      )
+      ),
+      // Story comments used to be copied into the direct-message table.
+      // Keep old comments out of real conversations as well as new ones.
+      sql`content NOT LIKE '[تعليق على القصة]:%'`
     ).orderBy(messages.createdAt);
   } catch (error) {
     console.error('[Database] Failed to get messages:', error);
@@ -463,7 +466,12 @@ export async function getUnreadMessageCount(userId: number) {
   try {
     const result = await db.select({ count: sql<number>`count(*)::int` })
       .from(messages)
-      .where(and(eq(messages.receiverId, userId), eq(messages.isRead, false)));
+      .where(and(
+        eq(messages.receiverId, userId),
+        eq(messages.isRead, false),
+        // Do not count legacy story comments as unread private messages.
+        sql`content NOT LIKE '[تعليق على القصة]:%'`
+      ));
     return result[0]?.count ?? 0;
   } catch {
     return 0;

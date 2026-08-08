@@ -366,8 +366,16 @@ export const appRouter = router({
           content: input.content,
         });
 
-        // 💬 Also send as a direct message
-        await saveMessage(ctx.user.id, story.userId, `[تعليق على القصة]: ${input.content}`);
+        // Story comments belong in notifications, not in the private-message
+        // inbox. The old implementation copied them into messages, which made
+        // the friends badge show unread messages with an empty chat.
+        await createNotification(story.userId, {
+          type: 'story-comment',
+          title: 'تعليق جديد على قصتك',
+          message: input.content,
+          fromName: ctx.user.name || 'مستخدم',
+          fromAvatar: ctx.user.avatar || '',
+        });
 
         return { success: true };
       }),
