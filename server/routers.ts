@@ -356,9 +356,10 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "القصة غير موجودة" });
         }
 
-        if (story.userId === ctx.user.id) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك التعليق على قصتك الخاصة" });
-        }
+        // Allow owner to reply to comments
+        // if (story.userId === ctx.user.id) {
+        //   throw new TRPCError({ code: "FORBIDDEN", message: "لا يمكنك التعليق على قصتك الخاصة" });
+        // }
 
         await saveStoryComment({
           storyId: input.storyId,

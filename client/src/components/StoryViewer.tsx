@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, ChevronLeft, ChevronRight, MessageCircle, Eye, Send, Trash2 } from "lucide-react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
@@ -28,6 +29,7 @@ interface StoryViewerProps {
 }
 
 export default function StoryViewer({ stories, initialIndex = 0, onClose }: StoryViewerProps) {
+  const [, setLocation] = useLocation();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
   const [showViewers, setShowViewers] = useState(false);
@@ -87,7 +89,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
 
   const handleSendComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentText.trim() || isOwner) return;
+    if (!commentText.trim()) return;
     addComment.mutate({ storyId: story.id, content: commentText });
   };
 
@@ -185,13 +187,27 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
               ) : (
                 comments.map((c: any) => (
                   <div key={c.id} className="flex gap-3">
-                    <Avatar className="w-8 h-8">
+                    <Avatar 
+                      className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => {
+                        onClose();
+                        setLocation(`/profile?userId=${c.userId}`);
+                      }}
+                    >
                       <AvatarImage src={c.userAvatar || ""} />
                       <AvatarFallback>{c.userName?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="bg-gray-100 p-3 rounded-2xl rounded-tr-none">
-                        <p className="font-bold text-xs mb-1">{c.userName}</p>
+                        <p 
+                          className="font-bold text-xs mb-1 cursor-pointer hover:text-purple-600 transition-colors"
+                          onClick={() => {
+                            onClose();
+                            setLocation(`/profile?userId=${c.userId}`);
+                          }}
+                        >
+                          {c.userName}
+                        </p>
                         <p className="text-sm">{c.content}</p>
                       </div>
                       <p className="text-[10px] text-gray-400 mt-1 mr-2">
@@ -205,9 +221,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
           </ScrollArea>
 
           <div className="p-4 border-t bg-gray-50">
-            {isOwner ? (
-              <p className="text-center text-sm text-gray-500 italic">لا يمكنك التعليق على قصتك الخاصة</p>
-            ) : (
+            {(
               <form onSubmit={handleSendComment} className="flex gap-2">
                 <Input 
                   value={commentText}
