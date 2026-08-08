@@ -744,6 +744,7 @@ export const appRouter = router({
             type: 'gift',
             fromName: ctx.user.name || 'مستخدم',
             fromAvatar: ctx.user.avatar || '',
+            fromUserId: ctx.user.id,
             message: `أرسل لك هدية: ${input.giftType}`,
           });
         }

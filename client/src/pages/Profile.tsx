@@ -37,9 +37,20 @@ const CREDIT_PACKAGES = [
 ];
 
 export default function Profile() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isAuthenticated, loading } = useAuth();
-  const u = user as any;
+  
+  // Parse userId from query string
+  const queryParams = new URLSearchParams(window.location.search);
+  const targetUserId = queryParams.get("userId") ? parseInt(queryParams.get("userId")!) : null;
+  const isOwnProfile = !targetUserId || targetUserId === (user as any)?.id;
+
+  const { data: publicProfile, isLoading: loadingPublic } = trpc.users.getPublicProfile.useQuery(
+    targetUserId || 0,
+    { enabled: !!targetUserId && !isOwnProfile }
+  );
+
+  const u = isOwnProfile ? (user as any) : publicProfile;
 
   const [name,   setName]   = useState(u?.name   || "");
   const [age,    setAge]    = useState<number>(u?.age ?? 18);
@@ -58,12 +69,12 @@ export default function Profile() {
   const storyFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (u?.name)   setName(u.name);
-    if (u?.age)    setAge(u.age);
-    if (u?.bio)    setBio(u.bio);
-    if (u?.avatar) setAvatar(u.avatar);
-    if (u?.gender) setGender(u.gender);
-  }, [u?.name, u?.age, u?.bio, u?.avatar, u?.gender]);
+    setName(u?.name || "");
+    setAge(u?.age ?? 18);
+    setBio(u?.bio || "");
+    setAvatar(u?.avatar || "");
+    setGender(u?.gender || "other");
+  }, [u]);
 
   const saveProfile = trpc.users.saveProfile.useMutation({
     onSuccess: () => {
@@ -152,15 +163,23 @@ export default function Profile() {
     ? new Date(u.createdAt).toLocaleDateString("ar-SA", { year: "numeric", month: "long" })
     : null;
 
-  if (loading) {
+  if (loading || (targetUserId && !isOwnProfile && loadingPublic)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-purple-900">
         <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!isAuthenticated) { setLocation("/login"); return null; }
+  if (targetUserId && !isOwnProfile && !publicProfile) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-4">
+        <p className="text-xl font-bold mb-4">المستخدم غير موجود</p>
+        <button onClick={() => setLocation("/")} className="bg-purple-600 px-6 py-2 rounded-full">العودة للرئيسية</button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir="rtl">
@@ -174,7 +193,9 @@ export default function Profile() {
           <button onClick={() => setLocation("/")} className="text-white/70 hover:text-white transition-colors p-1">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold text-white flex-1">الملف الشخصي</h1>
+          <h1 className="text-xl font-bold text-white flex-1">
+            {isOwnProfile ? "الملف الشخصي" : `ملف ${u?.name || "مستخدم"}`}
+          </h1>
           {u?.isPremium && (
             <span className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 text-xs px-3 py-1 rounded-full font-bold">
               <Crown className="w-3.5 h-3.5" /> VIP
@@ -274,28 +295,31 @@ export default function Profile() {
           <div className="px-6 pb-6">
             <div className="flex items-end gap-4 -mt-12 mb-4">
               <div className="relative group">
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-slate-900 shadow-xl flex-shrink-0 focus:outline-none active:scale-95 transition-transform"
-                >
+                <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-slate-900 shadow-xl flex-shrink-0">
                   {avatar ? (
-                    <img src={avatar} alt="صورتك" className="w-full h-full object-cover" />
+                    <img src={avatar} alt={name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-purple-500/60 to-pink-500/60 flex items-center justify-center">
                       <User className="w-10 h-10 text-white/70" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Camera className="w-6 h-6 text-white" />
-                  </div>
-                </button>
-                <button 
-                  onClick={() => setShowStoryUpload(true)}
-                  className="absolute -bottom-1 -right-1 w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-900 hover:scale-110 transition-transform"
-                >
-                  <PlusCircle className="w-5 h-5 text-white" />
-                </button>
+                  {isOwnProfile && (
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      <Camera className="w-6 h-6 text-white" />
+                    </button>
+                  )}
+                </div>
+                {isOwnProfile && (
+                  <button 
+                    onClick={() => setShowStoryUpload(true)}
+                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-900 hover:scale-110 transition-transform"
+                  >
+                    <PlusCircle className="w-5 h-5 text-white" />
+                  </button>
+                )}
               </div>
 
               <div className="flex-1 pt-14">
