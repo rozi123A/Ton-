@@ -196,10 +196,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
           {story.caption && <p className="text-white text-lg mb-4">{story.caption}</p>}
           <div className="flex justify-center gap-4">
             <button 
-              onClick={() => {
-                onClose();
-                window.location.href = "/profile";
-              }}
+              onClick={() => setShowComments(true)}
               className="flex items-center gap-2 text-white bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full backdrop-blur-sm"
             >
               <MessageCircle className="w-5 h-5" />
