@@ -86,7 +86,12 @@ export default function NotificationBell() {
         ts: n.createdAt instanceof Date ? n.createdAt.getTime() : new Date(n.createdAt).getTime(),
         read: n.isRead
       }));
-      setNotifs(formatted);
+      
+      // Update state without triggering addNotif logic (which plays sound)
+      setNotifs(prev => {
+        // Just sync with DB, don't play sound here as SSE handles live notifications
+        return formatted;
+      });
     }
   }, [dbNotifs]);
 
