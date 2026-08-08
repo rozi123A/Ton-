@@ -29,8 +29,6 @@ interface StoryViewerProps {
 
 export default function StoryViewer({ stories, initialIndex = 0, onClose }: StoryViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [progress, setProgress] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showViewers, setShowViewers] = useState(false);
   const [commentText, setCommentText] = useState("");
@@ -38,8 +36,6 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const { user } = useAuth();
   const story = stories[currentIndex];
   const isOwner = user?.id === story.userId;
-
-  const DURATION = 5000; // 5 seconds per story
 
   const recordView = trpc.stories.recordView.useMutation();
   const deleteStory = trpc.stories.delete.useMutation({
@@ -75,32 +71,9 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     }
   }, [currentIndex, story.id, user]);
 
-  useEffect(() => {
-    if (isPaused || showComments || showViewers) return;
-
-    const interval = 50;
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          if (currentIndex < stories.length - 1) {
-            setCurrentIndex(currentIndex + 1);
-            return 0;
-          } else {
-            onClose();
-            return 100;
-          }
-        }
-        return prev + (interval / DURATION) * 100;
-      });
-    }, interval);
-
-    return () => clearInterval(timer);
-  }, [currentIndex, isPaused, showComments, stories.length, onClose]);
-
   const next = () => {
     if (currentIndex < stories.length - 1) {
       setCurrentIndex(currentIndex + 1);
-      setProgress(0);
     } else {
       onClose();
     }
@@ -109,7 +82,6 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const prev = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
-      setProgress(0);
     }
   };
 
@@ -121,20 +93,6 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center select-none" dir="rtl">
-      {/* Progress Bars */}
-      <div className="absolute top-4 left-4 right-4 z-10 flex gap-1" dir="ltr">
-        {stories.map((_, idx) => (
-          <div key={idx} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-white transition-all duration-100 ease-linear"
-              style={{ 
-                width: idx < currentIndex ? '100%' : idx === currentIndex ? `${progress}%` : '0%' 
-              }}
-            />
-          </div>
-        ))}
-      </div>
-
       {/* Header */}
       <div className="absolute top-8 left-4 right-4 z-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -172,10 +130,6 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
       {/* Media Content */}
       <div 
         className="w-full h-full flex items-center justify-center"
-        onMouseDown={() => !showComments && setIsPaused(true)}
-        onMouseUp={() => setIsPaused(false)}
-        onTouchStart={() => !showComments && setIsPaused(true)}
-        onTouchEnd={() => setIsPaused(false)}
       >
         {story.mediaType === "video" ? (
           <video 
@@ -183,7 +137,6 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
             className="max-w-full max-h-full object-contain" 
             autoPlay 
             playsInline
-            onEnded={next}
           />
         ) : (
           <img src={story.mediaUrl} className="max-w-full max-h-full object-contain" />

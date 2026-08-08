@@ -1,4 +1,4 @@
-import { Bell, X, MessageCircle, UserPlus, Check, Heart } from 'lucide-react';
+import { Bell, X, UserPlus, Heart } from 'lucide-react';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { playFriendSound, playMessageSound } from '@/lib/notificationSound';
@@ -20,7 +20,8 @@ const MAX_STORED = 50;
 
 function loadStored(): AppNotif[] {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    return Array.isArray(stored) ? stored.filter((n: AppNotif) => n.type !== 'new-message') : [];
   } catch {
     return [];
   }
@@ -57,7 +58,6 @@ function timeAgo(ts: number): string {
 function NotifIcon({ type }: { type: string }) {
   if (type === 'friend-request')  return <UserPlus className="w-4 h-4 text-purple-400" />;
   if (type === 'friend-accepted') return <Heart className="w-4 h-4 text-pink-400" />;
-  if (type === 'new-message')     return <MessageCircle className="w-4 h-4 text-blue-400" />;
   return <Bell className="w-4 h-4 text-yellow-400" />;
 }
 
@@ -76,16 +76,18 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (dbNotifs) {
-      const formatted = dbNotifs.map(n => ({
-        id: n.id.toString(),
-        type: n.type,
-        title: n.title || undefined,
-        message: n.message || undefined,
-        fromName: n.fromName || undefined,
-        fromAvatar: n.fromAvatar || undefined,
-        ts: n.createdAt instanceof Date ? n.createdAt.getTime() : new Date(n.createdAt).getTime(),
-        read: n.isRead
-      }));
+      const formatted = dbNotifs
+        .filter(n => n.type !== 'new-message')
+        .map(n => ({
+          id: n.id.toString(),
+          type: n.type,
+          title: n.title || undefined,
+          message: n.message || undefined,
+          fromName: n.fromName || undefined,
+          fromAvatar: n.fromAvatar || undefined,
+          ts: n.createdAt instanceof Date ? n.createdAt.getTime() : new Date(n.createdAt).getTime(),
+          read: n.isRead
+        }));
       
       // Update state without triggering addNotif logic (which plays sound)
       setNotifs(prev => {
@@ -131,6 +133,10 @@ export default function NotificationBell() {
   }, [notifs, userId]);
 
   const addNotif = useCallback((raw: Omit<AppNotif, 'id' | 'read'>) => {
+    // Direct messages remain available in the chat UI; they do not belong in
+    // the general notification bell.
+    if (raw.type === 'new-message') return;
+
     const notif: AppNotif = { ...raw, id: `${raw.ts}-${Math.random()}`, read: false };
     setNotifs(prev => {
       const next = [notif, ...prev].slice(0, MAX_STORED);
@@ -164,7 +170,7 @@ export default function NotificationBell() {
       es.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
-          if (data.type === 'connected') return;
+          if (data.type === 'connected' || data.type === 'new-message') return;
           addNotif({
             type: data.type,
             title: data.title,

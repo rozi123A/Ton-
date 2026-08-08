@@ -366,15 +366,6 @@ export const appRouter = router({
           content: input.content,
         });
 
-        // 🔔 Send notification to story owner
-        await createNotification(story.userId, {
-          type: "new-message", // Using new-message type for better visibility
-          title: "تعليق جديد على قصتك",
-          message: `${ctx.user.name || 'مستخدم'}: ${input.content}`,
-          fromName: ctx.user.name,
-          fromAvatar: ctx.user.avatar,
-        });
-
         // 💬 Also send as a direct message
         await saveMessage(ctx.user.id, story.userId, `[تعليق على القصة]: ${input.content}`);
 
