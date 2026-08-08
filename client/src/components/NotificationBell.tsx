@@ -301,18 +301,18 @@ export default function NotificationBell() {
                 >
                   {/* Avatar or icon */}
                   <div className="flex-shrink-0 mt-0.5">
-                    {n.fromAvatar ? (
-                      <div className="relative">
-                        <img src={n.fromAvatar} alt={n.fromName} className="w-9 h-9 rounded-full object-cover border border-gray-100" />
-                        <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">
-                          <NotifIcon type={n.type} />
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center">
+                    <div className="relative">
+                      {n.fromAvatar ? (
+                        <img src={n.fromAvatar} alt={n.fromName} className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center border-2 border-white shadow-sm">
+                          <span className="text-purple-600 font-bold text-xs">{n.fromName?.charAt(0) || 'U'}</span>
+                        </div>
+                      )}
+                      <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-50">
                         <NotifIcon type={n.type} />
-                      </div>
-                    )}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Content */}

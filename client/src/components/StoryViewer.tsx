@@ -67,6 +67,14 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
 
   const utils = trpc.useUtils();
 
+  // Auto-scroll to bottom when new comments arrive
+  useEffect(() => {
+    if (showComments) {
+      const el = document.getElementById('comments-end');
+      el?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [comments.length, showComments]);
+
   useEffect(() => {
     if (story.id && user) {
       recordView.mutate({ storyId: story.id });
@@ -90,7 +98,13 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const handleSendComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
-    addComment.mutate({ storyId: story.id, content: commentText });
+    addComment.mutate({ storyId: story.id, content: commentText }, {
+      onSuccess: () => {
+        setCommentText("");
+        // Invalidate to show new comment
+        utils.stories.getComments.invalidate({ storyId: story.id });
+      }
+    });
   };
 
   return (
@@ -180,65 +194,79 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
             </button>
           </div>
           
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {comments.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">لا توجد تعليقات بعد</p>
-              ) : (
-                comments.map((c: any) => (
-                  <div key={c.id} className="flex gap-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-gray-50/50">
+            {comments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <MessageCircle className="w-12 h-12 opacity-20 mb-2" />
+                <p className="text-sm">لا توجد تعليقات بعد</p>
+              </div>
+            ) : (
+              [...comments].reverse().map((c: any) => (
+                <div key={c.id} className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <Avatar 
-                      className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity"
+                      className="w-10 h-10 border border-white shadow-sm cursor-pointer hover:scale-105 transition-transform"
                       onClick={() => {
                         onClose();
                         setLocation(`/profile?userId=${c.userId}`);
                       }}
                     >
-                      <AvatarImage src={c.userAvatar || ""} />
-                      <AvatarFallback>{c.userName?.charAt(0)}</AvatarFallback>
+                      {c.userAvatar ? (
+                        <AvatarImage src={c.userAvatar} className="object-cover" />
+                      ) : (
+                        <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold">
+                          {c.userName?.charAt(0) || "U"}
+                        </AvatarFallback>
+                      )}
                     </Avatar>
-                    <div className="flex-1">
-                      <div className="bg-gray-100 p-3 rounded-2xl rounded-tr-none">
-                        <p 
-                          className="font-bold text-xs mb-1 cursor-pointer hover:text-purple-600 transition-colors"
-                          onClick={() => {
-                            onClose();
-                            setLocation(`/profile?userId=${c.userId}`);
-                          }}
-                        >
-                          {c.userName}
-                        </p>
-                        <p className="text-sm">{c.content}</p>
-                      </div>
-                      <p className="text-[10px] text-gray-400 mt-1 mr-2">
-                        {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ar })}
+                  <div className="flex-1 min-w-0">
+                    <div className="bg-white p-3.5 rounded-2xl rounded-tr-none shadow-sm border border-gray-100">
+                      <p 
+                        className="font-bold text-xs text-purple-600 mb-1 cursor-pointer hover:underline"
+                        onClick={() => {
+                          onClose();
+                          setLocation(`/profile?userId=${c.userId}`);
+                        }}
+                      >
+                        {c.userName || 'مستخدم'}
                       </p>
+                      <p className="text-sm text-gray-800 leading-relaxed break-words">{c.content}</p>
                     </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5 mr-2 font-medium">
+                      {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true, locale: ar })}
+                    </p>
                   </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
+                </div>
+              ))
+            )}
+            <div id="comments-end" />
+          </div>
 
-          <div className="p-4 border-t bg-gray-50">
-            {(
-              <form onSubmit={handleSendComment} className="flex gap-2">
-                <Input 
+          <div className="p-4 border-t bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+            <form onSubmit={handleSendComment} className="flex gap-2 items-end max-w-full">
+              <div className="flex-1 relative">
+                <textarea
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="اكتب تعليقاً..."
-                  className="rounded-full bg-white"
+                  rows={1}
+                  className="w-full rounded-2xl bg-gray-100 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none min-h-[44px] max-h-[120px] overflow-y-auto"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendComment(e as any);
+                    }
+                  }}
                 />
-                <Button 
-                  type="submit" 
-                  size="icon" 
-                  disabled={!commentText.trim() || addComment.isPending}
-                  className="rounded-full"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </form>
-            )}
+              </div>
+              <Button 
+                type="submit" 
+                size="icon" 
+                disabled={!commentText.trim() || addComment.isPending}
+                className="rounded-full w-11 h-11 bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 flex-shrink-0"
+              >
+                <Send className="w-5 h-5 text-white" />
+              </Button>
+            </form>
           </div>
         </div>
       )}
