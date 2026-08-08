@@ -15,7 +15,7 @@ import {
   saveStory, getActiveStories, getUserStories,
   saveStoryComment, getStoryComments, recordStoryView, getStoryViewers,
   deleteStory, getStoryById,
-  getDb, createNotification, saveMessage,
+  getDb,
 } from "./db";
 import { and, eq, or, sql } from "drizzle-orm";
 import { users } from "../drizzle/schema";
