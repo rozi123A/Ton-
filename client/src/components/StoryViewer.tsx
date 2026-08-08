@@ -32,6 +32,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [showViewers, setShowViewers] = useState(false);
   const [commentText, setCommentText] = useState("");
   
   const { user } = useAuth();
@@ -61,6 +62,11 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
     { enabled: !!story.id }
   );
 
+  const { data: viewers = [] } = trpc.stories.getViewers.useQuery(
+    { storyId: story.id },
+    { enabled: !!story.id && isOwner }
+  );
+
   const utils = trpc.useUtils();
 
   useEffect(() => {
@@ -70,7 +76,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
   }, [currentIndex, story.id, user]);
 
   useEffect(() => {
-    if (isPaused || showComments) return;
+    if (isPaused || showComments || showViewers) return;
 
     const interval = 50;
     const timer = setInterval(() => {
@@ -185,7 +191,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
       </div>
 
       {/* Caption & Stats Overlay */}
-      {!showComments && (
+      {!showComments && !showViewers && (
         <div className="absolute bottom-20 left-0 right-0 p-6 text-center bg-gradient-to-t from-black/80 to-transparent">
           {story.caption && <p className="text-white text-lg mb-4">{story.caption}</p>}
           <div className="flex justify-center gap-4">
@@ -196,6 +202,15 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
               <MessageCircle className="w-5 h-5" />
               <span>{comments.length} تعليق</span>
             </button>
+            {isOwner && (
+              <button 
+                onClick={() => setShowViewers(true)}
+                className="flex items-center gap-2 text-white bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full backdrop-blur-sm"
+              >
+                <Eye className="w-5 h-5" />
+                <span>{viewers.length} مشاهدة</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -261,8 +276,43 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Stor
         </div>
       )}
 
+      {/* Viewers Panel */}
+      {showViewers && (
+        <div className="absolute inset-x-0 bottom-0 top-1/2 bg-white rounded-t-3xl z-20 flex flex-col animate-in slide-in-from-bottom duration-300">
+          <div className="p-4 border-b flex items-center justify-between">
+            <h3 className="font-bold text-lg">المشاهدات ({viewers.length})</h3>
+            <button onClick={() => setShowViewers(false)} className="p-2 hover:bg-gray-100 rounded-full">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {viewers.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">لا توجد مشاهدات بعد</p>
+              ) : (
+                viewers.map((v: any) => (
+                  <div key={v.userId} className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={v.userAvatar || ""} />
+                      <AvatarFallback>{v.userName?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="font-bold text-sm">{v.userName || 'مستخدم'}</p>
+                      <p className="text-[10px] text-gray-400">
+                        {formatDistanceToNow(new Date(v.viewedAt), { addSuffix: true, locale: ar })}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+
       {/* Controls */}
-      {!showComments && (
+      {!showComments && !showViewers && (
         <>
           <button 
             onClick={prev}

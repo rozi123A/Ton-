@@ -13,7 +13,7 @@ import {
   createNotification, getNotifications, markNotificationsAsRead,
   getUnreadMessageCount,   markMessagesRead, updateUserPresence, updateUserOffline,
   saveStory, getActiveStories, getUserStories,
-  saveStoryComment, getStoryComments, recordStoryView,
+  saveStoryComment, getStoryComments, recordStoryView, getStoryViewers,
   deleteStory, getStoryById,
   getDb, createNotification, saveMessage,
 } from "./db";
@@ -367,8 +367,7 @@ export const appRouter = router({
         });
 
         // 🔔 Send notification to story owner
-        await createNotification({
-          userId: story.userId,
+        await createNotification(story.userId, {
           type: "new-message", // Using new-message type for better visibility
           title: "تعليق جديد على قصتك",
           message: `${ctx.user.name || 'مستخدم'}: ${input.content}`,
@@ -400,6 +399,12 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await recordStoryView(input.storyId, ctx.user.id);
         return { success: true };
+      }),
+
+    getViewers: protectedProcedure
+      .input(z.object({ storyId: z.number() }))
+      .query(async ({ input }) => {
+        return await getStoryViewers(input.storyId);
       }),
 
     /**

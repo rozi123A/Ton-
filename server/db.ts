@@ -1159,6 +1159,27 @@ export async function recordStoryView(storyId: number, userId: number) {
   }
 }
 
+export async function getStoryViewers(storyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select({
+        userId: storyViews.userId,
+        userName: users.name,
+        userAvatar: users.avatar,
+        viewedAt: storyViews.createdAt,
+      })
+      .from(storyViews)
+      .innerJoin(users, eq(storyViews.userId, users.id))
+      .where(eq(storyViews.storyId, storyId))
+      .orderBy(desc(storyViews.createdAt));
+  } catch (err) {
+    console.error('[Database] getStoryViewers failed:', err);
+    return [];
+  }
+}
+
 export async function deleteStory(storyId: number, userId: number) {
   const db = await getDb();
   if (!db) return;
