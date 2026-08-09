@@ -552,8 +552,9 @@ export default function ChatRoom() {
         localStreamRef.current?.getTracks().forEach(t => t.stop());
         closePC();
         setStatus('idle');
-        toast.error(msg.message || 'رصيد نجوم غير كافٍ لاستخدام الرادار');
+        toast.error(msg.message || 'رصيد نقاط غير كافٍ لاستخدام الرادار');
         walletQuery.refetch();
+        balanceQuery.refetch();
         setTimeout(() => setLocation('/store'), 1500);
         break;
 
@@ -1004,6 +1005,15 @@ export default function ChatRoom() {
             </div>
 
             {/* Start button */}
+            {!(user as any)?.isPremium && (user as any)?.role !== 'admin' && (filterGender !== 'any' || (filterCountry !== 'any' && filterCountry !== myCountry)) && (
+              <div className="flex items-center justify-between px-2 mb-2">
+                <span className="text-white/60 text-xs font-medium">تكلفة البحث المخصص:</span>
+                <span className="text-yellow-400 text-sm font-black flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5" />
+                  100 نقطة
+                </span>
+              </div>
+            )}
             <button
               onClick={() => startSession(filterGender, filterCountry)}
               className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:from-purple-700 hover:via-fuchsia-700 hover:to-pink-600 text-white font-bold py-4 rounded-2xl shadow-2xl shadow-purple-900/50 transform hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 text-lg tracking-wide"
