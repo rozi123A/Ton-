@@ -565,7 +565,15 @@ export const appRouter = router({
           n.title === 'مكافأة يومية 🎁' &&
           (Date.now() - new Date(n.createdAt).getTime()) < 24 * 60 * 60 * 1000
         );
-        if (alreadyClaimed) throw new Error("لقد استلمت مكافأتك اليومية بالفعل!");
+        if (alreadyClaimed) {
+          const lastClaim = notifs.find(n => n.type === 'system' && n.title === 'مكافأة يومية 🎁');
+          const nextAvailable = new Date(new Date(lastClaim!.createdAt).getTime() + 24 * 60 * 60 * 1000).toISOString();
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `لقد استلمت مكافأتك اليومية بالفعل! يمكنك الاستلام مجدداً في ${new Date(nextAvailable).toLocaleTimeString('ar')}`,
+            cause: { nextAvailable }
+          });
+        }
 
         // Grant bonus
         await db.update(users)
@@ -576,13 +584,15 @@ export const appRouter = router({
           })
           .where(eq(users.id, ctx.user.id));
 
+        const now = new Date();
         await createNotification(ctx.user.id, {
           type:    'system',
           title:   'مكافأة يومية 🎁',
           message: 'لقد حصلت على 10 نقاط و 5 نجوم مجانية لزيارتك اليوم! استخدم النجوم في الرادار الآن.',
         });
 
-        return { success: true, starsGained: 5, creditsGained: 10 };
+        const nextAvailable = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+        return { success: true, starsGained: 5, creditsGained: 10, nextAvailable };
       }),
 
     /** Presence ping — updates lastSignedIn and isOnline so admin stats are accurate */

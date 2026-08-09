@@ -139,6 +139,7 @@ export default function ChatRoom() {
   const [dmTarget, setDmTarget] = useState<{ id: number; name: string; avatar: string } | null>(null);
   const [selectedFilter, setSelectedFilter] = useState('none');
   const [showDailyBonus, setShowDailyBonus] = useState(false);
+  const [bonusCountdown, setBonusCountdown] = useState<string | null>(null);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const { data: dbFriends, refetch: refetchFriends } = trpc.social.getFriends.useQuery(undefined, { enabled: !!user });
   const { data: unreadDmData, refetch: refetchUnread } = trpc.messages.getUnreadCount.useQuery(undefined, {
@@ -233,12 +234,39 @@ export default function ChatRoom() {
 
   useEffect(() => {
     if (notifications) {
-      const alreadyClaimed = notifications.some(n => 
+      const lastClaim = notifications.find(n => 
         n.type === 'system' && 
-        n.title === 'مكافأة يومية 🎁' && 
-        (Date.now() - new Date(n.createdAt).getTime()) < 24 * 60 * 60 * 1000
+        n.title === 'مكافأة يومية 🎁'
       );
-      setShowDailyBonus(!alreadyClaimed);
+      
+      const updateTimer = () => {
+        if (!lastClaim) {
+          setShowDailyBonus(true);
+          setBonusCountdown(null);
+          return;
+        }
+        
+        const lastClaimTime = new Date(lastClaim.createdAt).getTime();
+        const now = Date.now();
+        const diff = now - lastClaimTime;
+        const dayMs = 24 * 60 * 60 * 1000;
+        
+        if (diff >= dayMs) {
+          setShowDailyBonus(true);
+          setBonusCountdown(null);
+        } else {
+          setShowDailyBonus(true); // Always show, but disabled with timer
+          const remaining = dayMs - diff;
+          const hours = Math.floor(remaining / (60 * 60 * 1000));
+          const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+          const secs = Math.floor((remaining % (60 * 1000)) / 1000);
+          setBonusCountdown(`${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+        }
+      };
+
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
     }
   }, [notifications]);
 
@@ -1184,35 +1212,39 @@ export default function ChatRoom() {
             {/* Row 2: Daily Bonus compact card */}
             {showDailyBonus && (
               <button
-                onClick={() => claimBonus.mutate()}
-                disabled={claimBonus.isPending}
-                className="relative flex items-center gap-2 px-3 py-0 h-[42px] w-[115px] rounded-2xl
-                           bg-gradient-to-r from-orange-500/80 to-amber-400/80
-                           backdrop-blur-md border border-orange-300/25
-                           shadow-sm shadow-orange-900/20
-                           active:scale-[0.97] hover:brightness-110
-                           transition-all duration-150 overflow-hidden flex-shrink-0"
+                onClick={() => !bonusCountdown && claimBonus.mutate()}
+                disabled={claimBonus.isPending || !!bonusCountdown}
+                className={`relative flex items-center gap-2 px-3 py-0 h-[42px] w-[115px] rounded-2xl
+                           backdrop-blur-md border transition-all duration-150 overflow-hidden flex-shrink-0
+                           ${bonusCountdown 
+                             ? 'bg-gray-500/30 border-white/10 opacity-80 cursor-not-allowed' 
+                             : 'bg-gradient-to-r from-orange-500/80 to-amber-400/80 border-orange-300/25 shadow-sm shadow-orange-900/20 active:scale-[0.97] hover:brightness-110'
+                           }`}
               >
                 {/* Glassmorphism sheen */}
                 <span className="absolute inset-0 bg-gradient-to-br from-white/15 to-transparent pointer-events-none rounded-2xl" />
 
                 {/* Gift icon with glow */}
                 <span
-                  className="text-[20px] leading-none flex-shrink-0 relative z-10"
-                  style={{ filter: 'drop-shadow(0 0 5px rgba(255,200,50,0.7))' }}
+                  className={`text-[20px] leading-none flex-shrink-0 relative z-10 ${bonusCountdown ? 'grayscale opacity-50' : ''}`}
+                  style={{ filter: bonusCountdown ? 'none' : 'drop-shadow(0 0 5px rgba(255,200,50,0.7))' }}
                 >🎁</span>
 
                 {/* Text */}
                 <div className="flex flex-col leading-tight relative z-10">
                   <span className="text-white font-black text-[11px] tracking-wide">مكافأة</span>
-                  <span className="text-white/65 text-[9px]">اضغط للاستلام</span>
+                  <span className="text-white/65 text-[9px]">
+                    {bonusCountdown ? bonusCountdown : 'اضغط للاستلام'}
+                  </span>
                 </div>
 
-                {/* Red pulse dot */}
-                <span className="absolute top-1.5 left-1.5 flex h-2 w-2 z-20">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-70" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                </span>
+                {/* Red pulse dot - only show when claimable */}
+                {!bonusCountdown && (
+                  <span className="absolute top-1.5 left-1.5 flex h-2 w-2 z-20">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-70" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                  </span>
+                )}
               </button>
             )}
           </div>
