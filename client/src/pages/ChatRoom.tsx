@@ -138,7 +138,7 @@ export default function ChatRoom() {
   const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);
   const [dmTarget, setDmTarget] = useState<{ id: number; name: string; avatar: string } | null>(null);
   const [selectedFilter, setSelectedFilter] = useState('none');
-  const [showDailyBonus, setShowDailyBonus] = useState(false);
+  const [showDailyBonus, setShowDailyBonus] = useState(true);
   const [bonusCountdown, setBonusCountdown] = useState<string | null>(null);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const { data: dbFriends, refetch: refetchFriends } = trpc.social.getFriends.useQuery(undefined, { enabled: !!user });
@@ -238,15 +238,16 @@ export default function ChatRoom() {
 
   useEffect(() => {
     const updateTimer = () => {
-      if (!bonusStatusQuery.data) return;
+      if (!bonusStatusQuery.data) {
+        // While loading, if we don't have data, just keep it as is
+        return;
+      }
       
       const { canClaim, nextAvailable } = bonusStatusQuery.data;
       
       if (canClaim || !nextAvailable) {
-        setShowDailyBonus(true);
         setBonusCountdown(null);
       } else {
-        setShowDailyBonus(true);
         const nextTime = new Date(nextAvailable).getTime();
         const now = Date.now();
         const remaining = nextTime - now;
