@@ -1222,13 +1222,13 @@ export default function ChatRoom() {
         {/* Videos */}
         <div className="flex flex-col gap-3 flex-1 min-h-0">
           {/* Remote video */}
-          <div className="relative bg-gray-800 rounded-2xl overflow-hidden shadow-2xl border border-white/10" style={{ minHeight: 220 }}>
+          <div className="relative h-[62vw] min-h-[250px] max-h-[300px] md:h-auto md:min-h-[220px] md:max-h-none bg-gray-800 rounded-2xl overflow-hidden shadow-2xl border border-white/10">
             <video ref={remoteVideoRef} autoPlay playsInline
               className={`w-full h-full object-cover ${(status !== 'matched' || peerVideoOff) ? 'hidden' : ''}`}
               style={{ transform: 'scaleX(-1)', maxHeight: 340 }}
             />
             {(status !== 'matched' || peerVideoOff) && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ minHeight: 220 }}>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
                 {status === 'matched' ? (
                   <>
                     <div
@@ -1299,7 +1299,7 @@ export default function ChatRoom() {
           </div>
 
           {/* Local video */}
-          <div className="relative bg-gray-700 rounded-2xl overflow-hidden shadow-xl border border-white/10" style={{ height: 130 }}>
+          <div className="relative h-[38vw] min-h-[150px] max-h-[175px] md:h-[130px] md:min-h-0 md:max-h-none bg-gray-700 rounded-2xl overflow-hidden shadow-xl border border-white/10">
             <video ref={localVideoRef} autoPlay playsInline muted
               className={`w-full h-full object-cover ${!isVideoOn ? 'hidden' : ''}`}
               style={{ transform: 'scaleX(-1)' }}
@@ -1386,113 +1386,113 @@ export default function ChatRoom() {
       <div className="mt-3 bg-gray-900/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
 
         {/* ═══════════════ Controls Panel ═══════════════ */}
-        <div className="px-3 pt-3 pb-2 space-y-2">
+        <div className="px-2 pt-2 pb-1 space-y-1.5 md:px-3 md:pt-3 md:pb-2 md:space-y-2">
 
           {/* ── Row 1 : دردشة · صوت · كاميرا · ميكروفون ─── */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-1.5 md:gap-2">
 
             {/* Chat */}
             <button
               onClick={() => { setShowChat(v => !v); setUnread(0); }}
-              className="relative flex flex-col items-center gap-1.5 pt-2.5 pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
+              className="relative flex flex-col items-center gap-1 pt-1.5 pb-1.5 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
               style={{ background: showChat ? 'rgba(6,182,212,0.18)' : 'rgba(16,185,129,0.12)', border: showChat ? '1px solid rgba(6,182,212,0.5)' : '1px solid rgba(16,185,129,0.3)', boxShadow: showChat ? '0 0 14px rgba(6,182,212,0.25), inset 0 1px 0 rgba(255,255,255,0.07)' : '0 0 10px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.05)' }}
             >
               <div
-                className="w-11 h-11 rounded-[14px] flex items-center justify-center relative"
+                className="w-10 h-10 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center relative"
                 style={{ background: showChat ? 'linear-gradient(135deg,#06b6d4,#2563eb)' : 'linear-gradient(135deg,#10b981,#059669)', boxShadow: showChat ? '0 0 20px rgba(6,182,212,0.7), 0 4px 12px rgba(6,182,212,0.4)' : '0 0 18px rgba(16,185,129,0.65), 0 4px 12px rgba(16,185,129,0.35)' }}
               >
-                <MessageSquare className="w-[18px] h-[18px] text-white drop-shadow" />
+                 <MessageSquare className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />
                 {unread > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5" style={{boxShadow:'0 0 8px rgba(239,68,68,0.8)'}}>
                     {unread}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-bold tracking-wide" style={{color: showChat ? '#67e8f9' : '#6ee7b7', textShadow: showChat ? '0 0 8px rgba(6,182,212,0.8)' : '0 0 8px rgba(16,185,129,0.7)'}}>{t('chat.chat_btn')}</span>
+               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: showChat ? '#67e8f9' : '#6ee7b7', textShadow: showChat ? '0 0 8px rgba(6,182,212,0.8)' : '0 0 8px rgba(16,185,129,0.7)'}}>{t('chat.chat_btn')}</span>
             </button>
 
             {/* Speaker */}
             <button
               onClick={() => setIsSpeakerOn(v => !v)}
-              className="flex flex-col items-center gap-1.5 pt-2.5 pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
+               className="flex flex-col items-center gap-1 pt-1.5 pb-1.5 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
               style={{ background: isSpeakerOn ? 'rgba(20,184,166,0.18)' : 'rgba(239,68,68,0.12)', border: isSpeakerOn ? '1px solid rgba(20,184,166,0.5)' : '1px solid rgba(239,68,68,0.35)', boxShadow: isSpeakerOn ? '0 0 14px rgba(20,184,166,0.3), inset 0 1px 0 rgba(255,255,255,0.07)' : '0 0 12px rgba(239,68,68,0.2), inset 0 1px 0 rgba(255,255,255,0.04)' }}
             >
               <div
-                className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                className="w-10 h-10 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
                 style={{ background: isSpeakerOn ? 'linear-gradient(135deg,#14b8a6,#0891b2)' : 'linear-gradient(135deg,#ef4444,#be123c)', boxShadow: isSpeakerOn ? '0 0 20px rgba(20,184,166,0.7), 0 4px 12px rgba(20,184,166,0.4)' : '0 0 18px rgba(239,68,68,0.65), 0 4px 12px rgba(239,68,68,0.35)' }}
               >
-                {isSpeakerOn ? <Volume2 className="w-[18px] h-[18px] text-white drop-shadow" /> : <VolumeX className="w-[18px] h-[18px] text-white drop-shadow" />}
+                 {isSpeakerOn ? <Volume2 className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" /> : <VolumeX className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />}
               </div>
-              <span className="text-[10px] font-bold tracking-wide" style={{color: isSpeakerOn ? '#5eead4' : '#fca5a5', textShadow: isSpeakerOn ? '0 0 8px rgba(20,184,166,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isSpeakerOn ? t('chat.audio') : (t('chat.mute') || 'Mute')}</span>
+               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: isSpeakerOn ? '#5eead4' : '#fca5a5', textShadow: isSpeakerOn ? '0 0 8px rgba(20,184,166,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isSpeakerOn ? t('chat.audio') : (t('chat.mute') || 'Mute')}</span>
             </button>
 
             {/* Camera */}
             <button
               onClick={toggleVideo}
-              className="flex flex-col items-center gap-1.5 pt-2.5 pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
+               className="flex flex-col items-center gap-1 pt-1.5 pb-1.5 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
               style={{ background: isVideoOn ? 'rgba(139,92,246,0.18)' : 'rgba(239,68,68,0.12)', border: isVideoOn ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(239,68,68,0.35)', boxShadow: isVideoOn ? '0 0 14px rgba(139,92,246,0.3), inset 0 1px 0 rgba(255,255,255,0.07)' : '0 0 12px rgba(239,68,68,0.2), inset 0 1px 0 rgba(255,255,255,0.04)' }}
             >
               <div
-                className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                className="w-10 h-10 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
                 style={{ background: isVideoOn ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#ef4444,#be123c)', boxShadow: isVideoOn ? '0 0 20px rgba(139,92,246,0.75), 0 4px 12px rgba(139,92,246,0.4)' : '0 0 18px rgba(239,68,68,0.65), 0 4px 12px rgba(239,68,68,0.35)' }}
               >
-                {isVideoOn ? <Video className="w-[18px] h-[18px] text-white drop-shadow" /> : <VideoOff className="w-[18px] h-[18px] text-white drop-shadow" />}
+                 {isVideoOn ? <Video className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" /> : <VideoOff className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />}
               </div>
-              <span className="text-[10px] font-bold tracking-wide" style={{color: isVideoOn ? '#c4b5fd' : '#fca5a5', textShadow: isVideoOn ? '0 0 8px rgba(139,92,246,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isVideoOn ? t('chat.cam') : (t('chat.off') || 'Off')}</span>
+               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: isVideoOn ? '#c4b5fd' : '#fca5a5', textShadow: isVideoOn ? '0 0 8px rgba(139,92,246,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isVideoOn ? t('chat.cam') : (t('chat.off') || 'Off')}</span>
             </button>
 
             {/* Mic */}
             <button
               onClick={toggleMic}
-              className="flex flex-col items-center gap-1.5 pt-2.5 pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
+               className="flex flex-col items-center gap-1 pt-1.5 pb-1.5 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
               style={{ background: isMicOn ? 'rgba(59,130,246,0.18)' : 'rgba(239,68,68,0.12)', border: isMicOn ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(239,68,68,0.35)', boxShadow: isMicOn ? '0 0 14px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.07)' : '0 0 12px rgba(239,68,68,0.2), inset 0 1px 0 rgba(255,255,255,0.04)' }}
             >
               <div
-                className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                className="w-10 h-10 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
                 style={{ background: isMicOn ? 'linear-gradient(135deg,#3b82f6,#1d4ed8)' : 'linear-gradient(135deg,#ef4444,#be123c)', boxShadow: isMicOn ? '0 0 20px rgba(59,130,246,0.75), 0 4px 12px rgba(59,130,246,0.4)' : '0 0 18px rgba(239,68,68,0.65), 0 4px 12px rgba(239,68,68,0.35)' }}
               >
-                {isMicOn ? <Mic className="w-[18px] h-[18px] text-white drop-shadow" /> : <MicOff className="w-[18px] h-[18px] text-white drop-shadow" />}
+                 {isMicOn ? <Mic className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" /> : <MicOff className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />}
               </div>
-              <span className="text-[10px] font-bold tracking-wide" style={{color: isMicOn ? '#93c5fd' : '#fca5a5', textShadow: isMicOn ? '0 0 8px rgba(59,130,246,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isMicOn ? t('chat.mic') : (t('chat.muted') || 'Muted')}</span>
+               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: isMicOn ? '#93c5fd' : '#fca5a5', textShadow: isMicOn ? '0 0 8px rgba(59,130,246,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isMicOn ? t('chat.mic') : (t('chat.muted') || 'Muted')}</span>
             </button>
           </div>
 
           {/* ── Row 2 : أصدقاء · المتجر · الخلفية · هدية ── */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-1.5 md:gap-2">
 
             {/* Friends */}
             <button
               onClick={() => { setShowFriends(v => !v); refetchUnread(); }}
-              className="relative flex flex-col items-center gap-1.5 pt-2.5 pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
+               className="relative flex flex-col items-center gap-1 pt-1.5 pb-1.5 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
               style={{ background: 'rgba(244,63,94,0.13)', border: '1px solid rgba(244,63,94,0.35)', boxShadow: '0 0 12px rgba(244,63,94,0.2), inset 0 1px 0 rgba(255,255,255,0.06)' }}
             >
               <div
-                className="w-11 h-11 rounded-[14px] flex items-center justify-center relative"
+                className="w-10 h-10 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center relative"
                 style={{ background: 'linear-gradient(135deg,#f43f5e,#e11d48)', boxShadow: '0 0 20px rgba(244,63,94,0.7), 0 4px 12px rgba(244,63,94,0.4)' }}
               >
-                <Heart className="w-[18px] h-[18px] text-white drop-shadow" />
+                 <Heart className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />
                 {unreadDmCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-gray-900 text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5" style={{boxShadow:'0 0 8px rgba(234,179,8,0.9)'}}>
                     {unreadDmCount > 99 ? '99+' : unreadDmCount}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] font-bold tracking-wide" style={{color:'#fda4af', textShadow:'0 0 8px rgba(244,63,94,0.8)'}}>{t('chat.friends')}</span>
+               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color:'#fda4af', textShadow:'0 0 8px rgba(244,63,94,0.8)'}}>{t('chat.friends')}</span>
             </button>
 
             {/* Store */}
             <button
               onClick={() => { sessionStorage.setItem('chat_auto_start', 'true'); setLocation('/store?from=chat'); }}
-              className="flex flex-col items-center gap-1.5 pt-2.5 pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
+               className="flex flex-col items-center gap-1 pt-1.5 pb-1.5 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
               style={{ background: 'rgba(217,70,239,0.13)', border: '1px solid rgba(217,70,239,0.35)', boxShadow: '0 0 12px rgba(217,70,239,0.2), inset 0 1px 0 rgba(255,255,255,0.06)' }}
             >
               <div
-                className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                className="w-10 h-10 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
                 style={{ background: 'linear-gradient(135deg,#d946ef,#a21caf)', boxShadow: '0 0 20px rgba(217,70,239,0.7), 0 4px 12px rgba(217,70,239,0.4)' }}
               >
-                <ShoppingBag className="w-[18px] h-[18px] text-white drop-shadow" />
+                 <ShoppingBag className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />
               </div>
-              <span className="text-[10px] font-bold tracking-wide" style={{color:'#e879f9', textShadow:'0 0 8px rgba(217,70,239,0.8)'}}>{t('chat.store')}</span>
+               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color:'#e879f9', textShadow:'0 0 8px rgba(217,70,239,0.8)'}}>{t('chat.store')}</span>
             </button>
 
             {/* Camera Switch */}
@@ -1501,17 +1501,17 @@ export default function ChatRoom() {
               return (
                 <button
                   onClick={toggleCamera}
-                  className="flex flex-col items-center gap-1.5 pt-2.5 pb-2 rounded-2xl transition-all duration-200 active:scale-95"
+                   className="flex flex-col items-center gap-1 pt-1.5 pb-1.5 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95"
                   style={{ background: canSwitch ? 'rgba(234,179,8,0.13)' : 'rgba(255,255,255,0.04)', border: canSwitch ? '1px solid rgba(234,179,8,0.4)' : '1px solid rgba(255,255,255,0.08)', boxShadow: canSwitch ? '0 0 12px rgba(234,179,8,0.22), inset 0 1px 0 rgba(255,255,255,0.07)' : 'none', opacity: canSwitch ? 1 : 0.45 }}
                 >
                   <div
-                    className="w-11 h-11 rounded-[14px] flex items-center justify-center relative"
+                     className="w-10 h-10 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center relative"
                     style={{ background: canSwitch ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#475569,#334155)', boxShadow: canSwitch ? '0 0 20px rgba(234,179,8,0.7), 0 4px 12px rgba(234,179,8,0.4)' : 'none' }}
                   >
-                    <SwitchCamera className={`w-[18px] h-[18px] drop-shadow ${canSwitch ? 'text-gray-900' : 'text-white/50'}`} />
+                     <SwitchCamera className={`w-4 h-4 md:w-[18px] md:h-[18px] drop-shadow ${canSwitch ? 'text-gray-900' : 'text-white/50'}`} />
                     {!canSwitch && <Lock className="w-2.5 h-2.5 text-white/60 absolute top-1 right-1" />}
                   </div>
-                  <span className="text-[10px] font-bold tracking-wide leading-tight text-center" style={{color: canSwitch ? '#fde68a' : 'rgba(255,255,255,0.3)', textShadow: canSwitch ? '0 0 8px rgba(234,179,8,0.8)' : 'none'}}>
+                   <span className="text-[9px] md:text-[10px] font-bold tracking-wide leading-tight text-center" style={{color: canSwitch ? '#fde68a' : 'rgba(255,255,255,0.3)', textShadow: canSwitch ? '0 0 8px rgba(234,179,8,0.8)' : 'none'}}>
                     {canSwitch ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
                   </span>
                 </button>
@@ -1522,24 +1522,24 @@ export default function ChatRoom() {
             <button
               onClick={() => status === 'matched' ? setShowGifts(v => !v) : undefined}
               disabled={status !== 'matched'}
-              className="flex flex-col items-center gap-1.5 pt-2.5 pb-2 rounded-2xl transition-all duration-200 active:scale-95"
+               className="flex flex-col items-center gap-1 pt-1.5 pb-1.5 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95"
               style={{ background: status === 'matched' ? 'rgba(249,115,22,0.13)' : 'rgba(255,255,255,0.04)', border: status === 'matched' ? '1px solid rgba(249,115,22,0.4)' : '1px solid rgba(255,255,255,0.07)', boxShadow: status === 'matched' ? '0 0 12px rgba(249,115,22,0.22), inset 0 1px 0 rgba(255,255,255,0.07)' : 'none', opacity: status === 'matched' ? 1 : 0.4, cursor: status === 'matched' ? 'pointer' : 'not-allowed' }}
             >
               <div
-                className="w-11 h-11 rounded-[14px] flex items-center justify-center"
+                 className="w-10 h-10 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
                 style={{ background: status === 'matched' ? 'linear-gradient(135deg,#f97316,#db2777)' : 'linear-gradient(135deg,#475569,#334155)', boxShadow: status === 'matched' ? '0 0 20px rgba(249,115,22,0.7), 0 4px 12px rgba(249,115,22,0.4)' : 'none' }}
               >
-                <Gift className="w-[18px] h-[18px] text-white drop-shadow" />
+                 <Gift className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />
               </div>
-              <span className="text-[10px] font-bold tracking-wide" style={{color: status === 'matched' ? '#fdba74' : 'rgba(255,255,255,0.25)', textShadow: status === 'matched' ? '0 0 8px rgba(249,115,22,0.8)' : 'none'}}>هدية</span>
+               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: status === 'matched' ? '#fdba74' : 'rgba(255,255,255,0.25)', textShadow: status === 'matched' ? '0 0 8px rgba(249,115,22,0.8)' : 'none'}}>هدية</span>
             </button>
           </div>
 
           <button
             onClick={() => setShowAIStudio(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-pink-400/40 bg-gradient-to-r from-pink-500/20 to-purple-600/20 py-3.5 text-sm font-bold text-pink-100 transition hover:from-pink-500/30 hover:to-purple-600/30 active:scale-[0.98] shadow-md shadow-pink-500/20"
+             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-pink-400/40 bg-gradient-to-r from-pink-500/20 to-purple-600/20 py-2.5 md:py-3.5 text-sm font-bold text-pink-100 transition hover:from-pink-500/30 hover:to-purple-600/30 active:scale-[0.98] shadow-md shadow-pink-500/20"
           >
-            <Bot className="h-5 w-5 text-pink-300" />
+             <Bot className="h-4 w-4 md:h-5 md:w-5 text-pink-300" />
             <span>المساعد الذكي</span>
           </button>
 
@@ -1560,7 +1560,7 @@ export default function ChatRoom() {
                       startSession('any', 'any');
                     }
                   }}
-                  className={`flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02] ${isSearching ? 'animate-pulse' : ''}`}
+                   className={`flex items-center justify-center gap-2.5 py-2.5 md:py-3.5 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02] ${isSearching ? 'animate-pulse' : ''}`}
                   style={{
                     background: isSearching ? 'linear-gradient(135deg,#ef4444,#be123c)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
                     boxShadow: isSearching ? '0 0 24px rgba(239,68,68,0.6), 0 4px 16px rgba(239,68,68,0.4)' : '0 0 24px rgba(34,197,94,0.6), 0 4px 16px rgba(34,197,94,0.4)',
@@ -1588,7 +1588,7 @@ export default function ChatRoom() {
                 }
                 setStatus('setup');
               }}
-              className="flex items-center justify-center gap-2.5 py-3.5 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02]"
+               className="flex items-center justify-center gap-2.5 py-2.5 md:py-3.5 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02]"
               style={{
                 background: filterCountry !== 'any' || filterGender !== 'any' ? 'linear-gradient(135deg,#a855f7,#7c3aed)' : 'rgba(168,85,247,0.13)',
                 border: '1px solid rgba(168,85,247,0.45)',
@@ -1607,12 +1607,12 @@ export default function ChatRoom() {
         <div className="h-px bg-white/8 mx-3 mb-0" />
 
         {/* Next + End Call row */}
-        <div className="flex items-stretch gap-2.5 px-3 pt-2 pb-3">
+        <div className="flex items-stretch gap-2 px-2 pt-1.5 pb-2 md:gap-2.5 md:px-3 md:pt-2 md:pb-3">
           {/* Next */}
           <button
             onClick={handleNext}
             disabled={status === 'connecting' || status === 'waiting' || status === 'confirming'}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm tracking-wide transition-all duration-150 active:scale-[0.97] hover:scale-[1.02] disabled:opacity-35 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 md:gap-2 md:py-3 rounded-2xl font-bold text-sm tracking-wide transition-all duration-150 active:scale-[0.97] hover:scale-[1.02] disabled:opacity-35 disabled:cursor-not-allowed"
             style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#1c1917', boxShadow: '0 0 22px rgba(245,158,11,0.6), 0 4px 14px rgba(245,158,11,0.4)', border: '1px solid rgba(245,158,11,0.5)' }}
           >
             <SkipForward className="w-4 h-4 flex-shrink-0 drop-shadow" />
@@ -1622,7 +1622,7 @@ export default function ChatRoom() {
           {/* End Call */}
           <button
             onClick={handleEnd}
-            className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-2xl font-bold text-sm transition-all duration-150 active:scale-[0.97] hover:scale-[1.02]"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3 rounded-2xl font-bold text-sm transition-all duration-150 active:scale-[0.97] hover:scale-[1.02]"
             style={{ background: 'linear-gradient(135deg,#ef4444,#be123c)', color: 'white', boxShadow: '0 0 22px rgba(239,68,68,0.6), 0 4px 14px rgba(239,68,68,0.4)', border: '1px solid rgba(239,68,68,0.5)' }}
           >
             <PhoneOff className="w-4 h-4 flex-shrink-0 drop-shadow" />
