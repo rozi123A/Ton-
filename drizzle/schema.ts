@@ -26,6 +26,7 @@ export const users = pgTable("users", {
   wallet: integer("wallet").default(0).notNull(),
   stars: integer("stars").default(0).notNull(),
   points: integer("points").default(0).notNull(),
+  lastDailyBonusAt: timestamp("lastDailyBonusAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

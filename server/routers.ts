@@ -17,7 +17,7 @@ import {
   deleteStory, getStoryById,
   getDb,
 } from "./db";
-import { and, eq, or, sql, desc } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql, desc } from "drizzle-orm";
 import { users, notifications } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
 import { detectCountry } from "./_core/detectCountry";
@@ -552,21 +552,17 @@ export const appRouter = router({
 			      .query(async ({ ctx }) => {
 			        const db = await getDb();
 			        if (!db) throw new Error("Database not available");
-			        
-			        // Find the latest bonus notification
-			        const rows = await db.select().from(notifications)
-			          .where(and(
-			            eq(notifications.userId, ctx.user.id),
-			            eq(notifications.type, 'system'),
-			            eq(notifications.title, 'مكافأة يومية 🎁')
-			          ))
-			          .orderBy(desc(notifications.createdAt))
-			          .limit(1);
-			        
-			        const lastClaim = rows[0];
-			        if (!lastClaim) return { canClaim: true, nextAvailable: null };
-			        
-			        const lastClaimTime = new Date(lastClaim.createdAt).getTime();
+
+        const rows = await db
+          .select({ lastDailyBonusAt: users.lastDailyBonusAt })
+          .from(users)
+          .where(eq(users.id, ctx.user.id))
+          .limit(1);
+        const lastClaimTime = rows[0]?.lastDailyBonusAt
+          ? new Date(rows[0].lastDailyBonusAt).getTime()
+          : null;
+        if (lastClaimTime === null) return { canClaim: true, nextAvailable: null };
+
 			        const nextAvailable = new Date(lastClaimTime + 24 * 60 * 60 * 1000);
 			        const canClaim = Date.now() >= nextAvailable.getTime();
 			        
@@ -582,34 +578,35 @@ export const appRouter = router({
 			        const db = await getDb();
 			        if (!db) throw new Error("Database not available");
 			
-			        // Strict check on server side
-			        const rows = await db.select().from(notifications)
-			          .where(and(
-			            eq(notifications.userId, ctx.user.id),
-			            eq(notifications.type, 'system'),
-			            eq(notifications.title, 'مكافأة يومية 🎁')
-			          ))
-			          .orderBy(desc(notifications.createdAt))
-			          .limit(1);
-			        
-			        const lastClaim = rows[0];
 			        const dayMs = 24 * 60 * 60 * 1000;
-			
-			        if (lastClaim && (Date.now() - new Date(lastClaim.createdAt).getTime()) < dayMs) {
+        const now = new Date();
+        const cutoff = new Date(now.getTime() - dayMs);
+
+        // The WHERE clause makes the claim atomic. Concurrent requests can
+        // never both pass the 24-hour check and receive the reward.
+        const claimed = await db
+          .update(users)
+          .set({
+            credits: sql`${users.credits} + 10`,
+            wallet: sql`${users.wallet} + 5`,
+            lastDailyBonusAt: now,
+            lastSignedIn: now,
+          })
+          .where(and(
+            eq(users.id, ctx.user.id),
+            or(
+              isNull(users.lastDailyBonusAt),
+              lt(users.lastDailyBonusAt, cutoff),
+            ),
+          ))
+          .returning({ id: users.id });
+
+        if (claimed.length === 0) {
 			          throw new TRPCError({
 			            code: "BAD_REQUEST",
 			            message: "لقد استلمت مكافأتك اليومية بالفعل! يرجى الانتظار حتى انتهاء العداد.",
 			          });
 			        }
-			
-			        // Grant bonus
-			        await db.update(users)
-			          .set({
-			            credits: sql`${users.credits} + 10`,
-			            wallet: sql`${users.wallet} + 5`,
-			            lastSignedIn: new Date(),
-			          })
-			          .where(eq(users.id, ctx.user.id));
 			
 			        await createNotification(ctx.user.id, {
 			          type: 'system',

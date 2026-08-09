@@ -118,6 +118,7 @@ export async function ensureSchema(): Promise<void> {
 	       role          "role" NOT NULL DEFAULT 'user',
 	       stars         INTEGER NOT NULL DEFAULT 0,
 	       points        INTEGER NOT NULL DEFAULT 0,
+       "lastDailyBonusAt" TIMESTAMP,
 	       "createdAt"   TIMESTAMP NOT NULL DEFAULT now(),
        "updatedAt"   TIMESTAMP NOT NULL DEFAULT now(),
        "lastSignedIn" TIMESTAMP NOT NULL DEFAULT now()
@@ -176,6 +177,7 @@ export async function ensureSchema(): Promise<void> {
        message     TEXT,
        "fromName"  TEXT,
        "fromAvatar" TEXT,
+       "fromUserId" INTEGER,
        "isRead"    BOOLEAN NOT NULL DEFAULT false,
        "createdAt" TIMESTAMP NOT NULL DEFAULT now()
      )`,
@@ -241,6 +243,8 @@ export async function ensureSchema(): Promise<void> {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS role          "role" NOT NULL DEFAULT 'user'`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS stars         INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS points        INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "lastDailyBonusAt" TIMESTAMP`,
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS "fromUserId" INTEGER`,
   ];
   for (const m of migrations) {
     try { await _rawClient.unsafe(m); } catch { /* column already exists — safe to ignore */ }

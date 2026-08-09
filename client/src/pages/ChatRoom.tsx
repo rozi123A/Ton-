@@ -239,7 +239,7 @@ export default function ChatRoom() {
   useEffect(() => {
     const updateTimer = () => {
       if (!bonusStatusQuery.data) {
-        // While loading, if we don't have data, just keep it as is
+        setBonusCountdown(null);
         return;
       }
       
@@ -268,6 +268,10 @@ export default function ChatRoom() {
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
   }, [bonusStatusQuery.data]);
+
+  const bonusLoading = bonusStatusQuery.isLoading;
+  const bonusCoolingDown = Boolean(bonusCountdown);
+  const bonusDisabled = bonusLoading || bonusCoolingDown || claimBonus.isPending;
 
   useEffect(() => { if (balanceQuery.data) setCredits(balanceQuery.data.credits); }, [balanceQuery.data]);
 
@@ -1211,11 +1215,11 @@ export default function ChatRoom() {
             {/* Row 2: Daily Bonus compact card */}
             {showDailyBonus && (
               <button
-                onClick={() => !bonusCountdown && claimBonus.mutate()}
-                disabled={claimBonus.isPending || !!bonusCountdown}
+                onClick={() => !bonusDisabled && claimBonus.mutate()}
+                disabled={bonusDisabled}
                 className={`relative flex items-center gap-2 px-3 py-0 h-[42px] w-[115px] rounded-2xl
                            backdrop-blur-md border transition-all duration-150 overflow-hidden flex-shrink-0
-                           ${bonusCountdown 
+                           ${bonusDisabled
                              ? 'bg-gray-500/30 border-white/10 opacity-80 cursor-not-allowed' 
                              : 'bg-gradient-to-r from-orange-500/80 to-amber-400/80 border-orange-300/25 shadow-sm shadow-orange-900/20 active:scale-[0.97] hover:brightness-110'
                            }`}
@@ -1226,19 +1230,19 @@ export default function ChatRoom() {
                 {/* Gift icon with glow */}
                 <span
                   className={`text-[20px] leading-none flex-shrink-0 relative z-10 ${bonusCountdown ? 'grayscale opacity-50' : ''}`}
-                  style={{ filter: bonusCountdown ? 'none' : 'drop-shadow(0 0 5px rgba(255,200,50,0.7))' }}
+                  style={{ filter: bonusDisabled ? 'grayscale(1)' : 'drop-shadow(0 0 5px rgba(255,200,50,0.7))' }}
                 >🎁</span>
 
                 {/* Text */}
                 <div className="flex flex-col leading-tight relative z-10">
                   <span className="text-white font-black text-[11px] tracking-wide">مكافأة</span>
                   <span className="text-white/65 text-[9px]">
-                    {bonusCountdown ? bonusCountdown : 'اضغط للاستلام'}
+                    {claimBonus.isPending ? 'جاري الاستلام...' : bonusLoading ? 'جاري التحقق...' : bonusCountdown ? bonusCountdown : 'اضغط للاستلام'}
                   </span>
                 </div>
 
                 {/* Red pulse dot - only show when claimable */}
-                {!bonusCountdown && (
+                {!bonusDisabled && (
                   <span className="absolute top-1.5 left-1.5 flex h-2 w-2 z-20">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-70" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
