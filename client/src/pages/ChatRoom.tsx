@@ -233,42 +233,36 @@ export default function ChatRoom() {
   });
 
   useEffect(() => {
-    if (notifications) {
-      const lastClaim = notifications.find(n => 
-        n.type === 'system' && 
-        n.title === 'مكافأة يومية 🎁'
-      );
+    const updateTimer = () => {
+      const lastClaim = (user as any)?.lastBonusClaim;
+      if (!lastClaim) {
+        setShowDailyBonus(true);
+        setBonusCountdown(null);
+        return;
+      }
       
-      const updateTimer = () => {
-        if (!lastClaim) {
-          setShowDailyBonus(true);
-          setBonusCountdown(null);
-          return;
-        }
-        
-        const lastClaimTime = new Date(lastClaim.createdAt).getTime();
-        const now = Date.now();
-        const diff = now - lastClaimTime;
-        const dayMs = 24 * 60 * 60 * 1000;
-        
-        if (diff >= dayMs) {
-          setShowDailyBonus(true);
-          setBonusCountdown(null);
-        } else {
-          setShowDailyBonus(true); // Always show, but disabled with timer
-          const remaining = dayMs - diff;
-          const hours = Math.floor(remaining / (60 * 60 * 1000));
-          const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-          const secs = Math.floor((remaining % (60 * 1000)) / 1000);
-          setBonusCountdown(`${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
-        }
-      };
+      const lastClaimTime = new Date(lastClaim).getTime();
+      const now = Date.now();
+      const diff = now - lastClaimTime;
+      const dayMs = 24 * 60 * 60 * 1000;
+      
+      if (diff >= dayMs) {
+        setShowDailyBonus(true);
+        setBonusCountdown(null);
+      } else {
+        setShowDailyBonus(true);
+        const remaining = dayMs - diff;
+        const hours = Math.floor(remaining / (60 * 60 * 1000));
+        const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+        const secs = Math.floor((remaining % (60 * 1000)) / 1000);
+        setBonusCountdown(`${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+      }
+    };
 
-      updateTimer();
-      const interval = setInterval(updateTimer, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [notifications]);
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => { if (balanceQuery.data) setCredits(balanceQuery.data.credits); }, [balanceQuery.data]);
 
