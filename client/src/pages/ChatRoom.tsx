@@ -597,27 +597,27 @@ export default function ChatRoom() {
     }
   }, [createPC, signal, addMessage, startTimer, stopTimer, closePC, resetRemote, showGiftAnim, peerName, walletQuery, setLocation]);
 
-  const deductRadarStars = trpc.gifts.deductRadarStars.useMutation();
+  const deductRadarCredits = trpc.gifts.deductRadarCredits.useMutation();
 
   // ── start session (called after filter screen) ────────────────────────────
   const startSession = useCallback(async (fg: string, fc: string) => {
-    // Star Radar logic: free for "any" gender + own/any country; paid otherwise
+    // Radar logic: free for "any" gender + own/any country; paid otherwise (100 points)
     const isPaidRadar = fg !== 'any' || (fc !== 'any' && fc !== myCountry);
     const isAdminUser = (user as any)?.role === 'admin';
     if (isPaidRadar && !(user as any)?.isPremium && !isAdminUser) {
-      const stars = walletQuery.data?.wallet || 0;
-      if (stars < 5) {
-        toast.error(`رصيد نجومك ${stars} نجمة فقط. تحتاج 5 نجوم لاستخدام الرادار. يرجى الشحن أولاً.`);
+      const userCredits = balanceQuery.data?.credits || 0;
+      if (userCredits < 100) {
+        toast.error(`رصيدك ${userCredits} نقطة فقط. تحتاج 100 نقطة لاستخدام الرادار. يرجى الشحن أولاً.`);
         setLocation('/store');
         return;
       }
-      // Deduct stars immediately on start
+      // Deduct credits immediately on start
       try {
-        await deductRadarStars.mutateAsync({ amount: 5 });
-        toast.success("تم خصم 5 نجوم لتفعيل رادار النجوم 🌟");
-        walletQuery.refetch();
+        await deductRadarCredits.mutateAsync({ amount: 100 });
+        toast.success("تم خصم 100 نقطة لتفعيل الرادار 🌟");
+        balanceQuery.refetch();
       } catch (err: any) {
-        toast.error(err.message || "رصيد نجوم غير كافٍ");
+        toast.error(err.message || "رصيد نقاط غير كافٍ");
         return;
       }
     }
@@ -685,7 +685,7 @@ export default function ChatRoom() {
       resetPingTimeout();
     };
     connect();
-  }, [myId, myName, myAvatar, myGender, myCountry, handleEvent, user, walletQuery, deductRadarStars, setLocation]);
+  }, [myId, myName, myAvatar, myGender, myCountry, handleEvent, user, balanceQuery, deductRadarCredits, setLocation]);
 
   // ── cleanup on unmount ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -903,7 +903,7 @@ export default function ChatRoom() {
                 الجنس المطلوب
                 {!(user as any)?.isPremium && (user as any)?.role !== 'admin' && filterGender !== 'any' && (
                   <span className="text-[10px] bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
-                    <Zap className="w-2.5 h-2.5" /> 5 نجوم
+                    <Zap className="w-2.5 h-2.5" /> 100 نقطة
                   </span>
                 )}
               </label>
@@ -966,7 +966,7 @@ export default function ChatRoom() {
               
               {!(user as any)?.isPremium && (user as any)?.role !== 'admin' && filterCountry !== 'any' && filterCountry !== myCountry && (
                 <p className="text-yellow-400 text-[11px] mt-1.5 flex items-center gap-1">
-                  <Zap className="w-3 h-3" /> استخدام الرادار سيكلفك 5 نجوم
+                  <Zap className="w-3 h-3" /> استخدام الرادار سيكلفك 100 نقطة
                 </p>
               )}
               {myCountry && filterCountry === myCountry && (
@@ -984,11 +984,18 @@ export default function ChatRoom() {
                 className="w-12 h-12 rounded-full border-2 border-white/40 object-cover bg-white flex-shrink-0"
                 onError={(e) => { (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=default`; }}
               />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-white font-semibold text-sm truncate">{myName}</p>
-                <p className="text-white/50 text-xs">
-                  {myGender === 'male' ? 'ذكر' : myGender === 'female' ? 'أنثى' : 'غير محدد'}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-white/50 text-xs">
+                    {myGender === 'male' ? 'ذكر' : myGender === 'female' ? 'أنثى' : 'غير محدد'}
+                  </p>
+                  <span className="w-1 h-1 bg-white/20 rounded-full" />
+                  <p className="text-yellow-400 text-xs font-bold flex items-center gap-0.5">
+                    <Zap className="w-3 h-3" />
+                    {credits} نقطة
+                  </p>
+                </div>
               </div>
               <span className="mr-auto text-xs text-green-400 font-medium flex items-center gap-1">
                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse inline-block" />
@@ -1002,7 +1009,7 @@ export default function ChatRoom() {
               className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:from-purple-700 hover:via-fuchsia-700 hover:to-pink-600 text-white font-bold py-4 rounded-2xl shadow-2xl shadow-purple-900/50 transform hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 text-lg tracking-wide"
             >
               <Video className="w-5 h-5" />
-              {(filterGender === 'any' && (filterCountry === 'any' || filterCountry === myCountry)) ? 'ابدأ البحث الآن' : 'تفعيل رادار النجوم 🚀'}
+              {(filterGender === 'any' && (filterCountry === 'any' || filterCountry === myCountry)) ? 'ابدأ البحث الآن' : 'تفعيل رادار النقاط 🚀'}
             </button>
 
             <button

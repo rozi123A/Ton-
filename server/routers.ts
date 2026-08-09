@@ -834,14 +834,14 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    /** Deduct stars for using Star Radar (paid filter — skipped for admin) */
-    deductRadarStars: protectedProcedure
-      .input(z.object({ amount: z.number().min(1).max(50) }))
+    /** Deduct credits for using Radar (paid filter — skipped for admin) */
+    deductRadarCredits: protectedProcedure
+      .input(z.object({ amount: z.number().min(1).max(1000) }))
       .mutation(async ({ ctx, input }) => {
         if ((ctx.user as any).role === 'admin') return { success: true };
-        const { deductStars } = await import("./db");
-        const success = await deductStars(ctx.user.id, input.amount);
-        if (!success) throw new Error("رصيد نجوم غير كافٍ لاستخدام الرادار");
+        const { deductCredits } = await import("./db");
+        const success = await deductCredits(ctx.user.id, input.amount);
+        if (!success) throw new Error("رصيد نقاط غير كافٍ لاستخدام الرادار");
         return { success: true };
       }),
   }),
