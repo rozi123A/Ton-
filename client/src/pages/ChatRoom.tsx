@@ -1023,7 +1023,7 @@ export default function ChatRoom() {
             </button>
 
             <button
-              onClick={() => setLocation('/')}
+              onClick={() => setStatus('idle')}
               className="w-full flex items-center justify-center gap-2 text-white/50 hover:text-white/90 text-sm transition-colors py-2"
             >
               <ChevronLeft className="w-4 h-4" />
