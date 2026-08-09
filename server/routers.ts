@@ -548,47 +548,55 @@ export const appRouter = router({
         return profile;
       }),
 
-	    claimDailyBonus: protectedProcedure
-	      .mutation(async ({ ctx }) => {
-	        const db = await getDb();
-	        if (!db) throw new Error("Database not available");
-	
-	        // Load user row
-	        const rows = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-	        if (!rows[0]) throw new Error("User not found");
-	        const userRow = rows[0];
-	
-	        const now = new Date();
-	        const lastClaim = userRow.lastBonusClaim;
-	        const dayMs = 24 * 60 * 60 * 1000;
-	
-	        if (lastClaim && (now.getTime() - new Date(lastClaim).getTime()) < dayMs) {
-	          const nextAvailable = new Date(new Date(lastClaim).getTime() + dayMs).toISOString();
-	          throw new TRPCError({
-	            code: "BAD_REQUEST",
-	            message: `لقد استلمت مكافأتك اليومية بالفعل!`,
-	            cause: { nextAvailable }
-	          });
-	        }
-	
-	        // Grant bonus
-	        await db.update(users)
-	          .set({
-	            credits: sql`${users.credits} + 10`,
-	            wallet: sql`${users.wallet} + 5`,
-	            lastBonusClaim: now,
-	          })
-	          .where(eq(users.id, ctx.user.id));
-	
-	        await createNotification(ctx.user.id, {
-	          type: 'system',
-	          title: 'مكافأة يومية 🎁',
-	          message: 'لقد حصلت على 10 نقاط و 5 نجوم مجانية لزيارتك اليوم! استخدم النجوم في الرادار الآن.',
-	        });
-	
-	        const nextAvailable = new Date(now.getTime() + dayMs).toISOString();
-	        return { success: true, starsGained: 5, creditsGained: 10, nextAvailable };
-	      }),
+		    getBonusStatus: protectedProcedure
+		      .query(async ({ ctx }) => {
+		        const notifs = await getNotifications(ctx.user.id);
+		        const lastClaim = notifs.find(n => n.type === 'system' && n.title === 'مكافأة يومية 🎁');
+		        if (!lastClaim) return { canClaim: true, nextAvailable: null };
+		        
+		        const lastClaimTime = new Date(lastClaim.createdAt).getTime();
+		        const nextAvailable = new Date(lastClaimTime + 24 * 60 * 60 * 1000);
+		        const canClaim = Date.now() >= nextAvailable.getTime();
+		        
+		        return { 
+		          canClaim, 
+		          nextAvailable: nextAvailable.toISOString(),
+		          lastClaimTime: new Date(lastClaimTime).toISOString()
+		        };
+		      }),
+		
+		    claimDailyBonus: protectedProcedure
+		      .mutation(async ({ ctx }) => {
+		        const db = await getDb();
+		        if (!db) throw new Error("Database not available");
+		
+		        const notifs = await getNotifications(ctx.user.id);
+		        const lastClaim = notifs.find(n => n.type === 'system' && n.title === 'مكافأة يومية 🎁');
+		        const dayMs = 24 * 60 * 60 * 1000;
+		
+		        if (lastClaim && (Date.now() - new Date(lastClaim.createdAt).getTime()) < dayMs) {
+		          throw new TRPCError({
+		            code: "BAD_REQUEST",
+		            message: "لقد استلمت مكافأتك اليومية بالفعل!",
+		          });
+		        }
+		
+		        // Grant bonus
+		        await db.update(users)
+		          .set({
+		            credits: sql`${users.credits} + 10`,
+		            wallet: sql`${users.wallet} + 5`,
+		          })
+		          .where(eq(users.id, ctx.user.id));
+		
+		        await createNotification(ctx.user.id, {
+		          type: 'system',
+		          title: 'مكافأة يومية 🎁',
+		          message: 'لقد حصلت على 10 نقاط و 5 نجوم مجانية لزيارتك اليوم! استخدم النجوم في الرادار الآن.',
+		        });
+		
+		        return { success: true, starsGained: 5, creditsGained: 10 };
+		      }),
 
     /** Presence ping — updates lastSignedIn and isOnline so admin stats are accurate */
     ping: protectedProcedure

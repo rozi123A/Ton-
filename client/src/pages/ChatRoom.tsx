@@ -214,16 +214,20 @@ export default function ChatRoom() {
     onError: (err) => toast.error(err.message)
   });
 
+  const bonusStatusQuery = trpc.users.getBonusStatus.useQuery(undefined, { 
+    enabled: !!user,
+    refetchInterval: 30000 
+  });
+
   const claimBonus = trpc.users.claimDailyBonus.useMutation({
     onSuccess: (data) => {
       toast.success(`مبروك! حصلت على ${data.starsGained} نجوم و ${data.creditsGained} نقاط 🎁`);
-      setShowDailyBonus(false);
+      bonusStatusQuery.refetch();
       walletQuery.refetch();
       balanceQuery.refetch();
     },
     onError: (err) => {
       toast.error(err.message);
-      setShowDailyBonus(false);
     }
   });
 
@@ -234,35 +238,35 @@ export default function ChatRoom() {
 
   useEffect(() => {
     const updateTimer = () => {
-      const lastClaim = (user as any)?.lastBonusClaim;
-      if (!lastClaim) {
-        setShowDailyBonus(true);
-        setBonusCountdown(null);
-        return;
-      }
+      if (!bonusStatusQuery.data) return;
       
-      const lastClaimTime = new Date(lastClaim).getTime();
-      const now = Date.now();
-      const diff = now - lastClaimTime;
-      const dayMs = 24 * 60 * 60 * 1000;
+      const { canClaim, nextAvailable } = bonusStatusQuery.data;
       
-      if (diff >= dayMs) {
+      if (canClaim || !nextAvailable) {
         setShowDailyBonus(true);
         setBonusCountdown(null);
       } else {
         setShowDailyBonus(true);
-        const remaining = dayMs - diff;
-        const hours = Math.floor(remaining / (60 * 60 * 1000));
-        const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-        const secs = Math.floor((remaining % (60 * 1000)) / 1000);
-        setBonusCountdown(`${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+        const nextTime = new Date(nextAvailable).getTime();
+        const now = Date.now();
+        const remaining = nextTime - now;
+        
+        if (remaining <= 0) {
+          setBonusCountdown(null);
+          bonusStatusQuery.refetch();
+        } else {
+          const hours = Math.floor(remaining / (60 * 60 * 1000));
+          const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+          const secs = Math.floor((remaining % (60 * 1000)) / 1000);
+          setBonusCountdown(`${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+        }
       }
     };
 
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [bonusStatusQuery.data]);
 
   useEffect(() => { if (balanceQuery.data) setCredits(balanceQuery.data.credits); }, [balanceQuery.data]);
 
