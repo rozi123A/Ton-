@@ -19,7 +19,7 @@ type PaymentAmount = "$0.99" | "$2.49" | "$6.99";
 export default function Store() {
   const { t: translate, isRTL } = useTranslation();
   const t = (key: string) => translate(key);
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { user, refresh: mutateAuth } = useAuth();
   const [payMethod, setPayMethod] = useState<'money' | 'credits'>('money');
   
@@ -36,12 +36,19 @@ export default function Store() {
   const { data: payConfig } = trpc.system.getPaymentConfig.useQuery();
 
   const handleBack = () => {
-    if (fromChat) {
-      sessionStorage.setItem('chat_auto_start', 'true');
-      setLocation('/chat');
-    } else {
-      setLocation('/');
+    // Go back through the browser history instead of pushing another route.
+    // Pushing "/" here made the Store page reappear when the user pressed
+    // the browser back button on mobile.
+    if (window.history.length > 1) {
+      if (fromChat) {
+        sessionStorage.setItem('chat_auto_start', 'true');
+      }
+      window.history.back();
+      return;
     }
+
+    // Direct visits to /store have no in-app page to return to.
+    setLocation(fromChat ? '/chat' : '/');
   };
 
   /* ── mutations ─────────────────────────────────────────────────── */
