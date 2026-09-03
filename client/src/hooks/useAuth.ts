@@ -40,7 +40,7 @@ export function useAuth(options?: UseAuthOptions) {
       utils.auth.me.setData(undefined, null);
     },
   });
-  const { mutate: rememberGuest } = trpc.auth.rememberGuest.useMutation();
+  const { mutate: rememberGuest } = trpc.stories.rememberGuest.useMutation();
 
   // Existing guests created before persistent guest tokens were added get a
   // recovery token once, while their current cookie session is still valid.

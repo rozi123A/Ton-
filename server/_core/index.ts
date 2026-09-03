@@ -43,6 +43,7 @@ const adminWatchers = new Map<string, AdminWatcher>(); // watcherId → watcher
 
 // ── Recording storage (Backblaze B2) ─────────────────────────────────────────
 const REC_DIR = path.join('/tmp', 'ton-recs');
+const MAX_RECORDING_BYTES = 250 * 1024 * 1024;
 try { fs.mkdirSync(REC_DIR, { recursive: true }); } catch {}
 
 const B2_BUCKET   = process.env.B2_BUCKET   || '';
@@ -381,11 +382,30 @@ function registerSignalingRoutes(app: express.Express) {
 // ── Recording Routes ──────────────────────────────────────────────────────────
 
 function registerRecordingRoutes(app: express.Express) {
+  const recordingLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many recording uploads, please try again later.' },
+  });
+
   // Receive a video chunk — chunks assembled in /tmp, then uploaded to B2 on final
-  app.post('/api/record/chunk', express.raw({ type: '*/*', limit: '20mb' }), async (req: Request, res: Response) => {
+  app.post('/api/record/chunk', recordingLimiter, express.raw({ type: '*/*', limit: '20mb' }), async (req: Request, res: Response) => {
     const { sessionId, isFinal, name1, name2, peerId } = req.query as Record<string, string>;
-    if (!sessionId || !peerId) { res.json({ ok: false }); return; }
-    if (!peers.has(peerId) && isFinal !== 'true') { res.json({ ok: false, reason: 'peer not active' }); return; }
+    if (
+      !sessionId ||
+      !/^[a-zA-Z0-9_-]{1,128}$/.test(sessionId) ||
+      !peerId ||
+      !/^[a-zA-Z0-9_-]{1,128}$/.test(peerId)
+    ) {
+      res.status(400).json({ ok: false, reason: 'invalid recording identifiers' });
+      return;
+    }
+    if (!peers.has(peerId)) {
+      res.status(403).json({ ok: false, reason: 'peer not active' });
+      return;
+    }
 
     const chunk = req.body as Buffer;
     if (!chunk || chunk.length === 0) { res.json({ ok: true }); return; }
@@ -394,6 +414,11 @@ function registerRecordingRoutes(app: express.Express) {
     const metaPath = path.join(REC_DIR, `${sessionId}.json`);
 
     try {
+      const currentSize = fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
+      if (currentSize + chunk.length > MAX_RECORDING_BYTES) {
+        res.status(413).json({ ok: false, reason: 'recording too large' });
+        return;
+      }
       fs.appendFileSync(filePath, chunk);
       let meta: Record<string, unknown> = {};
       if (fs.existsSync(metaPath)) {
@@ -497,22 +522,30 @@ function validateAdminToken(token: string | undefined): boolean {
   try {
     const adminSecret = process.env.ADMIN_SECRET;
     if (!adminSecret) return false;
-    // Accept HMAC-signed tokens (new) or legacy base64 tokens (transitional)
     const expected = crypto
       .createHmac('sha256', adminSecret)
       .update('admin-session')
       .digest('hex');
-    if (token === expected) return true;
-    // Legacy fallback: base64(admin:<secret>) — must match exact secret
-    const decoded = Buffer.from(token, 'base64').toString('utf8');
-    return decoded === `admin:${adminSecret}`;
+    const provided = Buffer.from(token, 'utf8');
+    const expectedBuffer = Buffer.from(expected, 'utf8');
+    return provided.length === expectedBuffer.length &&
+      crypto.timingSafeEqual(provided, expectedBuffer);
   } catch { return false; }
+}
+
+function getAdminToken(req: Request): string | undefined {
+  const authorization = req.headers.authorization;
+  if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
+    return undefined;
+  }
+  const token = authorization.slice('Bearer '.length).trim();
+  return token || undefined;
 }
 
 function registerAdminMonitorRoutes(app: express.Express) {
   // List active paired calls
   app.get("/api/admin/active-calls", (req: Request, res: Response) => {
-    const token = req.query.token as string;
+    const token = getAdminToken(req);
     if (!validateAdminToken(token)) { res.status(403).json({ error: "forbidden" }); return; }
 
     const calls: Array<{
@@ -536,7 +569,7 @@ function registerAdminMonitorRoutes(app: express.Express) {
 
   // Admin SSE: receive offer/ICE forwarded from peer
   app.get("/api/admin/watch-stream", (req: Request, res: Response) => {
-    const token = req.query.token as string;
+    const token = getAdminToken(req);
     const targetPeerId = req.query.targetPeerId as string;
     const watcherId = req.query.watcherId as string;
     if (!validateAdminToken(token) || !targetPeerId || !watcherId) {
@@ -571,9 +604,10 @@ function registerAdminMonitorRoutes(app: express.Express) {
 
   // Admin sends answer or ICE back to peer
   app.post("/api/admin/watch-signal", express.json(), (req: Request, res: Response) => {
-    const { token, watcherId, type, data } = req.body as {
-      token: string; watcherId: string; type: string; data: unknown;
+    const { watcherId, type, data } = req.body as {
+      watcherId: string; type: string; data: unknown;
     };
+    const token = getAdminToken(req);
     if (!validateAdminToken(token)) { res.status(403).json({ error: "forbidden" }); return; }
 
     const watcher = adminWatchers.get(watcherId);
@@ -794,7 +828,7 @@ async function startServer() {
       await db.execute(sql`SELECT 1`);
       console.log('[db-keepalive] database ping OK');
     } catch (err) {
-      console.warn('[db-keepalive] database ping failed (DB may be sleeping):', err?.message || String(err));
+      console.warn('[db-keepalive] database ping failed (DB may be sleeping):', err instanceof Error ? err.message : String(err));
     }
   };
   // Start after 15 seconds, then every 3 minutes

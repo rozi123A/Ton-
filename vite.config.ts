@@ -1,19 +1,17 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
+import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 import path from "node:path";
 import { defineConfig } from "vite";
 
 // Dev-only: import Manus debug tools only when not building for production
 // These plugins are specific to the Manus AI development environment and will
 // fail on Render or any non-Manus host. Never include them in production builds.
-async function getDevPlugins() {
+function getDevPlugins(): Plugin[] {
   if (process.env.NODE_ENV === "production") return [];
   try {
-    const [{ jsxLocPlugin }, { vitePluginManusRuntime }] = await Promise.all([
-      import("@builder.io/vite-plugin-jsx-loc"),
-      import("vite-plugin-manus-runtime"),
-    ]);
-    return [jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+    return [jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()].flat() as Plugin[];
   } catch {
     return [];
   }
@@ -116,11 +114,11 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-export default defineConfig(async () => {
-  const devPlugins = await getDevPlugins();
+export default defineConfig(() => {
+  const devPlugins = getDevPlugins();
 
   return {
-    plugins: [react(), tailwindcss(), ...devPlugins],
+    plugins: [react(), tailwindcss(), ...devPlugins].flat(),
     resolve: {
       alias: {
         "@": path.resolve(import.meta.dirname, "client", "src"),
@@ -146,7 +144,7 @@ export default defineConfig(async () => {
     },
     server: {
       host: true,
-      allowedHosts: true,
+        allowedHosts: true as const,
       fs: {
         strict: true,
         deny: ["**/.*"],

@@ -25,6 +25,28 @@ type RecMeta = {
   size: number;
 };
 
+function adminHeaders(token: string): HeadersInit {
+  return { Authorization: `Bearer ${token}` };
+}
+
+async function downloadRecording(token: string, sessionId: string): Promise<void> {
+  const response = await fetch(`/api/admin/recording/${encodeURIComponent(sessionId)}`, {
+    headers: adminHeaders(token),
+  });
+  if (!response.ok) {
+    throw new Error('تعذر تنزيل التسجيل');
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = `${sessionId}.webm`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 function CallWatcher({
   call,
   token,
@@ -593,7 +615,9 @@ function CallsTab({ token }: { token: string }) {
   useEffect(() => {
     const fetchCalls = async () => {
       try {
-        const r = await fetch(`/api/admin/active-calls?token=${encodeURIComponent(token)}`);
+        const r = await fetch('/api/admin/active-calls', {
+          headers: adminHeaders(token),
+        });
         const d = await r.json();
         setCalls(d.calls || []);
       } catch {}
@@ -634,7 +658,9 @@ function RecordingsTab({ token }: { token: string }) {
 
   const fetchRecs = async () => {
     try {
-      const r = await fetch(`/api/admin/recordings?token=${encodeURIComponent(token)}`);
+      const r = await fetch('/api/admin/recordings', {
+        headers: adminHeaders(token),
+      });
       const d = await r.json();
       setRecs(d.recordings || []);
     } catch {}
@@ -653,7 +679,13 @@ function RecordingsTab({ token }: { token: string }) {
             <p style={{ margin: 0, fontSize: '11px', color: '#6b7280' }}>{fmtDate(r.startTime)} • {fmtSize(r.size)}</p>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <a href={`/api/admin/recording/${r.sessionId}?token=${encodeURIComponent(token)}`} download style={{ color: '#9ca3af' }}><Download style={{ width: '18px' }} /></a>
+             <button
+               onClick={() => void downloadRecording(token, r.sessionId).catch(() => toast.error('تعذر تنزيل التسجيل'))}
+               style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+               aria-label="تنزيل التسجيل"
+             >
+               <Download style={{ width: '18px' }} />
+             </button>
             <button onClick={() => setPlaying(r)} style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer' }}><Play style={{ width: '18px' }} /></button>
           </div>
         </div>
@@ -832,7 +864,7 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
 
           <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '10px' }}>
             <button
-              onClick={() => alert(`معرف المستخدم: ${user.id}\nالاسم: ${user.name}\nالإيميل: ${user.email || 'غير متوفر'}`)}
+              onClick={() => alert(`معرف المستخدم: ${user.id}\nالاسم: ${user.name}\nالإيميل: ${(user as { email?: string | null }).email || 'غير متوفر'}`)}
               style={{
                 flex: 1, backgroundColor: '#7c3aed', color: 'white', border: 'none',
                 borderRadius: '12px', padding: '12px', fontWeight: 700, fontSize: '14px', cursor: 'pointer'

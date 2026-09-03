@@ -18,7 +18,7 @@ import {
   getDb,
 } from "./db";
 import { and, eq, isNull, lt, or, sql, desc } from "drizzle-orm";
-import { users, notifications } from "../drizzle/schema";
+import { users, messages, notifications } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
 import { detectCountry } from "./_core/detectCountry";
 import { invokeLLM } from "./_core/llm";
@@ -116,7 +116,16 @@ function withFallback<T>(
 function verifyAdminHmac(token: string, secret: string): boolean {
   if (!token || !secret) return false;
   const expected = crypto.createHmac('sha256', secret).update('admin-session').digest('hex');
-  return token === expected;
+  const provided = Buffer.from(token, 'utf8');
+  const expectedBuffer = Buffer.from(expected, 'utf8');
+  return provided.length === expectedBuffer.length && crypto.timingSafeEqual(provided, expectedBuffer);
+}
+
+function secureStringEqual(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left, 'utf8');
+  const rightBuffer = Buffer.from(right, 'utf8');
+  return leftBuffer.length === rightBuffer.length &&
+    crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 export const appRouter = router({
@@ -292,7 +301,13 @@ export const appRouter = router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(async ({ ctx }) => {
       if (ctx.user) {
-        await updateUserOffline(ctx.user.id, ctx.user.openId);
+        // Clearing the browser session must not wait on a sleeping database.
+        // The presence update is best effort and is bounded to keep logout
+        // responsive even when the database is unavailable.
+        await Promise.race([
+          updateUserOffline(ctx.user.id, ctx.user.openId),
+          new Promise<void>(resolve => setTimeout(resolve, 1_000)),
+        ]).catch(() => undefined);
       }
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -1045,7 +1060,7 @@ export const appRouter = router({
       .input(z.object({ secret: z.string() }))
       .mutation(async ({ input }) => {
         const { ENV } = await import('./_core/env');
-        if (input.secret !== ENV.adminSecret) {
+        if (!secureStringEqual(input.secret, ENV.adminSecret)) {
           throw new Error("كلمة المرور خاطئة");
         }
         const hmacToken = crypto
@@ -1060,7 +1075,7 @@ export const appRouter = router({
       .input(z.object({ secret: z.string() }))
       .mutation(async ({ ctx, input }) => {
         const { ENV } = await import('./_core/env');
-        if (input.secret !== ENV.adminSecret) {
+        if (!secureStringEqual(input.secret, ENV.adminSecret)) {
           throw new Error("الكود غير صحيح");
         }
         const db = await getDb();

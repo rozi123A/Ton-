@@ -454,13 +454,15 @@ export async function getMessages(userId1: number, userId2: number) {
 
   try {
     return await db.select().from(messages).where(
-      or(
-        and(eq(messages.senderId, userId1), eq(messages.receiverId, userId2)),
-        and(eq(messages.senderId, userId2), eq(messages.receiverId, userId1))
-      ),
-      // Story comments used to be copied into the direct-message table.
-      // Keep old comments out of real conversations as well as new ones.
-      sql`content NOT LIKE '[تعليق على القصة]:%'`
+      and(
+        or(
+          and(eq(messages.senderId, userId1), eq(messages.receiverId, userId2)),
+          and(eq(messages.senderId, userId2), eq(messages.receiverId, userId1))
+        ),
+        // Story comments used to be copied into the direct-message table.
+        // Keep old comments out of real conversations as well as new ones.
+        sql`content NOT LIKE '[تعليق على القصة]:%'`
+      )
     ).orderBy(messages.createdAt);
   } catch (error) {
     console.error('[Database] Failed to get messages:', error);

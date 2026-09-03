@@ -5,6 +5,8 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
+import { users } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 import * as db from "../db";
 import { ENV } from "./env";
 import type {
