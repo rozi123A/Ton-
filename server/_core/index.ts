@@ -408,7 +408,10 @@ function registerRecordingRoutes(app: express.Express) {
     }
 
     const chunk = req.body as Buffer;
-    if (!chunk || chunk.length === 0) { res.json({ ok: true }); return; }
+    if ((!chunk || chunk.length === 0) && isFinal !== 'true') {
+      res.json({ ok: true });
+      return;
+    }
 
     const filePath = path.join(REC_DIR, `${sessionId}.webm`);
     const metaPath = path.join(REC_DIR, `${sessionId}.json`);

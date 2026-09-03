@@ -418,8 +418,8 @@ export default function ChatRoom() {
       recorderRef.current = rec;
 
       const sendChunks = async (blob: Blob, final = false) => {
-        const sid = recSessionRef.current;
-        if (!sid || blob.size < 100) return;
+        const sid = sessionId;
+        if ((!final && blob.size < 100) || !sid) return;
         try {
           const params = new URLSearchParams({
             sessionId: sid, peerId: myId,
@@ -433,26 +433,32 @@ export default function ChatRoom() {
           });
         } catch {}
       };
+      let uploadQueue = Promise.resolve();
+      const queueChunk = (blob: Blob, final = false) => {
+        const nextUpload = uploadQueue.then(() => sendChunks(blob, final));
+        uploadQueue = nextUpload.then(() => undefined, () => undefined);
+        return nextUpload;
+      };
 
       rec.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
         if (chunks.length >= 3) {
           const blob = new Blob(chunks.splice(0), { type: mimeType || 'video/webm' });
-          sendChunks(blob);
+          void queueChunk(blob);
         }
       };
 
-      rec.onstop = () => {
-        const sid = recSessionRef.current;
-        if (!sid) return;
+      rec.onstop = async () => {
         if (chunks.length > 0) {
           const blob = new Blob(chunks.splice(0), { type: mimeType || 'video/webm' });
-          sendChunks(blob, true);
+          await queueChunk(blob, true);
         } else {
           // Send final signal with empty body to close the meta
-          sendChunks(new Blob([''], { type: 'video/webm' }), true);
+          await queueChunk(new Blob([''], { type: 'video/webm' }), true);
         }
-        recSessionRef.current = null;
+        if (recSessionRef.current === sessionId) {
+          recSessionRef.current = null;
+        }
       };
 
       rec.start(5000); // collect 5-second chunks
