@@ -27,6 +27,25 @@ export default function Header() {
   const handleLogin    = () => setLocation("/login");
   const handleProfile  = () => setLocation("/profile");
   const handleLogout   = async () => { await logout(); setLocation("/"); };
+  const navigateToSection = (sectionId: string) => {
+    setIsMenuOpen(false);
+
+    const scrollToSection = () => {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.history.replaceState(null, "", `/#${sectionId}`);
+      }
+    };
+
+    if (window.location.pathname !== "/") {
+      setLocation("/");
+      window.setTimeout(scrollToSection, 150);
+      return;
+    }
+
+    scrollToSection();
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-300">
@@ -43,10 +62,10 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <a href="#features" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.features')}</a>
+           <button type="button" onClick={() => navigateToSection("features")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.features')}</button>
           <button onClick={() => setLocation('/store')} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.store')}</button>
-          <a href="#faq"      className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.faq')}</a>
-          <a href="#security" className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.security')}</a>
+           <button type="button" onClick={() => navigateToSection("faq")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.faq')}</button>
+           <button type="button" onClick={() => navigateToSection("security")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.security')}</button>
         </nav>
 
         {/* CTA — desktop */}
@@ -168,10 +187,10 @@ export default function Header() {
       {/* Mobile menu */}
       {isMenuOpen && (
          <div className="md:hidden bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 py-4 px-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-           <a href="#features" className="block text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.features')}</a>
+           <button type="button" onClick={() => navigateToSection("features")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.features')}</button>
            <button onClick={() => { setIsMenuOpen(false); setLocation('/store'); }} className={`block ${language === 'ar' ? 'text-right' : 'text-left'} w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2`}>{t('nav.store')}</button>
-           <a href="#faq"      className="block text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.faq')}</a>
-           <a href="#security" className="block text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.security')}</a>
+           <button type="button" onClick={() => navigateToSection("faq")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.faq')}</button>
+           <button type="button" onClick={() => navigateToSection("security")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.security')}</button>
           
           {/* Language Switcher Mobile */}
            <div className="flex items-center gap-2 pt-2">
