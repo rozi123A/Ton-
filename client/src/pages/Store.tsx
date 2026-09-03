@@ -138,11 +138,15 @@ export default function Store() {
       <main className="flex-grow container mx-auto px-4 py-10">
         <div className="mb-8 flex justify-start">
           <button
+            type="button"
             onClick={handleBack}
-            className="group flex items-center gap-3 px-5 py-2.5 bg-gradient-to-b from-yellow-300 to-yellow-500 text-gray-900 font-bold rounded-2xl shadow-[0_4px_0_0_#a16207] active:shadow-none active:translate-y-1 transition-all hover:brightness-110"
+            aria-label={t('common.back')}
+            className="group inline-flex min-h-11 items-center gap-2 rounded-full border border-purple-200 bg-white px-2.5 py-2 text-sm font-extrabold text-purple-700 shadow-[0_5px_16px_rgba(124,58,237,0.14)] transition-all duration-200 hover:-translate-y-0.5 hover:border-purple-300 hover:shadow-[0_8px_22px_rgba(124,58,237,0.2)] active:translate-y-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
           >
-            <ArrowRight className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
-            {fromChat ? t('common.back') : t('nav.features')}
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 via-fuchsia-600 to-pink-500 text-white shadow-md shadow-purple-300/50 transition-transform duration-200 group-hover:-translate-x-0.5">
+              <ArrowRight className={`h-4 w-4 ${isRTL ? 'rotate-180' : ''}`} />
+            </span>
+            <span className="px-1">{t('common.back')}</span>
           </button>
         </div>
 
