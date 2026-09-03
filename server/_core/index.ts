@@ -456,7 +456,7 @@ function registerRecordingRoutes(app: express.Express) {
 
   // List recordings — from B2 if configured, else from /tmp
   app.get('/api/admin/recordings', async (req: Request, res: Response) => {
-    const token = req.query.token as string;
+    const token = getAdminToken(req);
     if (!validateAdminToken(token)) { res.status(403).json({ error: 'forbidden' }); return; }
     try {
       if (b2) {
@@ -479,9 +479,10 @@ function registerRecordingRoutes(app: express.Express) {
 
   // Stream / download — from B2 if configured
   app.get('/api/admin/recording/:id', async (req: Request, res: Response) => {
-    const token = req.query.token as string;
+    const token = getAdminToken(req);
     if (!validateAdminToken(token)) { res.status(403).send('forbidden'); return; }
-    const id = req.params.id.replace(/[^a-zA-Z0-9_-]/g, '');
+    const id = req.params.id;
+    if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) { res.status(400).send('invalid recording id'); return; }
     const isDownload = req.query.dl === '1';
 
     if (b2) {
@@ -504,9 +505,10 @@ function registerRecordingRoutes(app: express.Express) {
 
   // Delete — from B2 + /tmp
   app.delete('/api/admin/recording/:id', async (req: Request, res: Response) => {
-    const token = req.query.token as string;
+    const token = getAdminToken(req);
     if (!validateAdminToken(token)) { res.status(403).json({ error: 'forbidden' }); return; }
-    const id = req.params.id.replace(/[^a-zA-Z0-9_-]/g, '');
+    const id = req.params.id;
+    if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) { res.status(400).json({ error: 'invalid recording id' }); return; }
     await b2Delete(`recordings/${id}.webm`);
     await b2Delete(`recordings/${id}.meta.json`);
     try { fs.unlinkSync(path.join(REC_DIR, `${id}.webm`)); } catch {}
