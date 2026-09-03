@@ -23,6 +23,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "تسجيل الخروج",
     "nav.vip_member": "عضو VIP",
     "nav.logged_in": "مسجّل الدخول",
+    "theme.dim": "تقليل الإضاءة",
+    "theme.normal": "الوضع العادي",
 
     // Home Page
     "home.hero_title": "تواصل مع العالم مباشرة",
@@ -134,6 +136,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "Logout",
     "nav.vip_member": "VIP Member",
     "nav.logged_in": "Logged In",
+    "theme.dim": "Reduce brightness",
+    "theme.normal": "Normal mode",
 
     // Home Page
     "home.hero_title": "Connect with the World Live",
@@ -245,6 +249,8 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "Déconnexion",
     "nav.vip_member": "Membre VIP",
     "nav.logged_in": "Connecté",
+    "theme.dim": "Réduire la luminosité",
+    "theme.normal": "Mode normal",
 
     // Home Page
     "home.hero_title": "Connectez-vous au monde en direct",

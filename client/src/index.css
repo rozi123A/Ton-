@@ -145,6 +145,52 @@
   }
 }
 
+/* Keep the existing utility-heavy screens readable when the user enables
+   reduced brightness from the mobile menu. */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #0b0b12;
+}
+
+.dark .bg-white {
+  background-color: #11131f;
+}
+
+.dark .bg-gray-50 {
+  background-color: #171925;
+}
+
+.dark .bg-gray-100 {
+  background-color: #202231;
+}
+
+.dark .text-gray-900 {
+  color: #f3f4f6;
+}
+
+.dark .text-gray-800 {
+  color: #e5e7eb;
+}
+
+.dark .text-gray-700 {
+  color: #d1d5db;
+}
+
+.dark .text-gray-600 {
+  color: #aeb4c0;
+}
+
+.dark .border-gray-200 {
+  border-color: #2f3344;
+}
+
+.dark .border-gray-100 {
+  border-color: #252838;
+}
+
 @layer components {
   @keyframes float {
     0%, 100% {
