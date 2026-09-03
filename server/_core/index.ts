@@ -747,12 +747,29 @@ async function startServer() {
   app.use('/api/trpc/admin.verifyAdmin', authLimiter);
   app.use('/api/trpc', generalLimiter);
 
-  // 🔒 CORS — allow all origins (safe for WebSSE signaling + tRPC)
-  app.use((_req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
-    if (_req.method === 'OPTIONS') { res.sendStatus(204); return; }
+  // 🔒 CORS — cross-origin access is opt-in via an exact origin allowlist.
+  const corsOrigins = new Set(
+    (process.env.CORS_ORIGINS ?? '')
+      .split(',')
+      .map(origin => origin.trim())
+      .filter(Boolean),
+  );
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    const isAllowedOrigin = typeof origin === 'string' && corsOrigins.has(origin);
+
+    if (isAllowedOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    }
+
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(isAllowedOrigin ? 204 : 403);
+      return;
+    }
     next();
   });
 
