@@ -6,7 +6,7 @@ import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_
 import {
   saveUserProfile, getUsersByGender, getMessages, saveMessage,
   upsertUser, getUserByOpenId, getRecentUsers, incrementProfileViews,
-  getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
+  getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremiumWithCredits,
   getCountryStats, getNewRegistrations, getTotalUsersCount, getOnlineUsersCount, getPremiumCount, searchUsers, broadcastNotificationToAll,
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
@@ -791,13 +791,10 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         const isAdmin = (ctx.user as any).role === 'admin';
-        if (!isAdmin) {
-          const current = await getUserCredits(ctx.user.id);
-          if (current < input.cost) throw new Error('رصيدك غير كافٍ لإرسال هذه الهدية');
-        }
-        
         const receiverId = input.receiverId || 0;
-        await saveGift(ctx.user.id, receiverId, input.giftType, input.cost);
+        const saved = await saveGift(ctx.user.id, receiverId, input.giftType, input.cost);
+        if (!saved && !isAdmin) throw new Error('رصيدك غير كافٍ لإرسال هذه الهدية');
+        if (!saved) throw new Error('تعذر تسجيل الهدية، حاول مجدداً');
         
         if (receiverId > 0) {
           await createNotification(receiverId, {
@@ -856,23 +853,21 @@ export const appRouter = router({
         return { success: true, newBalance };
       }),
 
-    /** Upgrade user to premium (free/admin) */
+    /** Premium upgrades must use a verified payment or the credits flow below. */
     upgrade: protectedProcedure
-      .mutation(async ({ ctx }) => {
-        await upgradeToPremium(ctx.user.id);
-        return { success: true };
+      .mutation(async () => {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Premium upgrades require a verified payment or credits.',
+        });
       }),
 
     /** Upgrade to Premium by spending 50000 credits */
     upgradeWithCredits: protectedProcedure
       .mutation(async ({ ctx }) => {
-        if ((ctx.user as any).isPremium) throw new Error("أنت مشترك بالفعل في Premium!");
         const COST = 50000;
-        const balance = await getUserCredits(ctx.user.id);
-        if (balance < COST) throw new Error(`رصيدك ${balance} نقطة فقط. تحتاج ${COST} نقطة للاشتراك.`);
-        const ok = await deductCredits(ctx.user.id, COST);
-        if (!ok) throw new Error("فشل خصم النقاط، حاول مجدداً.");
-        await upgradeToPremium(ctx.user.id);
+        const ok = await upgradeToPremiumWithCredits(ctx.user.id, COST);
+        if (!ok) throw new Error("أنت مشترك بالفعل أو لا تملك نقاطًا كافية للاشتراك.");
         await createNotification(ctx.user.id, {
           type: 'system',
           title: '🎉 مرحباً بك في Premium!',

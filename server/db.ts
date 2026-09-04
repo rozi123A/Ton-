@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { and, desc, eq, isNotNull, ne, or, sql, gt } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, ne, or, sql, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests, stories, InsertStory, storyComments, storyViews, InsertStoryComment, InsertStoryView } from '../drizzle/schema';
@@ -518,10 +518,11 @@ export async function deductCredits(userId: number, amount: number): Promise<boo
   const db = await getDb();
   if (!db) return false;
   try {
-    const current = await getUserCredits(userId);
-    if (current < amount) return false;
-    await db.update(users).set({ credits: sql`${users.credits} - ${amount}` }).where(eq(users.id, userId));
-    return true;
+    const updated = await db.update(users)
+      .set({ credits: sql`${users.credits} - ${amount}` })
+      .where(and(eq(users.id, userId), gte(users.credits, amount)))
+      .returning({ id: users.id });
+    return updated.length > 0;
   } catch {
     return false;
   }
@@ -531,11 +532,11 @@ export async function deductStars(userId: number, amount: number): Promise<boole
   const db = await getDb();
   if (!db) return false;
   try {
-    const result = await db.select({ wallet: users.wallet }).from(users).where(eq(users.id, userId)).limit(1);
-    const current = result[0]?.wallet ?? 0;
-    if (current < amount) return false;
-    await db.update(users).set({ wallet: sql`${users.wallet} - ${amount}` }).where(eq(users.id, userId));
-    return true;
+    const updated = await db.update(users)
+      .set({ wallet: sql`${users.wallet} - ${amount}` })
+      .where(and(eq(users.id, userId), gte(users.wallet, amount)))
+      .returning({ id: users.id });
+    return updated.length > 0;
   } catch {
     return false;
   }
@@ -562,13 +563,19 @@ export async function addCredits(userId: number, amount: number): Promise<void> 
   }
 }
 
-export async function saveGift(senderId: number, receiverId: number, giftType: string, cost: number): Promise<void> {
+export async function saveGift(senderId: number, receiverId: number, giftType: string, cost: number): Promise<boolean> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return false;
   try {
     await db.transaction(async (tx) => {
-      // Deduct from sender
-      await tx.update(users).set({ credits: sql`${users.credits} - ${cost}` }).where(eq(users.id, senderId));
+      // Deduct only when the sender still has enough credits. This is a
+      // single conditional UPDATE, so concurrent gifts cannot overspend.
+      const sender = await tx.update(users)
+        .set({ credits: sql`${users.credits} - ${cost}` })
+        .where(and(eq(users.id, senderId), gte(users.credits, cost)))
+        .returning({ id: users.id });
+      if (sender.length === 0) throw new Error('INSUFFICIENT_CREDITS');
+
       // Add to receiver's credit balance so their balance actually increases
       if (receiverId > 0) {
         await tx.update(users).set({ credits: sql`${users.credits} + ${cost}` }).where(eq(users.id, receiverId));
@@ -576,8 +583,11 @@ export async function saveGift(senderId: number, receiverId: number, giftType: s
       // Log gift
       await tx.insert(gifts).values({ senderId, receiverId, giftType, cost });
     });
+    return true;
   } catch (err) {
+    if (err instanceof Error && err.message === 'INSUFFICIENT_CREDITS') return false;
     console.error('[Database] saveGift failed:', err);
+    return false;
   }
 }
 
@@ -642,6 +652,28 @@ export async function upgradeToPremium(userId: number): Promise<void> {
   } catch (err) {
     console.error('[Database] upgradeToPremium failed:', err);
     throw err;
+  }
+}
+
+export async function upgradeToPremiumWithCredits(userId: number, cost: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const updated = await db.update(users)
+      .set({
+        isPremium: true,
+        credits: sql`${users.credits} - ${cost} + 100`,
+      })
+      .where(and(
+        eq(users.id, userId),
+        eq(users.isPremium, false),
+        gte(users.credits, cost),
+      ))
+      .returning({ id: users.id });
+    return updated.length > 0;
+  } catch (err) {
+    console.error('[Database] upgradeToPremiumWithCredits failed:', err);
+    return false;
   }
 }
 

@@ -33,6 +33,7 @@ interface PeerInfo {
 
 const peers = new Map<string, PeerInfo>();
 const waitingQueue: string[] = [];
+const recordingSessions = new Map<string, { peerId: string; userId: number }>();
 
 interface LastPartner { partnerName: string; partnerAvatar: string; ts: number; }
 const lastPeers = new Map<string, LastPartner>();
@@ -222,18 +223,55 @@ function removePeer(peerId: string) {
 }
 
 function registerSignalingRoutes(app: express.Express) {
-  app.get("/api/signal/connect", async (req: Request, res: Response) => {
+  const connectLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many signaling connections, please try again later." },
+  });
+  const signalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many signaling messages, please try again later." },
+  });
+
+  app.get("/api/signal/connect", connectLimiter, async (req: Request, res: Response) => {
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || user.isCron || user.id <= 0) {
+      res.status(401).json({ error: "authentication required" });
+      return;
+    }
+
     const peerId        = req.query.peerId        as string;
-    const name          = (req.query.name          as string) || "مستخدم";
-    const avatar        = (req.query.avatar        as string) || "";
-    const gender        = (req.query.gender        as string) || "other";
     const filterGender  = (req.query.filterGender  as string) || "any";
     const filterCountry = (req.query.filterCountry as string) || "any";
-    const userId        = req.query.userId ? parseInt(req.query.userId as string) : undefined;
 
-    if (!peerId) { res.status(400).json({ error: "peerId required" }); return; }
+    if (
+      !peerId ||
+      !/^[a-zA-Z0-9_-]{1,128}$/.test(peerId) ||
+      !/^(male|female|other|any)$/.test(filterGender) ||
+      !/^[a-zA-Z]{2,10}$/.test(filterCountry) && filterCountry !== "any"
+    ) {
+      res.status(400).json({ error: "invalid signaling parameters" });
+      return;
+    }
 
+    const existingPeer = peers.get(peerId);
+    if (existingPeer && existingPeer.userId !== user.id) {
+      res.status(403).json({ error: "peer belongs to another user" });
+      return;
+    }
     removePeer(peerId);
+
+    // Identity is always loaded from the authenticated session, never from the
+    // query string. This prevents wallet charging and notification spoofing.
+    const name = (user.name || "مستخدم").slice(0, 120);
+    const avatar = (user.avatar || "").slice(0, 2048);
+    const gender = user.gender || "other";
+    const userId = user.id;
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -296,13 +334,34 @@ function registerSignalingRoutes(app: express.Express) {
     });
   });
 
-  app.post("/api/signal/send", express.json(), (req: Request, res: Response) => {
+  app.post("/api/signal/send", signalLimiter, express.json(), async (req: Request, res: Response) => {
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || user.isCron || user.id <= 0) {
+      res.status(401).json({ error: "authentication required" });
+      return;
+    }
+
     const { peerId, type, data, text } = req.body as {
       peerId: string; type: string; data?: unknown; text?: string;
     };
 
+    if (
+      typeof peerId !== "string" ||
+      !/^[a-zA-Z0-9_-]{1,128}$/.test(peerId) ||
+      typeof type !== "string" ||
+      type.length === 0 ||
+      type.length > 64
+    ) {
+      res.status(400).json({ ok: false, reason: "invalid signal" });
+      return;
+    }
+
     const peer = peers.get(peerId);
     if (!peer) { res.json({ ok: false, reason: "peer not found" }); return; }
+    if (peer.userId !== user.id) {
+      res.status(403).json({ ok: false, reason: "peer belongs to another user" });
+      return;
+    }
 
     // ── Admin monitoring signals ──────────────────────────────────────────
     if (type === "admin-watch-offer" || type === "admin-watch-ice") {
@@ -403,7 +462,13 @@ function registerRecordingRoutes(app: express.Express) {
 
   // Receive a video chunk — chunks assembled in /tmp, then uploaded to B2 on final
   app.post('/api/record/chunk', recordingLimiter, express.raw({ type: '*/*', limit: '20mb' }), async (req: Request, res: Response) => {
-    const { sessionId, isFinal, name1, name2, peerId } = req.query as Record<string, string>;
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user || user.isCron || user.id <= 0) {
+      res.status(401).json({ ok: false, reason: 'authentication required' });
+      return;
+    }
+
+    const { sessionId, isFinal, peerId } = req.query as Record<string, string>;
     if (
       !sessionId ||
       !/^[a-zA-Z0-9_-]{1,128}$/.test(sessionId) ||
@@ -413,9 +478,23 @@ function registerRecordingRoutes(app: express.Express) {
       res.status(400).json({ ok: false, reason: 'invalid recording identifiers' });
       return;
     }
-    if (!peers.has(peerId)) {
+    const peer = peers.get(peerId);
+    if (!peer) {
       res.status(403).json({ ok: false, reason: 'peer not active' });
       return;
+    }
+    if (peer.userId !== user.id) {
+      res.status(403).json({ ok: false, reason: 'peer belongs to another user' });
+      return;
+    }
+
+    const recordingOwner = recordingSessions.get(sessionId);
+    if (recordingOwner && (recordingOwner.peerId !== peerId || recordingOwner.userId !== user.id)) {
+      res.status(403).json({ ok: false, reason: 'recording session belongs to another peer' });
+      return;
+    }
+    if (!recordingOwner) {
+      recordingSessions.set(sessionId, { peerId, userId: user.id });
     }
 
     const chunk = req.body as Buffer;
@@ -430,6 +509,9 @@ function registerRecordingRoutes(app: express.Express) {
     try {
       const currentSize = fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
       if (currentSize + chunk.length > MAX_RECORDING_BYTES) {
+        recordingSessions.delete(sessionId);
+        try { fs.unlinkSync(filePath); } catch {}
+        try { fs.unlinkSync(metaPath); } catch {}
         res.status(413).json({ ok: false, reason: 'recording too large' });
         return;
       }
@@ -439,7 +521,13 @@ function registerRecordingRoutes(app: express.Express) {
         try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch {}
       }
       if (!meta.startTime) {
-        meta = { sessionId, startTime: Date.now(), name1: name1 || '?', name2: name2 || '?' };
+        const partner = peer.partnerId ? peers.get(peer.partnerId) : undefined;
+        meta = {
+          sessionId,
+          startTime: Date.now(),
+          name1: peer.name,
+          name2: partner?.name || '?',
+        };
       }
       if (isFinal === 'true') {
         meta.endTime = Date.now();
@@ -459,6 +547,7 @@ function registerRecordingRoutes(app: express.Express) {
           // Clean up /tmp after successful upload
           try { fs.unlinkSync(filePath); } catch {}
           try { fs.unlinkSync(metaPath); } catch {}
+           recordingSessions.delete(sessionId);
           console.log(`[B2] Uploaded recording ${sessionId} (${Math.round((meta.size as number)/1024)}KB)`);
         } catch (e) {
           console.error('[B2] Upload failed — recording stays in /tmp', e);
@@ -807,7 +896,14 @@ async function startServer() {
     legacyHeaders: false,
   });
   app.use('/api/trpc/users.guestLogin', authLimiter);
-  app.use('/api/trpc/admin.verifyAdmin', authLimiter);
+  const adminSecretLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many admin authentication attempts, please try again later.' },
+  });
+  app.use('/api/trpc/admin.verifySecret', adminSecretLimiter);
   app.use('/api/trpc', generalLimiter);
 
   // 🔒 CORS — cross-origin access is opt-in via an exact origin allowlist.
