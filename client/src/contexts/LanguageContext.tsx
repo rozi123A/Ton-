@@ -23,8 +23,10 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "تسجيل الخروج",
     "nav.vip_member": "عضو VIP",
     "nav.logged_in": "مسجّل الدخول",
-    "theme.dim": "تقليل الإضاءة",
-    "theme.normal": "الوضع العادي",
+    "theme.dark_mode": "الوضع الداكن",
+    "theme.light_mode": "الوضع الفاتح",
+    "theme.switch_to_dark": "تفعيل المظهر الداكن",
+    "theme.switch_to_light": "العودة إلى المظهر الفاتح",
 
     // Home Page
     "home.hero_title": "تواصل مع العالم مباشرة",
@@ -136,8 +138,10 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "Logout",
     "nav.vip_member": "VIP Member",
     "nav.logged_in": "Logged In",
-    "theme.dim": "Reduce brightness",
-    "theme.normal": "Normal mode",
+    "theme.dark_mode": "Dark mode",
+    "theme.light_mode": "Light mode",
+    "theme.switch_to_dark": "Switch to dark mode",
+    "theme.switch_to_light": "Switch to light mode",
 
     // Home Page
     "home.hero_title": "Connect with the World Live",
@@ -249,8 +253,10 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.logout": "Déconnexion",
     "nav.vip_member": "Membre VIP",
     "nav.logged_in": "Connecté",
-    "theme.dim": "Réduire la luminosité",
-    "theme.normal": "Mode normal",
+    "theme.dark_mode": "Mode sombre",
+    "theme.light_mode": "Mode clair",
+    "theme.switch_to_dark": "Activer le mode sombre",
+    "theme.switch_to_light": "Revenir au mode clair",
 
     // Home Page
     "home.hero_title": "Connectez-vous au monde en direct",

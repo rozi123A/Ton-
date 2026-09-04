@@ -73,8 +73,8 @@ export default function Header() {
           <button
             type="button"
             onClick={() => toggleTheme?.()}
-            title={isDark ? t('theme.normal') : t('theme.dim')}
-            aria-label={isDark ? t('theme.normal') : t('theme.dim')}
+            title={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
+            aria-label={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
             aria-pressed={isDark}
             className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
           >
@@ -203,16 +203,26 @@ export default function Header() {
           </div>
 
            {/* Theme switcher */}
-           <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
-             <div className="flex items-center gap-2 text-gray-700 dark:text-gray-200 font-medium">
-               {isDark ? <Moon className="w-4 h-4 text-purple-500" /> : <Sun className="w-4 h-4 text-amber-500" />}
-               <span>{t('theme.dim')}</span>
+           <div className="flex items-center justify-between gap-3 rounded-2xl border border-purple-200/80 dark:border-purple-800/70 bg-gradient-to-l from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-gray-900 px-3.5 py-3 shadow-sm">
+             <div className="flex min-w-0 items-center gap-3">
+               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${isDark ? "bg-purple-600 text-white" : "bg-white text-amber-500"}`}>
+                 {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+               </div>
+               <div className="min-w-0">
+                 <p className="text-sm font-bold text-gray-900 dark:text-white">
+                   {isDark ? t('theme.dark_mode') : t('theme.light_mode')}
+                 </p>
+                 <p className="mt-0.5 truncate text-[11px] font-medium text-purple-700 dark:text-purple-300">
+                   {isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
+                 </p>
+               </div>
              </div>
              <Switch
                checked={isDark}
                onCheckedChange={() => toggleTheme?.()}
-               aria-label={t('theme.dim')}
+                aria-label={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
                aria-checked={isDark}
+                className="h-6 w-11 border-purple-300 bg-gray-300 data-[state=checked]:bg-purple-600 dark:border-purple-700 dark:bg-gray-700"
              />
            </div>
 
