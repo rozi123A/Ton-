@@ -50,9 +50,19 @@ try { fs.mkdirSync(REC_DIR, { recursive: true }); } catch {}
 const B2_BUCKET   = process.env.B2_BUCKET   || '';
 const B2_ENDPOINT = process.env.B2_ENDPOINT  || ''; // e.g. s3.us-east-005.backblazeb2.com
 
+function getB2Region(endpoint: string): string {
+  const match = endpoint.trim().match(/^s3\.([^.]+)\.backblazeb2\.com$/i);
+  if (!match) {
+    throw new Error(
+      '[B2] B2_ENDPOINT must be a Backblaze S3 hostname such as s3.us-east-005.backblazeb2.com',
+    );
+  }
+  return match[1];
+}
+
 let b2: S3Client | null = null;
 if (B2_BUCKET && B2_ENDPOINT && process.env.B2_KEY_ID && process.env.B2_APP_KEY) {
-  const region = B2_ENDPOINT.split('.').slice(1, 3).join('-') || 'us-east-005';
+  const region = getB2Region(B2_ENDPOINT);
   b2 = new S3Client({
     endpoint: `https://${B2_ENDPOINT}`,
     region,
@@ -437,19 +447,23 @@ function registerRecordingRoutes(app: express.Express) {
         fs.writeFileSync(metaPath, JSON.stringify(meta));
 
         // Upload to Backblaze B2 permanently
-        if (b2) {
-          try {
-            const videoBuffer = fs.readFileSync(filePath);
-            const metaBuffer  = Buffer.from(JSON.stringify(meta));
-            await b2Upload(`recordings/${sessionId}.webm`, videoBuffer, 'video/webm');
-            await b2Upload(`recordings/${sessionId}.meta.json`, metaBuffer, 'application/json');
-            // Clean up /tmp after successful upload
-            try { fs.unlinkSync(filePath); } catch {}
-            try { fs.unlinkSync(metaPath); } catch {}
-            console.log(`[B2] Uploaded recording ${sessionId} (${Math.round((meta.size as number)/1024)}KB)`);
-          } catch (e) {
-            console.error('[B2] Upload failed — recording stays in /tmp', e);
-          }
+        if (!b2) {
+          res.status(503).json({ ok: false, reason: 'permanent recording storage unavailable' });
+          return;
+        }
+        try {
+          const videoBuffer = fs.readFileSync(filePath);
+          const metaBuffer  = Buffer.from(JSON.stringify(meta));
+          await b2Upload(`recordings/${sessionId}.webm`, videoBuffer, 'video/webm');
+          await b2Upload(`recordings/${sessionId}.meta.json`, metaBuffer, 'application/json');
+          // Clean up /tmp after successful upload
+          try { fs.unlinkSync(filePath); } catch {}
+          try { fs.unlinkSync(metaPath); } catch {}
+          console.log(`[B2] Uploaded recording ${sessionId} (${Math.round((meta.size as number)/1024)}KB)`);
+        } catch (e) {
+          console.error('[B2] Upload failed — recording stays in /tmp', e);
+          res.status(502).json({ ok: false, reason: 'recording upload failed' });
+          return;
         }
       } else {
         fs.writeFileSync(metaPath, JSON.stringify(meta));

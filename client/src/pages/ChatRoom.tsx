@@ -426,11 +426,14 @@ export default function ChatRoom() {
             name1: myName || '؟', name2: (window as any).peerNameForRec || '؟',
             isFinal: String(final),
           });
-          await fetch(`/api/record/chunk?${params}`, {
+          const response = await fetch(`/api/record/chunk?${params}`, {
             method: 'POST',
             headers: { 'Content-Type': 'video/webm' },
             body: blob,
           });
+          if (!response.ok) {
+            throw new Error(`recording upload failed (${response.status})`);
+          }
         } catch {}
       };
       let uploadQueue = Promise.resolve();
