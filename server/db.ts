@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { and, desc, eq, isNotNull, ne, or, sql, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
@@ -1022,21 +1023,34 @@ export async function broadcastNotificationToAll(title: string, message: string)
     // Push live via SSE endpoint so connected users see it immediately
     try {
       const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 3000}`;
-      for (const u of allUsers) {
-        try {
-          await fetch(`${serverUrl}/api/notify/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: String(u.id),
-              type: 'system',
-              title,
-              message,
-              ts: Date.now(),
-            }),
-            signal: AbortSignal.timeout(3000),
-          }).catch(() => {});
-        } catch {}
+      const adminSecret = process.env.ADMIN_SECRET;
+      if (!adminSecret) {
+        console.warn('[Database] SSE broadcast skipped: ADMIN_SECRET is not configured');
+      } else {
+        const adminToken = crypto
+          .createHmac('sha256', adminSecret)
+          .update('admin-session')
+          .digest('hex');
+
+        for (const u of allUsers) {
+          try {
+            await fetch(`${serverUrl}/api/notify/send`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${adminToken}`,
+              },
+              body: JSON.stringify({
+                userId: String(u.id),
+                type: 'system',
+                title,
+                message,
+                ts: Date.now(),
+              }),
+              signal: AbortSignal.timeout(3000),
+            }).catch(() => {});
+          } catch {}
+        }
       }
       console.log(`[Database] broadcastNotificationToAll: SSE push attempted for ${allUsers.length} users`);
     } catch (sseErr) {

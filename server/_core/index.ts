@@ -16,6 +16,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { validateEnv } from "./env";
 import { sql } from "drizzle-orm";
+import { sdk } from "./sdk";
 
 // ── Signaling via Server-Sent Events (SSE) ────────────────────────────────────
 
@@ -659,9 +660,24 @@ function sendUserNotification(userId: string, notif: NotifPayload) {
 }
 
 function registerNotifyRoutes(app: express.Express) {
-  app.get("/api/notify/stream", (req: Request, res: Response) => {
-    const userId = req.query.userId as string;
-    if (!userId) { res.status(400).json({ error: "userId required" }); return; }
+  app.get("/api/notify/stream", async (req: Request, res: Response) => {
+    const user = await sdk.authenticateRequest(req).catch(() => null);
+    if (!user) {
+      res.status(401).json({ error: "authentication required" });
+      return;
+    }
+
+    if (user.isCron) {
+      res.status(403).json({ error: "scheduled sessions cannot open notification streams" });
+      return;
+    }
+
+    if (user.id <= 0) {
+      res.status(503).json({ error: "notification service temporarily unavailable" });
+      return;
+    }
+
+    const userId = String(user.id);
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -683,12 +699,18 @@ function registerNotifyRoutes(app: express.Express) {
     }, 25000);
 
     req.on("close", () => {
-      notifyClients.delete(userId);
+      if (notifyClients.get(userId) === res) notifyClients.delete(userId);
       clearInterval(keepAlive);
     });
   });
 
   app.post("/api/notify/send", express.json(), (req: Request, res: Response) => {
+    const token = getAdminToken(req);
+    if (!validateAdminToken(token)) {
+      res.status(403).json({ error: "forbidden" });
+      return;
+    }
+
     const { userId, type, title, message, fromName, fromAvatar } = req.body as {
       userId: string;
       type?: string;
@@ -698,7 +720,29 @@ function registerNotifyRoutes(app: express.Express) {
       fromAvatar?: string;
     };
 
-    if (!userId) { res.json({ ok: false, reason: "userId required" }); return; }
+    if (
+      typeof userId !== "string" ||
+      !/^\d+$/.test(userId) ||
+      userId.length > 20
+    ) {
+      res.status(400).json({ ok: false, reason: "invalid userId" });
+      return;
+    }
+
+    if (type !== undefined && (typeof type !== "string" || type.length > 64)) {
+      res.status(400).json({ ok: false, reason: "invalid notification type" });
+      return;
+    }
+
+    if (title !== undefined && (typeof title !== "string" || title.length > 200)) {
+      res.status(400).json({ ok: false, reason: "invalid notification title" });
+      return;
+    }
+
+    if (message !== undefined && (typeof message !== "string" || message.length > 1000)) {
+      res.status(400).json({ ok: false, reason: "invalid notification message" });
+      return;
+    }
 
     const notif: NotifPayload = {
       type: type || "notification",
@@ -778,8 +822,8 @@ async function startServer() {
     next();
   });
 
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "10mb" }));
+  app.use(express.urlencoded({ limit: "100kb", extended: true }));
 
   registerStorageProxy(app);
   registerOAuthRoutes(app);
@@ -799,9 +843,17 @@ async function startServer() {
   });
 
   // ── Wake DB endpoint — admin-only DB health check that forces connection ──
-  app.get("/api/wake-db", async (_req, res) => {
+  app.get("/api/wake-db", authLimiter, async (req, res) => {
+    const token = getAdminToken(req);
+    if (!validateAdminToken(token)) {
+      res.status(403).json({ error: "forbidden" });
+      return;
+    }
+
+    let timedOut = false;
     // Extended timeout for this endpoint since it may need to wake the DB
     const timeout = setTimeout(() => {
+      timedOut = true;
       res.json({ ok: false, status: 'timeout', message: 'قاعدة البيانات لم تستجب خلال 60 ثانية. قد تكون نائمة أو URL خاطئ.' });
     }, 60_000);
     try {
@@ -823,9 +875,11 @@ async function startServer() {
         }
       }
       clearTimeout(timeout);
+      if (timedOut || res.headersSent) return;
       res.json({ ok: true, status: 'awake', userCount: count });
     } catch (err: any) {
       clearTimeout(timeout);
+      if (timedOut || res.headersSent) return;
       res.json({ ok: false, status: 'error', message: err.message || String(err) });
     }
   });

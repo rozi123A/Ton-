@@ -168,7 +168,9 @@ export default function NotificationBell() {
 
     const connect = () => {
       if (esRef.current) esRef.current.close();
-      const es = new EventSource(`/api/notify/stream?userId=${userId}`);
+      // The server derives the user identity from the authenticated session.
+      // Never send a user ID from the browser as an authorization signal.
+      const es = new EventSource('/api/notify/stream');
       esRef.current = es;
 
       es.onmessage = (e) => {
