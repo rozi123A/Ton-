@@ -218,6 +218,32 @@ const resolveApiUrl = () => {
   return "https://forge.manus.im/v1/chat/completions";
 };
 
+const resolveModelsUrl = () => {
+  if (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0) {
+    return `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`;
+  }
+  if (ENV.openaiApiKey) {
+    return `${ENV.openaiApiBase.replace(/\/$/, "")}/models`;
+  }
+  return "https://forge.manus.im/v1/models";
+};
+
+const CHAT_MODEL_PREFERENCES = [
+  "openai/gpt-oss-120b",
+  "openai/gpt-oss-20b",
+  "llama-4-scout-17b-16e-instruct",
+  "qwen/qwen3-32b",
+  "llama-3.1-8b-instant",
+  "llama-3.3-70b-versatile",
+  "gpt-4o-mini",
+];
+
+const MODEL_CATALOG_TTL_MS = 5 * 60 * 1000;
+let modelCatalogCache: {
+  expiresAt: number;
+  ids: Set<string> | null;
+} | null = null;
+
 const assertApiKey = () => {
   if (!ENV.forgeApiKey && !ENV.openaiApiKey) {
     throw new Error("لم يتم تكوين مفتاح API للذكاء الاصطناعي (BUILT_IN_FORGE_API_KEY أو OPENAI_API_KEY)");
@@ -340,6 +366,56 @@ const fetchWithBackoff = async (
     : new Error("LLM request failed after exhausting retries");
 };
 
+const getAvailableModelIds = async (): Promise<Set<string> | null> => {
+  if (modelCatalogCache && modelCatalogCache.expiresAt > Date.now()) {
+    return modelCatalogCache.ids;
+  }
+
+  try {
+    const response = await fetchWithBackoff(resolveModelsUrl(), {
+      headers: { authorization: `Bearer ${ENV.forgeApiKey || ENV.openaiApiKey}` },
+    });
+    if (!response.ok) {
+      throw new Error(`model catalog request failed with ${response.status}`);
+    }
+
+    const body = (await response.json()) as { data?: Array<{ id?: unknown }> };
+    const ids = new Set(
+      (body.data ?? []).flatMap(item => typeof item.id === "string" ? [item.id] : []),
+    );
+    modelCatalogCache = { expiresAt: Date.now() + MODEL_CATALOG_TTL_MS, ids };
+    return ids;
+  } catch (error) {
+    console.warn("[LLM] Could not load model catalog; using fallback model", error);
+    // Avoid hammering a provider whose /models endpoint is temporarily down.
+    modelCatalogCache = { expiresAt: Date.now() + 60_000, ids: null };
+    return null;
+  }
+};
+
+const chooseChatModel = (
+  requestedModel: string | undefined,
+  availableModelIds: Set<string> | null,
+  fallbackModel: string,
+): string => {
+  if (!availableModelIds || availableModelIds.size === 0) {
+    return requestedModel || fallbackModel;
+  }
+
+  if (requestedModel && availableModelIds.has(requestedModel)) {
+    return requestedModel;
+  }
+
+  const preferred = CHAT_MODEL_PREFERENCES.find(model => availableModelIds.has(model));
+  if (preferred) return preferred;
+
+  const modelIds = Array.from(availableModelIds);
+  const nonUtilityModel = modelIds.find(model =>
+    !/(embed|whisper|transcrib|moderation|tts|image|rerank)/i.test(model),
+  );
+  return nonUtilityModel || modelIds[0] || fallbackModel;
+};
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
 
@@ -363,24 +439,15 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     messages: messages.map(normalizeMessage),
   };
 
-  let selectedModel = model || ENV.aiModel;
-  
-  // Keep legacy Groq model settings working after those models were retired.
-  // This model is supported by the current Groq OpenAI-compatible endpoint.
-  if (
-    selectedModel === "llama-3.1-70b-versatile" ||
-    selectedModel === "llama-3.3-70b-versatile"
-  ) {
-    selectedModel = "llama-3.1-8b-instant";
-  }
-
-  if (selectedModel) {
-    payload.model = selectedModel;
-  } else if (ENV.openaiApiKey && !ENV.forgeApiKey) {
-    // Default to a currently supported Groq model
-    const isGroq = ENV.openaiApiKey.startsWith("gsk_") || ENV.openaiApiBase.includes("groq");
-    payload.model = isGroq ? "llama-3.1-8b-instant" : "gpt-4o-mini";
-  }
+  const requestedModel = model || ENV.aiModel || undefined;
+  const isGroq = ENV.openaiApiKey.startsWith("gsk_") || ENV.openaiApiBase.includes("groq");
+  const fallbackModel = isGroq ? "openai/gpt-oss-20b" : "gpt-4o-mini";
+  const selectedModel = chooseChatModel(
+    requestedModel,
+    await getAvailableModelIds(),
+    fallbackModel,
+  );
+  if (selectedModel) payload.model = selectedModel;
 
   if (tools && tools.length > 0) {
     payload.tools = tools;
@@ -460,13 +527,7 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0)
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/models`
-    : (ENV.openaiApiKey)
-      ? `${ENV.openaiApiBase.replace(/\/$/, "")}/models`
-      : "https://forge.manus.im/v1/models";
-
-  const response = await fetchWithBackoff(url, {
+  const response = await fetchWithBackoff(resolveModelsUrl(), {
     headers: { authorization: `Bearer ${ENV.forgeApiKey || ENV.openaiApiKey}` },
   });
 
