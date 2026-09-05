@@ -334,12 +334,12 @@ export default function Store() {
       <Footer />
 
       <Dialog open={showPayModal} onOpenChange={setShowPayModal}>
-        <DialogContent className="sm:max-w-md rounded-3xl border-none bg-gray-900 text-white overflow-hidden p-0">
-          <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-8 text-center">
-            <div className="mx-auto w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 shadow-xl border border-white/30">
-              <Wallet className="w-8 h-8 text-white" />
+        <DialogContent className="sm:max-w-md max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-3xl border-none bg-gray-900 text-white p-0">
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-5 py-5 text-center">
+            <div className="mx-auto w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-2 shadow-xl border border-white/30">
+              <Wallet className="w-7 h-7 text-white" />
             </div>
-            <DialogTitle className="text-2xl font-black text-white mb-2">{t('store.pay_modal_title')}</DialogTitle>
+            <DialogTitle className="text-xl font-black text-white mb-1">{t('store.pay_modal_title')}</DialogTitle>
             <DialogDescription className="text-white/80 text-sm">
             {isRTL
               ? 'أرسل المبلغ على العنوان أدناه ثم أرسل رقم التحويل للمراجعة والتفعيل'
@@ -347,8 +347,8 @@ export default function Store() {
           </DialogDescription>
           </div>
 
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
+          <div className="p-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3 bg-white/5 p-3 rounded-2xl border border-white/10">
               <div className="text-center border-r border-white/10">
                 <p className="text-white/40 text-[10px] uppercase font-bold mb-1">{t('store.product')}</p>
                 <p className="text-sm font-bold">{selectedItem?.type === 'vip' ? t('store.vip_title') : `${selectedItem?.amount} ${t('store.stars_count')}`}</p>
@@ -362,7 +362,7 @@ export default function Store() {
             <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
               <button
                 onClick={() => setCryptoMethod('usdt_trc20')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   cryptoMethod === 'usdt_trc20' ? 'bg-white text-gray-900 shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'
                 }`}
               >
@@ -370,7 +370,7 @@ export default function Store() {
               </button>
               <button
                 onClick={() => setCryptoMethod('binance_pay')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   cryptoMethod === 'binance_pay' ? 'bg-white text-gray-900 shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'
                 }`}
               >
@@ -378,7 +378,7 @@ export default function Store() {
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <Label className="text-xs font-bold text-white/60 uppercase tracking-wider">
                   {cryptoMethod === 'binance_pay' ? 'Binance Pay ID' : 'USDT Wallet (TRC20)'}
@@ -392,7 +392,7 @@ export default function Store() {
                   </div>
                   <button
                     onClick={() => copyToClipboard(cryptoMethod === 'binance_pay' ? (payConfig?.binancePayId || '813764011') : (payConfig?.usdtTrc20Address || 'Txxxxxxxxxxxxxxxxxxxxxxxxx'))}
-                    className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors"
+                    className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors"
                   >
                     {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -403,7 +403,7 @@ export default function Store() {
               </p>
             </div>
 
-            <div className="space-y-3 pt-2">
+            <div className="space-y-2 pt-0">
               <Label className="text-xs font-bold text-white/60 uppercase tracking-wider flex items-center gap-1.5">
                 {cryptoMethod === 'usdt_trc20'
                   ? (isRTL ? 'رقم التحويل (Transaction Hash)' : 'Transaction Hash (TxID)')
@@ -415,16 +415,16 @@ export default function Store() {
                 placeholder={cryptoMethod === 'usdt_trc20'
                   ? (isRTL ? 'مثال: abc123def456...' : 'e.g. abc123def456...')
                   : (isRTL ? 'مثال: 123456789' : 'e.g. 123456789')}
-                className="bg-gray-800 border-white/10 rounded-2xl py-6 text-white placeholder:text-white/20 focus:border-purple-500 transition-all"
+                className="h-11 bg-gray-800 border-white/10 rounded-xl px-4 py-2 text-white placeholder:text-white/20 focus:border-purple-500 transition-all"
               />
             </div>
           </div>
 
-          <DialogFooter className="p-6 pt-0">
+          <DialogFooter className="p-4 pt-0">
             <Button
               onClick={handleSubmitPayment}
               disabled={submitPaymentMutation.isPending}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white font-black py-7 text-lg rounded-2xl shadow-2xl shadow-purple-900/40 transition-all border-t border-white/20"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white font-black py-4 text-base rounded-2xl shadow-2xl shadow-purple-900/40 transition-all border-t border-white/20"
             >
               {submitPaymentMutation.isPending
                 ? (isRTL ? '⏳ جاري الإرسال...' : '⏳ Submitting...')
