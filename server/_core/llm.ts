@@ -365,17 +365,21 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   let selectedModel = model || ENV.aiModel;
   
-  // Auto-fix for decommissioned Groq models
-  if (selectedModel === "llama-3.1-70b-versatile") {
-    selectedModel = "llama-3.3-70b-versatile";
+  // Keep legacy Groq model settings working after those models were retired.
+  // This model is supported by the current Groq OpenAI-compatible endpoint.
+  if (
+    selectedModel === "llama-3.1-70b-versatile" ||
+    selectedModel === "llama-3.3-70b-versatile"
+  ) {
+    selectedModel = "llama-3.1-8b-instant";
   }
 
   if (selectedModel) {
     payload.model = selectedModel;
   } else if (ENV.openaiApiKey && !ENV.forgeApiKey) {
-    // Default to the newest stable Groq model
+    // Default to a currently supported Groq model
     const isGroq = ENV.openaiApiKey.startsWith("gsk_") || ENV.openaiApiBase.includes("groq");
-    payload.model = isGroq ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
+    payload.model = isGroq ? "llama-3.1-8b-instant" : "gpt-4o-mini";
   }
 
   if (tools && tools.length > 0) {
