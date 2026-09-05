@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Image as ImageIcon,
+  Download,
   Loader2,
   MapPin,
   Mic,
@@ -349,8 +350,9 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
               {imageUrl && (
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
                   <img src={imageUrl} alt="الصورة المنشأة بالذكاء الاصطناعي" className="max-h-[420px] w-full object-contain" />
-                  <a href={imageUrl} download className="block border-t border-white/10 p-3 text-center text-sm font-bold text-pink-200 hover:bg-white/10">
-                    فتح أو تنزيل الصورة
+                  <a href={imageUrl} download className="flex items-center justify-center gap-2 border-t border-white/10 p-3 text-center text-sm font-bold text-pink-200 hover:bg-white/10">
+                    <Download className="h-4 w-4" />
+                    تنزيل الصورة
                   </a>
                 </div>
               )}
@@ -365,15 +367,28 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                 {imagesQuery.data && imagesQuery.data.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {imagesQuery.data.map(image => (
-                      <button
+                      <div
                         key={image.id}
-                        onClick={() => setImageUrl(image.imageUrl)}
                         className="group overflow-hidden rounded-2xl border border-white/10 bg-black/20 text-right transition hover:border-pink-300/50 hover:shadow-lg hover:shadow-pink-500/10"
-                        title={image.prompt}
                       >
-                        <img src={image.imageUrl} alt={image.prompt} className="aspect-square w-full object-cover transition group-hover:scale-105" />
-                        <span className="block truncate p-2 text-[11px] text-white/60">{image.prompt}</span>
-                      </button>
+                        <button
+                          onClick={() => setImageUrl(image.imageUrl)}
+                          className="block w-full text-right"
+                          title={image.prompt}
+                        >
+                          <img src={image.imageUrl} alt={image.prompt} className="aspect-square w-full object-cover transition group-hover:scale-105" />
+                          <span className="block truncate p-2 text-[11px] text-white/60">{image.prompt}</span>
+                        </button>
+                        <a
+                          href={image.imageUrl}
+                          download
+                          className="flex items-center justify-center gap-1.5 border-t border-white/10 px-2 py-2 text-[11px] font-bold text-pink-200 transition hover:bg-pink-500/10"
+                          aria-label={`تنزيل صورة: ${image.prompt}`}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          تنزيل
+                        </a>
+                      </div>
                     ))}
                   </div>
                 ) : (
