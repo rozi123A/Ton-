@@ -257,7 +257,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                </span>
               أدوات ConnectLive الذكية
             </h2>
-            <p className="mt-1 text-xs text-white/50">الخدمات تعمل من الخادم ولا تكشف مفاتيحها للمتصفح.</p>
+            <p className="mt-1 text-xs text-white/50">حلول ذكية للإبداع والتواصل، مصممة لتسهّل تجربتك.</p>
           </div>
           <button onClick={onClose} className="rounded-xl p-2 text-white/60 hover:bg-white/10 hover:text-white" aria-label="إغلاق">
             <X className="h-5 w-5" />
