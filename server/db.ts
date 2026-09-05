@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { and, desc, eq, gte, isNotNull, isNull, lte, ne, or, sql, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests, stories, InsertStory, storyComments, storyViews, InsertStoryComment, InsertStoryView } from '../drizzle/schema';
+import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests, stories, InsertStory, storyComments, storyViews, InsertStoryComment, InsertStoryView, aiConversations, aiMessages, aiImages, AiConversation, AiMessage, AiImage } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
 /** Strip query params unsupported by postgres.js (e.g. channel_binding from Neon) */
@@ -87,6 +87,7 @@ export async function ensureSchema(): Promise<void> {
   const enums: Array<[string, string]> = [
     ['gender', `'male', 'female', 'other'`],
     ['role',   `'user', 'admin'`],
+    ['ai_message_role', `'user', 'assistant'`],
   ];
   for (const [typeName, values] of enums) {
     try {
@@ -219,6 +220,28 @@ export async function ensureSchema(): Promise<void> {
 		       "userId"     INTEGER NOT NULL,
 		       "createdAt"  TIMESTAMP NOT NULL DEFAULT now()
 		     )`,
+        `CREATE TABLE IF NOT EXISTS ai_conversations (
+           id          SERIAL PRIMARY KEY,
+           "userId"    INTEGER NOT NULL,
+           title       TEXT NOT NULL DEFAULT 'محادثة جديدة',
+           "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+           "updatedAt" TIMESTAMP NOT NULL DEFAULT now()
+         )`,
+        `CREATE TABLE IF NOT EXISTS ai_messages (
+           id               SERIAL PRIMARY KEY,
+           "conversationId" INTEGER NOT NULL,
+           "userId"         INTEGER NOT NULL,
+           role             "ai_message_role" NOT NULL,
+           content          TEXT NOT NULL,
+           "createdAt"      TIMESTAMP NOT NULL DEFAULT now()
+         )`,
+        `CREATE TABLE IF NOT EXISTS ai_images (
+           id          SERIAL PRIMARY KEY,
+           "userId"    INTEGER NOT NULL,
+           prompt      TEXT NOT NULL,
+           "imageUrl"  TEXT NOT NULL,
+           "createdAt" TIMESTAMP NOT NULL DEFAULT now()
+         )`,
 		  ];
 
   for (const stmt of tables) {
@@ -519,6 +542,105 @@ export async function markMessagesRead(userId: number, senderId: number) {
   } catch (err) {
     console.error('[Database] markMessagesRead failed:', err);
   }
+}
+
+// ── AI assistant persistence ──────────────────────────────────────────────────
+
+export async function createAiConversation(userId: number, title = 'محادثة جديدة'): Promise<AiConversation> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة حالياً، تعذر إنشاء المحادثة.');
+
+  const result = await db
+    .insert(aiConversations)
+    .values({ userId, title: title.trim().slice(0, 120) || 'محادثة جديدة' })
+    .returning();
+  if (!result[0]) throw new Error('تعذر إنشاء محادثة المساعد.');
+  return result[0];
+}
+
+export async function getAiConversations(userId: number): Promise<AiConversation[]> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة حالياً، تعذر تحميل المحادثات.');
+
+  return db
+    .select()
+    .from(aiConversations)
+    .where(eq(aiConversations.userId, userId))
+    .orderBy(desc(aiConversations.updatedAt), desc(aiConversations.createdAt));
+}
+
+export async function getAiConversation(userId: number, conversationId: number): Promise<AiConversation | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة حالياً.');
+
+  const result = await db
+    .select()
+    .from(aiConversations)
+    .where(and(eq(aiConversations.id, conversationId), eq(aiConversations.userId, userId)))
+    .limit(1);
+  return result[0];
+}
+
+export async function getAiMessages(userId: number, conversationId: number): Promise<AiMessage[]> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة حالياً، تعذر تحميل الرسائل.');
+
+  const conversation = await getAiConversation(userId, conversationId);
+  if (!conversation) throw new Error('المحادثة غير موجودة.');
+
+  return db
+    .select()
+    .from(aiMessages)
+    .where(and(eq(aiMessages.userId, userId), eq(aiMessages.conversationId, conversationId)))
+    .orderBy(aiMessages.createdAt, aiMessages.id);
+}
+
+export async function saveAiMessage(
+  userId: number,
+  conversationId: number,
+  role: 'user' | 'assistant',
+  content: string,
+): Promise<AiMessage> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة حالياً، تعذر حفظ الرسالة.');
+
+  const conversation = await getAiConversation(userId, conversationId);
+  if (!conversation) throw new Error('المحادثة غير موجودة.');
+
+  const result = await db
+    .insert(aiMessages)
+    .values({ userId, conversationId, role, content })
+    .returning();
+  await db
+    .update(aiConversations)
+    .set({ updatedAt: new Date() })
+    .where(and(eq(aiConversations.id, conversationId), eq(aiConversations.userId, userId)));
+
+  if (!result[0]) throw new Error('تعذر حفظ رسالة المساعد.');
+  return result[0];
+}
+
+export async function saveAiImage(userId: number, prompt: string, imageUrl: string): Promise<AiImage> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة حالياً، تعذر حفظ الصورة.');
+
+  const result = await db
+    .insert(aiImages)
+    .values({ userId, prompt, imageUrl })
+    .returning();
+  if (!result[0]) throw new Error('تعذر حفظ الصورة المنشأة.');
+  return result[0];
+}
+
+export async function getAiImages(userId: number): Promise<AiImage[]> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة حالياً، تعذر تحميل الصور.');
+
+  return db
+    .select()
+    .from(aiImages)
+    .where(eq(aiImages.userId, userId))
+    .orderBy(desc(aiImages.createdAt), desc(aiImages.id));
 }
 
 // ── Gifts / Credits ──────────────────────────────────────────────────────────

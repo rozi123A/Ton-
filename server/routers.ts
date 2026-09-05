@@ -15,6 +15,8 @@ import {
   saveStory, getActiveStories, getUserStories, getPublicUserStories,
   saveStoryComment, getStoryComments, recordStoryView, getStoryViewers,
   deleteStory, getStoryById,
+  createAiConversation, getAiConversations, getAiConversation, getAiMessages, saveAiMessage,
+  saveAiImage, getAiImages,
   getDb,
 } from "./db";
 import { and, eq, gte, isNull, lt, or, sql, desc } from "drizzle-orm";
@@ -145,14 +147,54 @@ export const appRouter = router({
   system: systemRouter,
 
   ai: router({
+    listConversations: protectedProcedure
+      .query(async ({ ctx }) => getAiConversations(ctx.user.id)),
+
+    createConversation: protectedProcedure
+      .input(z.object({ title: z.string().trim().max(120).optional() }).optional())
+      .mutation(async ({ ctx, input }) => createAiConversation(ctx.user.id, input?.title)),
+
+    getConversationMessages: protectedProcedure
+      .input(z.object({ conversationId: z.number().int().positive() }))
+      .query(async ({ ctx, input }) => getAiMessages(ctx.user.id, input.conversationId)),
+
+    listImages: protectedProcedure
+      .query(async ({ ctx }) => getAiImages(ctx.user.id)),
+
     chat: protectedProcedure
       .input(z.object({
         messages: z.array(aiMessageSchema).min(1).max(100),
+        conversationId: z.number().int().positive().optional(),
         model: z.string().min(1).max(100).optional(),
         maxTokens: z.number().int().min(1).max(4_000).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         try {
+          const latestUserMessage = [...input.messages].reverse().find(message => message.role === "user");
+          if (!latestUserMessage) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "أرسل رسالة للمساعد أولاً.",
+            });
+          }
+
+          let conversationId = input.conversationId;
+          if (conversationId) {
+            const conversation = await getAiConversation(ctx.user.id, conversationId);
+            if (!conversation) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "المحادثة غير موجودة أو لا تملك صلاحية الوصول إليها.",
+              });
+            }
+          } else {
+            const title = latestUserMessage.content.replace(/\s+/g, " ").slice(0, 60);
+            const conversation = await createAiConversation(ctx.user.id, title);
+            conversationId = conversation.id;
+          }
+
+          await saveAiMessage(ctx.user.id, conversationId, "user", latestUserMessage.content);
+
           const systemPrompt = {
             role: "system" as const,
             content: "أنت المساعد الذكي الرسمي لمنصة ConnectLive. أنت خبير، ودود، ومحترف. تساعد المستخدمين في الدردشة، توليد الصور، والخرائط. أجب دائماً باللغة العربية بأسلوب راقٍ ومفيد."
@@ -180,8 +222,10 @@ export const appRouter = router({
               message: "لم تُرجع خدمة الذكاء الاصطناعي نصاً صالحاً.",
             });
           }
-          return { text };
+          await saveAiMessage(ctx.user.id, conversationId, "assistant", text);
+          return { text, conversationId };
         } catch (error: any) {
+          if (error instanceof TRPCError) throw error;
           console.error("[AI Chat Error]", error);
           throw new TRPCError({
             code: "BAD_GATEWAY",
@@ -196,10 +240,16 @@ export const appRouter = router({
         model: z.string().trim().min(1).max(100).optional(),
         quality: z.enum(["low", "medium", "high"]).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         try {
-          return await generateImage(input);
+          const result = await generateImage(input);
+          if (!result.url) {
+            throw new Error("لم تُرجع خدمة الصور رابطاً صالحاً.");
+          }
+          const savedImage = await saveAiImage(ctx.user.id, input.prompt, result.url);
+          return { ...result, imageId: savedImage.id };
         } catch (error) {
+          if (error instanceof TRPCError) throw error;
           throw new TRPCError({
             code: "BAD_GATEWAY",
             message: error instanceof Error ? error.message : "تعذر توليد الصورة.",

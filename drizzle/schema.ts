@@ -2,6 +2,7 @@ import { integer, pgEnum, pgTable, text, timestamp, varchar, boolean, serial, un
 
 export const genderEnum = pgEnum("gender", ["male", "female", "other"]);
 export const roleEnum = pgEnum("role", ["user", "admin"]);
+export const aiMessageRoleEnum = pgEnum("ai_message_role", ["user", "assistant"]);
 
 /**
  * Core user table backing auth flow.
@@ -173,3 +174,37 @@ export const storyViews = pgTable("story_views", {
 
 export type StoryView = typeof storyViews.$inferSelect;
 export type InsertStoryView = typeof storyViews.$inferInsert;
+
+export const aiConversations = pgTable("ai_conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  title: text("title").notNull().default("محادثة جديدة"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type AiConversation = typeof aiConversations.$inferSelect;
+export type InsertAiConversation = typeof aiConversations.$inferInsert;
+
+export const aiMessages = pgTable("ai_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversationId").notNull(),
+  userId: integer("userId").notNull(),
+  role: aiMessageRoleEnum("role").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiMessage = typeof aiMessages.$inferSelect;
+export type InsertAiMessage = typeof aiMessages.$inferInsert;
+
+export const aiImages = pgTable("ai_images", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  prompt: text("prompt").notNull(),
+  imageUrl: text("imageUrl").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiImage = typeof aiImages.$inferSelect;
+export type InsertAiImage = typeof aiImages.$inferInsert;
