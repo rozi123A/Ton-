@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { and, desc, eq, isNotNull, ne, or, sql, gt } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, lte, ne, or, sql, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests, stories, InsertStory, storyComments, storyViews, InsertStoryComment, InsertStoryView } from '../drizzle/schema';
@@ -113,6 +113,7 @@ export async function ensureSchema(): Promise<void> {
        credits       INTEGER NOT NULL DEFAULT 100,
        wallet        INTEGER NOT NULL DEFAULT 0,
        "isPremium"   BOOLEAN NOT NULL DEFAULT false,
+       "premiumExpiresAt" TIMESTAMP,
        "isOnline"    BOOLEAN NOT NULL DEFAULT false,
        "lastSeen"    TIMESTAMP NOT NULL DEFAULT now(),
        "loginMethod" VARCHAR(64),
@@ -234,6 +235,7 @@ export async function ensureSchema(): Promise<void> {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS credits       INTEGER   NOT NULL DEFAULT 100`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet        INTEGER   NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "isPremium"   BOOLEAN   NOT NULL DEFAULT false`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "premiumExpiresAt" TIMESTAMP`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileViews" INTEGER  NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS country       VARCHAR(10)`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS bio           TEXT`,
@@ -249,6 +251,13 @@ export async function ensureSchema(): Promise<void> {
   ];
   for (const m of migrations) {
     try { await _rawClient.unsafe(m); } catch { /* column already exists — safe to ignore */ }
+  }
+  try {
+    await _rawClient.unsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS payment_requests_txid_unique ON payment_requests ("transactionId")`,
+    );
+  } catch (err) {
+    console.error('[Database] Failed to ensure payment transaction uniqueness:', err);
   }
 
     console.log('[Database] Schema ready');
@@ -372,7 +381,18 @@ export async function getUsersByGender(gender: 'male' | 'female' | 'other') {
   }
 
   try {
-    return await db.select().from(users).where(eq(users.gender, gender));
+    return await db.select({
+      id: users.id,
+      name: users.name,
+      age: users.age,
+      gender: users.gender,
+      avatar: users.avatar,
+      bio: users.bio,
+      country: users.country,
+      isOnline: users.isOnline,
+      isPremium: users.isPremium,
+      lastSeen: users.lastSeen,
+    }).from(users).where(and(eq(users.gender, gender), ne(users.role, 'admin')));
   } catch (error) {
     console.error('[Database] Failed to get users by gender:', error);
     return [];
@@ -505,12 +525,12 @@ export async function markMessagesRead(userId: number, senderId: number) {
 
 export async function getUserCredits(userId: number): Promise<number> {
   const db = await getDb();
-  if (!db) return 100;
+  if (!db) return 0;
   try {
     const result = await db.select({ credits: users.credits }).from(users).where(eq(users.id, userId)).limit(1);
-    return result[0]?.credits ?? 100;
+    return result[0]?.credits ?? 0;
   } catch {
-    return 100;
+    return 0;
   }
 }
 
@@ -518,10 +538,11 @@ export async function deductCredits(userId: number, amount: number): Promise<boo
   const db = await getDb();
   if (!db) return false;
   try {
-    const current = await getUserCredits(userId);
-    if (current < amount) return false;
-    await db.update(users).set({ credits: sql`${users.credits} - ${amount}` }).where(eq(users.id, userId));
-    return true;
+    const result = await db.update(users)
+      .set({ credits: sql`${users.credits} - ${amount}` })
+      .where(and(eq(users.id, userId), gte(users.credits, amount)))
+      .returning({ id: users.id });
+    return result.length === 1;
   } catch {
     return false;
   }
@@ -531,12 +552,36 @@ export async function deductStars(userId: number, amount: number): Promise<boole
   const db = await getDb();
   if (!db) return false;
   try {
-    const result = await db.select({ wallet: users.wallet }).from(users).where(eq(users.id, userId)).limit(1);
-    const current = result[0]?.wallet ?? 0;
-    if (current < amount) return false;
-    await db.update(users).set({ wallet: sql`${users.wallet} - ${amount}` }).where(eq(users.id, userId));
-    return true;
+    const result = await db.update(users)
+      .set({ wallet: sql`${users.wallet} - ${amount}` })
+      .where(and(eq(users.id, userId), gte(users.wallet, amount)))
+      .returning({ id: users.id });
+    return result.length === 1;
   } catch {
+    return false;
+  }
+}
+
+export async function upgradeWithCredits(userId: number, amount: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const now = new Date();
+    const result = await db.update(users)
+      .set({
+        credits: sql`${users.credits} - ${amount}`,
+        isPremium: true,
+        premiumExpiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+      })
+      .where(and(
+        eq(users.id, userId),
+        gte(users.credits, amount),
+        or(eq(users.isPremium, false), isNull(users.premiumExpiresAt), lte(users.premiumExpiresAt, now)),
+      ))
+      .returning({ id: users.id });
+    return result.length === 1;
+  } catch (err) {
+    console.error('[Database] upgradeWithCredits failed:', err);
     return false;
   }
 }
@@ -562,13 +607,17 @@ export async function addCredits(userId: number, amount: number): Promise<void> 
   }
 }
 
-export async function saveGift(senderId: number, receiverId: number, giftType: string, cost: number): Promise<void> {
+export async function saveGift(senderId: number, receiverId: number, giftType: string, cost: number): Promise<boolean> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return false;
   try {
     await db.transaction(async (tx) => {
       // Deduct from sender
-      await tx.update(users).set({ credits: sql`${users.credits} - ${cost}` }).where(eq(users.id, senderId));
+      const debited = await tx.update(users)
+        .set({ credits: sql`${users.credits} - ${cost}` })
+        .where(and(eq(users.id, senderId), gte(users.credits, cost)))
+        .returning({ id: users.id });
+      if (debited.length !== 1) throw new Error('رصيد نقاط غير كافٍ لإرسال الهدية');
       // Add to receiver's credit balance so their balance actually increases
       if (receiverId > 0) {
         await tx.update(users).set({ credits: sql`${users.credits} + ${cost}` }).where(eq(users.id, receiverId));
@@ -576,8 +625,10 @@ export async function saveGift(senderId: number, receiverId: number, giftType: s
       // Log gift
       await tx.insert(gifts).values({ senderId, receiverId, giftType, cost });
     });
+    return true;
   } catch (err) {
     console.error('[Database] saveGift failed:', err);
+    return false;
   }
 }
 
@@ -635,8 +686,9 @@ export async function upgradeToPremium(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   try {
-    await db.update(users).set({ 
+    await db.update(users).set({
       isPremium: true,
+      premiumExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       credits: sql`${users.credits} + 100` // 100 points as bonus for premium
     }).where(eq(users.id, userId));
   } catch (err) {
@@ -659,8 +711,8 @@ export async function getUserPublicProfile(userId: number) {
       avatar: users.avatar,
       bio: users.bio,
       role: users.role,
-      stars: users.stars,
-      points: users.points,
+      isPremium: users.isPremium,
+      premiumExpiresAt: users.premiumExpiresAt,
     }).from(users).where(eq(users.id, userId)).limit(1);
     const profile = rows[0] ?? null;
     // الأدمن لا يمكن رؤية ملفه الشخصي من قِبل أي أحد
@@ -668,6 +720,8 @@ export async function getUserPublicProfile(userId: number) {
     if (!profile) return null;
 
     // الملف العام يعرض بطاقة المستخدم ومحتواه فقط.
+    const isPremium = profile.isPremium &&
+      (!profile.premiumExpiresAt || profile.premiumExpiresAt.getTime() > Date.now());
     return {
       id: profile.id,
       name: profile.name,
@@ -675,8 +729,7 @@ export async function getUserPublicProfile(userId: number) {
       gender: profile.gender,
       avatar: profile.avatar,
       bio: profile.bio,
-      stars: profile.stars,
-      points: profile.points,
+      isPremium,
     };
   } catch (err) {
     console.error('[Database] getUserPublicProfile failed:', err);
@@ -763,7 +816,18 @@ export async function getFriends(userId: number) {
     const userFriends = await db.select().from(friends).where(or(eq(friends.userId1, userId), eq(friends.userId2, userId)));
     const friendIds = userFriends.map(f => f.userId1 === userId ? f.userId2 : f.userId1);
     if (friendIds.length === 0) return [];
-    return await db.select().from(users).where(sql`${users.id} IN (${sql.join(friendIds, sql`, `)})`);
+    return await db.select({
+      id: users.id,
+      name: users.name,
+      avatar: users.avatar,
+      age: users.age,
+      gender: users.gender,
+      bio: users.bio,
+      country: users.country,
+      isOnline: users.isOnline,
+      isPremium: users.isPremium,
+      lastSeen: users.lastSeen,
+    }).from(users).where(sql`${users.id} IN (${sql.join(friendIds, sql`, `)})`);
   } catch (err) {
     console.error('[Database] getFriends failed:', err);
     return [];
@@ -782,22 +846,19 @@ export async function createPaymentRequest(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  // 🔒 FIX: Block duplicate transaction IDs — one TXID can only be used once
-  const existing = await db
-    .select({ id: paymentRequests.id })
-    .from(paymentRequests)
-    .where(eq(paymentRequests.transactionId, data.transactionId))
-    .limit(1);
-  if (existing.length > 0) {
-    throw new Error('رقم المعاملة مستخدم بالفعل. يرجى التأكد من إدخال رقم صحيح وفريد.');
+  try {
+    await db.insert(paymentRequests).values({
+      ...data,
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  } catch (error: any) {
+    if (error?.code === '23505' || String(error?.message ?? '').toLowerCase().includes('transaction')) {
+      throw new Error('رقم المعاملة مستخدم بالفعل. يرجى التأكد من إدخال رقم صحيح وفريد.');
+    }
+    throw error;
   }
-
-  await db.insert(paymentRequests).values({
-    ...data,
-    status: 'pending',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
 }
 
 export async function getPendingPaymentRequests() {
@@ -825,18 +886,25 @@ export async function updatePaymentRequestStatus(requestId: number, status: 'app
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const request = await db.select().from(paymentRequests).where(eq(paymentRequests.id, requestId)).limit(1);
-  if (!request[0]) throw new Error("Payment request not found");
-  
   await db.transaction(async (tx) => {
-    await tx.update(paymentRequests)
+    const claimed = await tx.update(paymentRequests)
       .set({ status, updatedAt: new Date() })
-      .where(eq(paymentRequests.id, requestId));
+      .where(and(eq(paymentRequests.id, requestId), eq(paymentRequests.status, 'pending')))
+      .returning({
+        userId: paymentRequests.userId,
+        itemType: paymentRequests.itemType,
+        itemAmount: paymentRequests.itemAmount,
+      });
+    const request = claimed[0];
+    if (!request) throw new Error("Payment request is already processed or does not exist");
       
     if (status === 'approved') {
-      const { userId, itemType, itemAmount } = request[0];
+      const { userId, itemType, itemAmount } = request;
       if (itemType === 'vip') {
-        await tx.update(users).set({ isPremium: true }).where(eq(users.id, userId));
+        await tx.update(users).set({
+          isPremium: true,
+          premiumExpiresAt: new Date(Date.now() + (itemAmount ?? 1) * 30 * 24 * 60 * 60 * 1000),
+        }).where(eq(users.id, userId));
         await createNotification(userId, {
           type: 'system',
           title: '🎉 تم تفعيل VIP!',
@@ -851,7 +919,7 @@ export async function updatePaymentRequestStatus(requestId: number, status: 'app
         });
       }
     } else {
-      await createNotification(request[0].userId, {
+      await createNotification(request.userId, {
         type: 'system',
         title: '❌ تم رفض طلب الدفع',
         message: 'للأسف تم رفض طلب الدفع الخاص بك. يرجى التأكد من رقم المعاملة والمحاولة مرة أخرى.',
@@ -952,7 +1020,10 @@ export async function getPremiumCount(): Promise<number> {
   try {
     const result = await db.select({ count: sql<number>`cast(count(*) as int)` })
       .from(users)
-      .where(eq(users.isPremium, true));
+      .where(and(
+        eq(users.isPremium, true),
+        or(isNull(users.premiumExpiresAt), gt(users.premiumExpiresAt, new Date())),
+      ));
     return result[0]?.count ?? 0;
   } catch (err) {
     console.error('[Database] getPremiumCount failed:', err);

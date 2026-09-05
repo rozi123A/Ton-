@@ -4,8 +4,6 @@ import { useLocation } from 'wouter';
 import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, Shield, Eye, EyeOff, Video, Radio, X, MonitorPlay, Trash2, Play, Download, Wallet, Check, Ban, Clock, Star, Search, Bell, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
 
-const ADMIN_SESSION_KEY = 'admin_mode';
-
 type ActiveCall = {
   peerId1: string;
   name1: string;
@@ -26,7 +24,8 @@ type RecMeta = {
 };
 
 function adminHeaders(token: string): HeadersInit {
-  return { Authorization: `Bearer ${token}` };
+  void token;
+  return {};
 }
 
 async function downloadRecording(token: string, sessionId: string): Promise<void> {
@@ -104,7 +103,6 @@ function PasswordGate({ onVerified }: { onVerified: () => void }) {
   const verifyMutation = trpc.admin.verifySecret.useMutation({
     onSuccess: (data) => {
       if (data.verified) {
-        sessionStorage.setItem(ADMIN_SESSION_KEY, data.token);
         onVerified();
       }
     },
@@ -312,11 +310,9 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'stats'|'calls'|'recordings'|'payments'|'search'|'broadcast'>('stats');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isVerified, setIsVerified] = useState(false);
-  const token = sessionStorage.getItem(ADMIN_SESSION_KEY);
-
-  useEffect(() => {
-    if (token) setIsVerified(true);
-  }, [token]);
+  // The server stores the short-lived admin session in an HttpOnly cookie.
+  // This placeholder is only kept for existing child component prop shapes.
+  const token = 'cookie';
 
   if (!isVerified) return <PasswordGate onVerified={() => setIsVerified(true)} />;
 

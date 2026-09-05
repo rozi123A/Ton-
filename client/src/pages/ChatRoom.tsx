@@ -690,7 +690,6 @@ export default function ChatRoom() {
       gender: myGender,
       filterGender: fg,
       filterCountry: fc,
-      userId: (user as any)?.id || '',
     });
     // Request browser notification permission
     if ('Notification' in window && Notification.permission === 'default') {

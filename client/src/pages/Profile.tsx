@@ -36,6 +36,15 @@ const CREDIT_PACKAGES = [
   { credits: 1000, price: "4$", popular: false },
 ];
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("تعذر قراءة الملف"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Profile() {
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, loading } = useAuth();
@@ -64,6 +73,7 @@ export default function Profile() {
   const [showStoryUpload, setShowStoryUpload] = useState(false);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState<number | null>(null);
   const [storyMedia, setStoryMedia] = useState<string | null>(null);
+  const [storyFile, setStoryFile] = useState<File | null>(null);
   const [storyType, setStoryType] = useState<"image" | "video">("image");
   const [storyCaption, setStoryCaption] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -103,10 +113,11 @@ export default function Profile() {
   const myStoriesQuery = isPublicProfile ? publicStoriesQuery : ownStoriesQuery;
   
   const utils = trpc.useUtils();
+  const uploadStoryVideo = trpc.stories.uploadVideo.useMutation();
   const createStory = trpc.stories.create.useMutation({
     onSuccess: async () => {
       setShowStoryUpload(false);
-      setStoryMedia(null);
+      clearStoryMedia();
       setStoryCaption("");
       await utils.stories.getActive.invalidate();
       await utils.stories.getUserStories.invalidate({ userId: u?.id });
@@ -117,6 +128,29 @@ export default function Profile() {
       alert("خطأ: " + (error.message || "تعذر نشر القصة"));
     },
   });
+
+  const clearStoryMedia = () => {
+    if (storyMedia?.startsWith("blob:")) URL.revokeObjectURL(storyMedia);
+    setStoryMedia(null);
+    setStoryFile(null);
+  };
+
+  const publishStory = async () => {
+    if (!storyMedia) return;
+    try {
+      let mediaUrl = storyMedia;
+      if (storyType === "video") {
+        if (!storyFile) throw new Error("لم يتم اختيار فيديو صالح");
+        const uploaded = await uploadStoryVideo.mutateAsync({
+          dataUrl: await readFileAsDataUrl(storyFile),
+        });
+        mediaUrl = uploaded.mediaUrl;
+      }
+      await createStory.mutateAsync({ mediaUrl, mediaType: storyType, caption: storyCaption });
+    } catch (error) {
+      alert("خطأ: " + (error instanceof Error ? error.message : "تعذر نشر القصة"));
+    }
+  };
 
   const deleteStory = trpc.stories.delete.useMutation({
     onSuccess: async () => {
@@ -148,11 +182,12 @@ export default function Profile() {
         return;
       }
       setStoryType("video");
-      const reader = new FileReader();
-      reader.onload = (ev) => setStoryMedia(ev.target?.result as string);
-      reader.readAsDataURL(file);
+      setStoryFile(file);
+      setStoryMedia(URL.createObjectURL(file));
     } else if (file.type.startsWith("image/")) {
       setStoryType("image");
+      if (storyMedia?.startsWith("blob:")) URL.revokeObjectURL(storyMedia);
+      setStoryFile(null);
       try {
         const compressed = await compressImage(file);
         setStoryMedia(compressed);
@@ -237,7 +272,7 @@ export default function Profile() {
             <div className="bg-slate-800 w-full max-w-md rounded-3xl border border-slate-700 overflow-hidden shadow-2xl">
               <div className="p-4 border-b border-slate-700 flex justify-between items-center">
                 <h3 className="text-white font-bold">إضافة قصة جديدة</h3>
-                <button onClick={() => { setShowStoryUpload(false); setStoryMedia(null); }} className="text-white/50 hover:text-white">
+                <button onClick={() => { setShowStoryUpload(false); clearStoryMedia(); }} className="text-white/50 hover:text-white">
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -265,7 +300,7 @@ export default function Profile() {
                         <video src={storyMedia} className="w-full h-full object-contain" controls />
                       )}
                       <button 
-                        onClick={() => setStoryMedia(null)}
+                        onClick={clearStoryMedia}
                         className="absolute top-2 right-2 bg-black/50 p-2 rounded-full text-white"
                       >
                         <X className="w-4 h-4" />
@@ -280,8 +315,8 @@ export default function Profile() {
                     />
                     
                     <button
-                      onClick={() => createStory.mutate({ mediaUrl: storyMedia, mediaType: storyType, caption: storyCaption })}
-                      disabled={createStory.isPending}
+                      onClick={() => void publishStory()}
+                      disabled={createStory.isPending || uploadStoryVideo.isPending}
                       className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl shadow-lg disabled:opacity-50"
                     >
                       {createStory.isPending ? "جاري النشر..." : "نشر القصة الآن"}
@@ -349,7 +384,7 @@ export default function Profile() {
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Star className="w-3.5 h-3.5 text-yellow-400" />
                   <span className={`text-yellow-400 font-bold text-lg ${!isOwnProfile ? 'blur-[4px] select-none' : ''}`}>
-                    {isOwnProfile ? (walletQuery.data?.wallet ?? 0) : (u?.stars ?? 0)}
+                    {isOwnProfile ? (walletQuery.data?.wallet ?? 0) : '—'}
                   </span>
                 </div>
                 <p className="text-white/50 text-xs">نجوم</p>
@@ -358,7 +393,7 @@ export default function Profile() {
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Zap className="w-3.5 h-3.5 text-purple-400" />
                   <span className={`text-purple-400 font-bold text-lg ${!isOwnProfile ? 'blur-[4px] select-none' : ''}`}>
-                    {isOwnProfile ? (balanceQuery.data?.credits ?? 0) : (u?.points ?? 0)}
+                    {isOwnProfile ? (balanceQuery.data?.credits ?? 0) : '—'}
                   </span>
                 </div>
                 <p className="text-white/50 text-xs">نقاط</p>

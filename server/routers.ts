@@ -6,7 +6,7 @@ import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_
 import {
   saveUserProfile, getUsersByGender, getMessages, saveMessage,
   upsertUser, getUserByOpenId, getRecentUsers, incrementProfileViews,
-  getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium,
+  getUserCredits, deductCredits, addCredits, saveGift, upgradeToPremium, upgradeWithCredits,
   getCountryStats, getNewRegistrations, getTotalUsersCount, getOnlineUsersCount, getPremiumCount, searchUsers, broadcastNotificationToAll,
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
@@ -17,7 +17,7 @@ import {
   deleteStory, getStoryById,
   getDb,
 } from "./db";
-import { and, eq, isNull, lt, or, sql, desc } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, or, sql, desc } from "drizzle-orm";
 import { users, messages, notifications } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
 import { detectCountry } from "./_core/detectCountry";
@@ -115,11 +115,24 @@ function withFallback<T>(
 // ── Admin HMAC token verification (no session required) ─────────────────
 function verifyAdminHmac(token: string, secret: string): boolean {
   if (!token || !secret) return false;
-  const expected = crypto.createHmac('sha256', secret).update('admin-session').digest('hex');
-  const provided = Buffer.from(token, 'utf8');
+  const [expiresAt, signature] = token.split('.');
+  const expires = Number(expiresAt);
+  if (!Number.isSafeInteger(expires) || expires <= Date.now()) return false;
+  const expected = crypto.createHmac('sha256', secret).update(`admin-session:${expires}`).digest('hex');
+  const provided = Buffer.from(signature ?? '', 'utf8');
   const expectedBuffer = Buffer.from(expected, 'utf8');
   return provided.length === expectedBuffer.length && crypto.timingSafeEqual(provided, expectedBuffer);
 }
+
+const adminSessionProcedure = publicProcedure.use(async ({ ctx, next }) => {
+  const cookies = (ctx.req.headers.cookie ?? '').split(';').map(part => part.trim());
+  const cookie = cookies.find(part => part.startsWith('connectlive_admin='));
+  const token = cookie?.slice('connectlive_admin='.length);
+  if (!verifyAdminHmac(token ?? '', ENV.adminSecret)) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'جلسة الإدارة منتهية أو غير صالحة' });
+  }
+  return next();
+});
 
 function secureStringEqual(left: string, right: string): boolean {
   const leftBuffer = Buffer.from(left, 'utf8');
@@ -328,6 +341,36 @@ export const appRouter = router({
   }),
 
   stories: router({
+    uploadVideo: protectedProcedure
+      .input(z.object({
+        dataUrl: z.string()
+          .regex(/^data:video\/(?:webm|mp4|ogg|quicktime);base64,[A-Za-z0-9+/]+={0,2}$/i)
+          .max(14_500_000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "تخزين الفيديو غير مهيأ في الخادم.",
+          });
+        }
+        const match = input.dataUrl.match(/^data:(video\/[^;]+);base64,(.+)$/i);
+        if (!match) throw new TRPCError({ code: "BAD_REQUEST", message: "صيغة الفيديو غير صالحة." });
+        const mimeType = match[1].toLowerCase();
+        const video = Buffer.from(match[2], "base64");
+        if (video.length === 0 || video.length > 10 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "حجم الفيديو غير صالح." });
+        }
+        const extension = mimeType.split("/")[1].replace("quicktime", "mov");
+        const uploaded = await storagePut(
+          `stories/${ctx.user.id}-${nanoid()}.${extension}`,
+          video,
+          mimeType,
+        );
+        const origin = `${ctx.req.protocol}://${ctx.req.get("host")}`;
+        return { mediaUrl: new URL(uploaded.url, origin).toString() };
+      }),
+
     create: protectedProcedure
       .input(z.object({
         mediaUrl: z.string().url(),
@@ -335,6 +378,12 @@ export const appRouter = router({
         caption: z.string().max(200).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        if (input.mediaType === "video" && input.mediaUrl.startsWith("data:")) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "يجب رفع الفيديو إلى التخزين قبل نشر القصة.",
+          });
+        }
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
         await saveStory({
           userId: ctx.user.id,
@@ -709,6 +758,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         // = FIX: Validate itemAmount matches the claimed price for star packages
+        let storedItemAmount = input.itemAmount;
         if (input.itemType === 'stars') {
           const STAR_PRICES: Record<number, string> = {
             5000:  '$0.99',
@@ -719,6 +769,13 @@ export const appRouter = router({
           if (!expected || expected !== input.amount) {
             throw new Error("سعر باقة النجوم غير صالح.");
           }
+        } else {
+          const VIP_DURATIONS: Record<string, number> = {
+            '$0.99': 1,
+            '$2.49': 3,
+            '$6.99': 12,
+          };
+          storedItemAmount = VIP_DURATIONS[input.amount];
         }
 
         const { createPaymentRequest } = await import("./db");
@@ -728,7 +785,7 @@ export const appRouter = router({
           method: input.method,
           transactionId: input.transactionId,
           itemType: input.itemType,
-          itemAmount: input.itemAmount,
+          itemAmount: storedItemAmount,
         });
         await createNotification(ctx.user.id, {
           type: 'system',
@@ -739,13 +796,13 @@ export const appRouter = router({
       }),
 
     /** Get pending payment requests (Admin only) */
-    getPendingPayments: adminProcedure.query(async () => {
+    getPendingPayments: adminSessionProcedure.query(async () => {
       const { getPendingPaymentRequests } = await import("./db");
       return await getPendingPaymentRequests();
     }),
 
     /** Approve or reject a payment request (Admin only) */
-    handlePaymentRequest: adminProcedure
+    handlePaymentRequest: adminSessionProcedure
       .input(z.object({
         requestId: z.number(),
         status: z.enum(['approved', 'rejected'])
@@ -757,7 +814,7 @@ export const appRouter = router({
       }),
 
     /** Revoke VIP from a user (Admin only) */
-    revokeVip: adminProcedure
+    revokeVip: adminSessionProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ input }) => {
         const { getDb } = await import("./db");
@@ -765,19 +822,19 @@ export const appRouter = router({
         const { eq } = await import("drizzle-orm");
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        await db.update(users).set({ isPremium: false }).where(eq(users.id, input.userId));
+        await db.update(users).set({ isPremium: false, premiumExpiresAt: null }).where(eq(users.id, input.userId));
         return { success: true };
       }),
 
     /** Reset all non-admin VIPs (Admin only) */
-    resetAllVips: adminProcedure
+    resetAllVips: adminSessionProcedure
       .mutation(async () => {
         const { getDb } = await import("./db");
         const { users } = await import("../drizzle/schema");
         const { and, eq, ne } = await import("drizzle-orm");
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        await db.update(users).set({ isPremium: false }).where(and(eq(users.isPremium, true), ne(users.role, 'admin')));
+        await db.update(users).set({ isPremium: false, premiumExpiresAt: null }).where(and(eq(users.isPremium, true), ne(users.role, 'admin')));
         return { success: true };
       }),
 
@@ -797,7 +854,8 @@ export const appRouter = router({
         }
         
         const receiverId = input.receiverId || 0;
-        await saveGift(ctx.user.id, receiverId, input.giftType, input.cost);
+        const saved = await saveGift(ctx.user.id, receiverId, input.giftType, input.cost);
+        if (!saved) throw new Error('تعذر إرسال الهدية أو رصيد النقاط غير كافٍ');
         
         if (receiverId > 0) {
           await createNotification(receiverId, {
@@ -825,23 +883,18 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
-        
-        const user = await db.select().from(users).where(eq(users.id, ctx.user.id)).limit(1);
-        if (!user[0] || user[0].wallet < input.amount) {
-          throw new Error("رصيد نجوم غير كافٍ للتحويل");
-        }
-        
+
         // Conversion rate: 2 stars = 1 credit
         const creditsToGain = Math.floor(input.amount / 2);
-        
-        await db.transaction(async (tx) => {
-          await tx.update(users)
-            .set({ 
-              wallet: sql`${users.wallet} - ${input.amount}`,
-              credits: sql`${users.credits} + ${creditsToGain}`
-            })
-            .where(eq(users.id, ctx.user.id));
-        });
+
+        const converted = await db.update(users)
+          .set({
+            wallet: sql`${users.wallet} - ${input.amount}`,
+            credits: sql`${users.credits} + ${creditsToGain}`,
+          })
+          .where(and(eq(users.id, ctx.user.id), gte(users.wallet, input.amount)))
+          .returning({ id: users.id });
+        if (converted.length !== 1) throw new Error("رصيد نجوم غير كافٍ للتحويل");
         
         return { success: true, creditsGained: creditsToGain };
       }),
@@ -866,13 +919,9 @@ export const appRouter = router({
     /** Upgrade to Premium by spending 50000 credits */
     upgradeWithCredits: protectedProcedure
       .mutation(async ({ ctx }) => {
-        if ((ctx.user as any).isPremium) throw new Error("أنت مشترك بالفعل في Premium!");
         const COST = 50000;
-        const balance = await getUserCredits(ctx.user.id);
-        if (balance < COST) throw new Error(`رصيدك ${balance} نقطة فقط. تحتاج ${COST} نقطة للاشتراك.`);
-        const ok = await deductCredits(ctx.user.id, COST);
+        const ok = await upgradeWithCredits(ctx.user.id, COST);
         if (!ok) throw new Error("فشل خصم النقاط، حاول مجدداً.");
-        await upgradeToPremium(ctx.user.id);
         await createNotification(ctx.user.id, {
           type: 'system',
           title: '🎉 مرحباً بك في Premium!',
@@ -894,66 +943,51 @@ export const appRouter = router({
   }),
 
   admin: router({
-    newRegistrations: publicProcedure
+    newRegistrations: adminSessionProcedure
       .input(z.object({ adminToken: z.string(), limit: z.number().min(1).max(200).optional() }))
       .query(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         const result = await withTimeout(getNewRegistrations(input.limit ?? 100));
         return result;
       }),
 
-    countryStats: publicProcedure
+    countryStats: adminSessionProcedure
       .input(z.object({ adminToken: z.string() }))
       .query(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         const result = await withTimeout(getCountryStats());
         return result;
       }),
 
-    totalCount: publicProcedure
+    totalCount: adminSessionProcedure
       .input(z.object({ adminToken: z.string() }))
       .query(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         const result = await withTimeout(getTotalUsersCount());
         return result;
       }),
 
-    onlineCount: publicProcedure
+    onlineCount: adminSessionProcedure
       .input(z.object({ adminToken: z.string() }))
       .query(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         const result = await withTimeout(getOnlineUsersCount());
         return result;
       }),
 
-    premiumCount: publicProcedure
+    premiumCount: adminSessionProcedure
       .input(z.object({ adminToken: z.string() }))
       .query(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         const result = await withTimeout(getPremiumCount());
         return result;
       }),
 
-    searchUsers: publicProcedure
+    searchUsers: adminSessionProcedure
       .input(z.object({ adminToken: z.string(), query: z.string().min(1).max(100) }))
       .query(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         return searchUsers(input.query);
       }),
 
     /** DB health check — returns connection status and REAL row counts from DB */
-    dbStatus: publicProcedure
+    dbStatus: adminSessionProcedure
       .input(z.object({ adminToken: z.string() }))
       .query(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
-
         // 1. Get drizzle instance (postgres.js connects lazily on first query)
         const db = await getDb();
         if (!db) {
@@ -1043,31 +1077,31 @@ export const appRouter = router({
         return { connected: false, totalUsers: 0, premiumUsers: 0, onlineUsers: 0, reason: 'فشل الاتصال بعد عدة محاولات' };
       }),
 
-        broadcast: publicProcedure
+        broadcast: adminSessionProcedure
       .input(z.object({ adminToken: z.string(), title: z.string().min(1).max(200), message: z.string().min(1).max(1000) }))
       .mutation(async ({ input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!verifyAdminHmac(input.adminToken, ENV.adminSecret)) throw new TRPCError({ code: 'FORBIDDEN' });
         const count = await broadcastNotificationToAll(input.title, input.message);
         return { success: true, count };
       }),
 
-    /**
-     * Public endpoint — verify admin password without needing a user session.
-     * Returns a signed token the client stores in sessionStorage.
-     */
+    /** Public endpoint — verify the admin password and issue a short-lived HttpOnly cookie. */
     verifySecret: publicProcedure
       .input(z.object({ secret: z.string() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const { ENV } = await import('./_core/env');
         if (!secureStringEqual(input.secret, ENV.adminSecret)) {
           throw new Error("كلمة المرور خاطئة");
         }
-        const hmacToken = crypto
-          .createHmac('sha256', ENV.adminSecret)
-          .update('admin-session')
+        const expiresAt = Date.now() + 15 * 60 * 1000;
+        const signature = crypto.createHmac('sha256', ENV.adminSecret)
+          .update(`admin-session:${expiresAt}`)
           .digest('hex');
-        return { verified: true, token: hmacToken };
+        const token = `${expiresAt}.${signature}`;
+        ctx.res.cookie('connectlive_admin', token, {
+          ...getSessionCookieOptions(ctx.req),
+          maxAge: 15 * 60 * 1000,
+        });
+        return { verified: true };
       }),
 
     /** If the caller is logged in, also promote them to admin in the DB */

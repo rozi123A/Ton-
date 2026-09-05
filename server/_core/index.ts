@@ -4,6 +4,7 @@ import express, { type Request, type Response } from "express";
 import { createServer } from "http";
 import fs from "fs";
 import path from "path";
+import { Readable } from "stream";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -45,6 +46,12 @@ const adminWatchers = new Map<string, AdminWatcher>(); // watcherId → watcher
 // ── Recording storage (Backblaze B2) ─────────────────────────────────────────
 const REC_DIR = path.join('/tmp', 'ton-recs');
 const MAX_RECORDING_BYTES = 250 * 1024 * 1024;
+const MAX_USER_RECORDING_BYTES = 1024 * 1024 * 1024;
+const MAX_IP_RECORDING_BYTES = 2 * 1024 * 1024 * 1024;
+const RECORDING_TTL_MS = 24 * 60 * 60 * 1000;
+const recordingSessions = new Map<string, { userId: number; peerId: string; ip: string; bytes: number; lastSeen: number }>();
+const recordingBytesByUser = new Map<number, number>();
+const recordingBytesByIp = new Map<string, number>();
 try { fs.mkdirSync(REC_DIR, { recursive: true }); } catch {}
 
 const B2_BUCKET   = process.env.B2_BUCKET   || '';
@@ -74,8 +81,8 @@ if (B2_BUCKET && B2_ENDPOINT && process.env.B2_KEY_ID && process.env.B2_APP_KEY)
   console.warn('[B2] Backblaze env vars missing — recordings saved to /tmp only (ephemeral)');
 }
 
-async function b2Upload(key: string, body: Buffer, type = 'application/octet-stream') {
-  if (!b2 || !B2_BUCKET) return;
+async function b2Upload(key: string, body: Buffer | Readable, type = 'application/octet-stream') {
+  if (!b2 || !B2_BUCKET) throw new Error('Permanent recording storage is not configured');
   await b2.send(new PutObjectCommand({ Bucket: B2_BUCKET, Key: key, Body: body, ContentType: type }));
 }
 
@@ -222,17 +229,42 @@ function removePeer(peerId: string) {
 }
 
 function registerSignalingRoutes(app: express.Express) {
-  app.get("/api/signal/connect", async (req: Request, res: Response) => {
+  const signalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many signaling requests' },
+  });
+
+  app.get("/api/signal/connect", signalLimiter, async (req: Request, res: Response) => {
+    const authenticatedUser = await sdk.authenticateRequest(req).catch(() => null);
+    if (!authenticatedUser || authenticatedUser.isCron || authenticatedUser.id <= 0) {
+      res.status(401).json({ error: "authentication required" });
+      return;
+    }
+
     const peerId        = req.query.peerId        as string;
-    const name          = (req.query.name          as string) || "مستخدم";
-    const avatar        = (req.query.avatar        as string) || "";
-    const gender        = (req.query.gender        as string) || "other";
-    const filterGender  = (req.query.filterGender  as string) || "any";
-    const filterCountry = (req.query.filterCountry as string) || "any";
-    const userId        = req.query.userId ? parseInt(req.query.userId as string) : undefined;
+    const name          = String(req.query.name || authenticatedUser.name || "مستخدم").slice(0, 100);
+    const avatar        = String(req.query.avatar || "").slice(0, 512);
+    const genderValue   = String(req.query.gender || "other");
+    const gender        = ['male', 'female', 'other'].includes(genderValue) ? genderValue : 'other';
+    const filterGenderValue = String(req.query.filterGender || "any");
+    const filterGender  = ['male', 'female', 'other', 'any'].includes(filterGenderValue) ? filterGenderValue : 'any';
+    const filterCountryValue = String(req.query.filterCountry || "any");
+    const filterCountry = filterCountryValue === 'any' ? 'any' : filterCountryValue.slice(0, 10);
+    const userId        = authenticatedUser.id;
 
-    if (!peerId) { res.status(400).json({ error: "peerId required" }); return; }
+    if (!peerId || !/^[a-zA-Z0-9_-]{1,128}$/.test(peerId)) {
+      res.status(400).json({ error: "invalid peerId" });
+      return;
+    }
 
+    const existingPeer = peers.get(peerId);
+    if (existingPeer && existingPeer.userId !== userId) {
+      res.status(409).json({ error: "peerId belongs to another session" });
+      return;
+    }
     removePeer(peerId);
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -242,7 +274,7 @@ function registerSignalingRoutes(app: express.Express) {
     res.flushHeaders();
 
     // ── Server-side Radar star validation ────────────────────────────────────
-    if (userId && userId > 0) {
+    if (userId > 0) {
       const isPaidFilter = filterGender !== 'any' || filterCountry !== 'any';
       if (isPaidFilter) {
         const { getUserCountryAndWallet, deductStars } = await import('../db');
@@ -296,13 +328,36 @@ function registerSignalingRoutes(app: express.Express) {
     });
   });
 
-  app.post("/api/signal/send", express.json(), (req: Request, res: Response) => {
+  app.post("/api/signal/send", signalLimiter, express.json({ limit: '64kb' }), async (req: Request, res: Response) => {
+    const authenticatedUser = await sdk.authenticateRequest(req).catch(() => null);
+    if (!authenticatedUser || authenticatedUser.isCron || authenticatedUser.id <= 0) {
+      res.status(401).json({ error: "authentication required" });
+      return;
+    }
+    if (Number(req.headers['content-length'] || 0) > 64 * 1024 ||
+        Buffer.byteLength(JSON.stringify(req.body ?? {}), 'utf8') > 64 * 1024) {
+      res.status(413).json({ ok: false, reason: "signal payload too large" });
+      return;
+    }
     const { peerId, type, data, text } = req.body as {
       peerId: string; type: string; data?: unknown; text?: string;
     };
 
+    if (typeof peerId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(peerId) ||
+        typeof type !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(type)) {
+      res.status(400).json({ ok: false, reason: "invalid signal payload" });
+      return;
+    }
     const peer = peers.get(peerId);
     if (!peer) { res.json({ ok: false, reason: "peer not found" }); return; }
+    if (peer.userId !== authenticatedUser.id) {
+      res.status(403).json({ ok: false, reason: "peer ownership check failed" });
+      return;
+    }
+    if (text !== undefined && (typeof text !== 'string' || text.length > 4000)) {
+      res.status(400).json({ ok: false, reason: "invalid signal text" });
+      return;
+    }
 
     // ── Admin monitoring signals ──────────────────────────────────────────
     if (type === "admin-watch-offer" || type === "admin-watch-ice") {
@@ -401,8 +456,35 @@ function registerRecordingRoutes(app: express.Express) {
     message: { error: 'Too many recording uploads, please try again later.' },
   });
 
+  const cleanupRecordings = () => {
+    const cutoff = Date.now() - RECORDING_TTL_MS;
+    recordingSessions.forEach((session, sessionId) => {
+      if (session.lastSeen < cutoff) {
+        recordingSessions.delete(sessionId);
+        recordingBytesByUser.set(session.userId, Math.max(0, (recordingBytesByUser.get(session.userId) ?? 0) - session.bytes));
+        recordingBytesByIp.set(session.ip, Math.max(0, (recordingBytesByIp.get(session.ip) ?? 0) - session.bytes));
+        for (const suffix of ['.webm', '.json']) {
+          try { fs.unlinkSync(path.join(REC_DIR, `${sessionId}${suffix}`)); } catch {}
+        }
+      }
+    });
+    try {
+      for (const file of fs.readdirSync(REC_DIR)) {
+        const filePath = path.join(REC_DIR, file);
+        if (fs.statSync(filePath).mtimeMs < cutoff) fs.unlinkSync(filePath);
+      }
+    } catch {}
+  };
+  const cleanupTimer = setInterval(cleanupRecordings, 60 * 60 * 1000);
+  cleanupTimer.unref();
+
   // Receive a video chunk — chunks assembled in /tmp, then uploaded to B2 on final
   app.post('/api/record/chunk', recordingLimiter, express.raw({ type: '*/*', limit: '20mb' }), async (req: Request, res: Response) => {
+    const authenticatedUser = await sdk.authenticateRequest(req).catch(() => null);
+    if (!authenticatedUser || authenticatedUser.isCron || authenticatedUser.id <= 0) {
+      res.status(401).json({ ok: false, reason: 'authentication required' });
+      return;
+    }
     const { sessionId, isFinal, name1, name2, peerId } = req.query as Record<string, string>;
     if (
       !sessionId ||
@@ -413,8 +495,13 @@ function registerRecordingRoutes(app: express.Express) {
       res.status(400).json({ ok: false, reason: 'invalid recording identifiers' });
       return;
     }
-    if (!peers.has(peerId)) {
+    const peer = peers.get(peerId);
+    if (!peer || peer.userId !== authenticatedUser.id) {
       res.status(403).json({ ok: false, reason: 'peer not active' });
+      return;
+    }
+    if (!b2) {
+      res.status(503).json({ ok: false, reason: 'permanent recording storage unavailable' });
       return;
     }
 
@@ -424,16 +511,35 @@ function registerRecordingRoutes(app: express.Express) {
       return;
     }
 
+    const ipHeader = req.headers['x-forwarded-for'];
+    const ip = (Array.isArray(ipHeader) ? ipHeader[0] : ipHeader?.split(',')[0])?.trim() || req.ip || 'unknown';
+    let session = recordingSessions.get(sessionId);
+    if (session && (session.userId !== authenticatedUser.id || session.peerId !== peerId || session.ip !== ip)) {
+      res.status(403).json({ ok: false, reason: 'recording session ownership check failed' });
+      return;
+    }
+    if (!session) {
+      session = { userId: authenticatedUser.id, peerId, ip, bytes: 0, lastSeen: Date.now() };
+      recordingSessions.set(sessionId, session);
+    }
+    const userBytes = recordingBytesByUser.get(session.userId) ?? 0;
+    const ipBytes = recordingBytesByIp.get(session.ip) ?? 0;
+    if (session.bytes + chunk.length > MAX_RECORDING_BYTES ||
+        userBytes + chunk.length > MAX_USER_RECORDING_BYTES ||
+        ipBytes + chunk.length > MAX_IP_RECORDING_BYTES) {
+      res.status(413).json({ ok: false, reason: 'recording quota exceeded' });
+      return;
+    }
+
     const filePath = path.join(REC_DIR, `${sessionId}.webm`);
     const metaPath = path.join(REC_DIR, `${sessionId}.json`);
 
     try {
-      const currentSize = fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
-      if (currentSize + chunk.length > MAX_RECORDING_BYTES) {
-        res.status(413).json({ ok: false, reason: 'recording too large' });
-        return;
-      }
       fs.appendFileSync(filePath, chunk);
+      session.bytes += chunk.length;
+      session.lastSeen = Date.now();
+      recordingBytesByUser.set(session.userId, userBytes + chunk.length);
+      recordingBytesByIp.set(session.ip, ipBytes + chunk.length);
       let meta: Record<string, unknown> = {};
       if (fs.existsSync(metaPath)) {
         try { meta = JSON.parse(fs.readFileSync(metaPath, 'utf8')); } catch {}
@@ -446,29 +552,31 @@ function registerRecordingRoutes(app: express.Express) {
         meta.size = fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
         fs.writeFileSync(metaPath, JSON.stringify(meta));
 
-        // Upload to Backblaze B2 permanently
-        if (!b2) {
-          res.status(503).json({ ok: false, reason: 'permanent recording storage unavailable' });
-          return;
-        }
         try {
-          const videoBuffer = fs.readFileSync(filePath);
           const metaBuffer  = Buffer.from(JSON.stringify(meta));
-          await b2Upload(`recordings/${sessionId}.webm`, videoBuffer, 'video/webm');
+          await b2Upload(`recordings/${sessionId}.webm`, fs.createReadStream(filePath), 'video/webm');
           await b2Upload(`recordings/${sessionId}.meta.json`, metaBuffer, 'application/json');
           // Clean up /tmp after successful upload
           try { fs.unlinkSync(filePath); } catch {}
           try { fs.unlinkSync(metaPath); } catch {}
+          recordingSessions.delete(sessionId);
+          recordingBytesByUser.set(session.userId, Math.max(0, (recordingBytesByUser.get(session.userId) ?? 0) - session.bytes));
+          recordingBytesByIp.set(session.ip, Math.max(0, (recordingBytesByIp.get(session.ip) ?? 0) - session.bytes));
           console.log(`[B2] Uploaded recording ${sessionId} (${Math.round((meta.size as number)/1024)}KB)`);
         } catch (e) {
           console.error('[B2] Upload failed — recording stays in /tmp', e);
+          await b2Delete(`recordings/${sessionId}.webm`);
           res.status(502).json({ ok: false, reason: 'recording upload failed' });
           return;
         }
       } else {
         fs.writeFileSync(metaPath, JSON.stringify(meta));
       }
-    } catch (e) { console.error('[record]', e); }
+    } catch (e) {
+      console.error('[record]', e);
+      res.status(500).json({ ok: false, reason: 'recording chunk could not be saved' });
+      return;
+    }
     res.json({ ok: true });
   });
 
@@ -542,11 +650,14 @@ function validateAdminToken(token: string | undefined): boolean {
   try {
     const adminSecret = process.env.ADMIN_SECRET;
     if (!adminSecret) return false;
+    const [expiresAt, signature] = token.split('.');
+    const expires = Number(expiresAt);
+    if (!Number.isSafeInteger(expires) || expires <= Date.now()) return false;
     const expected = crypto
       .createHmac('sha256', adminSecret)
-      .update('admin-session')
+      .update(`admin-session:${expires}`)
       .digest('hex');
-    const provided = Buffer.from(token, 'utf8');
+    const provided = Buffer.from(signature ?? '', 'utf8');
     const expectedBuffer = Buffer.from(expected, 'utf8');
     return provided.length === expectedBuffer.length &&
       crypto.timingSafeEqual(provided, expectedBuffer);
@@ -554,11 +665,11 @@ function validateAdminToken(token: string | undefined): boolean {
 }
 
 function getAdminToken(req: Request): string | undefined {
-  const authorization = req.headers.authorization;
-  if (typeof authorization !== 'string' || !authorization.startsWith('Bearer ')) {
-    return undefined;
-  }
-  const token = authorization.slice('Bearer '.length).trim();
+  const cookie = (req.headers.cookie ?? '')
+    .split(';')
+    .map(part => part.trim())
+    .find(part => part.startsWith('connectlive_admin='));
+  const token = cookie?.slice('connectlive_admin='.length).trim();
   return token || undefined;
 }
 
@@ -807,6 +918,7 @@ async function startServer() {
     legacyHeaders: false,
   });
   app.use('/api/trpc/users.guestLogin', authLimiter);
+  app.use('/api/trpc/admin.verifySecret', authLimiter);
   app.use('/api/trpc/admin.verifyAdmin', authLimiter);
   app.use('/api/trpc', generalLimiter);
 
@@ -836,6 +948,7 @@ async function startServer() {
     next();
   });
 
+  app.use('/api/signal/send', express.json({ limit: '64kb' }));
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ limit: "100kb", extended: true }));
 

@@ -1,4 +1,4 @@
-import { integer, pgEnum, pgTable, text, timestamp, varchar, boolean, serial } from "drizzle-orm/pg-core";
+import { integer, pgEnum, pgTable, text, timestamp, varchar, boolean, serial, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const genderEnum = pgEnum("gender", ["male", "female", "other"]);
 export const roleEnum = pgEnum("role", ["user", "admin"]);
@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   profileViews: integer("profileViews").default(0).notNull(),
   country: varchar("country", { length: 10 }),
   isPremium: boolean("isPremium").default(false).notNull(),
+  premiumExpiresAt: timestamp("premiumExpiresAt"),
   isOnline: boolean("isOnline").default(false).notNull(),
   lastSeen: timestamp("lastSeen").defaultNow().notNull(),
   loginMethod: varchar("loginMethod", { length: 64 }),
@@ -132,7 +133,9 @@ export const paymentRequests = pgTable("payment_requests", {
   itemAmount: integer("itemAmount"), // amount of stars if itemType is stars
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  transactionIdUnique: uniqueIndex("payment_requests_txid_unique").on(table.transactionId),
+}));
 
 export type PaymentRequest = typeof paymentRequests.$inferSelect;
 export type InsertPaymentRequest = typeof paymentRequests.$inferInsert;

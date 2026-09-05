@@ -104,11 +104,11 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
               <div className="flex items-center gap-3 mt-2">
                 <div className="flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded-full">
                   <span className="text-yellow-500 text-[10px] font-bold">⭐</span>
-                  <span className="text-white/80 text-xs font-bold blur-[3px] select-none">{(profile as any).stars ?? 0}</span>
+                  <span className="text-white/50 text-xs font-bold">—</span>
                 </div>
                 <div className="flex items-center gap-1 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
                   <span className="text-blue-500 text-[10px] font-bold">💎</span>
-                  <span className="text-white/80 text-xs font-bold blur-[3px] select-none">{(profile as any).points ?? 0}</span>
+                  <span className="text-white/50 text-xs font-bold">—</span>
                 </div>
               </div>
             </div>
