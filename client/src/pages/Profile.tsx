@@ -516,86 +516,103 @@ export default function Profile() {
 
         {/* ── Private edit fields / public identity card ───────────────── */}
         {isOwnProfile ? (
-          <section className="order-3 bg-slate-800 rounded-2xl border border-slate-700 p-5 space-y-4">
-            <h2 className="font-bold text-white flex items-center gap-2">
-              <User className="w-4 h-4 text-purple-400" /> معلوماتك
-            </h2>
-
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-1.5">الاسم</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="اسمك"
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-400 transition-colors"
-            />
-          </div>
-
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-1.5">العمر</label>
-            <input type="number" value={age} onChange={e => setAge(Number(e.target.value))} min={13} max={100}
-              className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-purple-400 transition-colors"
-            />
-          </div>
-
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-1.5">الجنس</label>
-            <div className="flex gap-2">
-              {([{ v: "male", l: "ذكر" }, { v: "female", l: "أنثى" }, { v: "other", l: "آخر" }] as const).map(({ v, l }) => (
-                <button key={v} onClick={() => setGender(v)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all border ${
-                    gender === v ? "bg-purple-600 text-white border-purple-600" : "border-white/20 text-white/60 hover:border-purple-400 bg-white/5"
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
+          <section className="order-3 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 shadow-xl shadow-purple-950/20">
+            <div className="border-b border-white/10 bg-gradient-to-l from-purple-500/15 via-fuchsia-500/10 to-transparent px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/20 ring-1 ring-purple-300/20">
+                  <User className="h-5 w-5 text-purple-300" />
+                </span>
+                <div>
+                  <h2 className="font-bold text-white">معلوماتك</h2>
+                  <p className="mt-0.5 text-xs text-white/45">حدّث بياناتك لتظهر بصورة أفضل</p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-white/70 text-sm font-medium mb-1.5">نبذة عنك</label>
-            <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="اكتب شيئاً عن نفسك..." rows={3}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-400 resize-none transition-colors"
-            />
-          </div>
+            <div className="space-y-4 p-5">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-white/60">الاسم</label>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="اسمك"
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-white/25 outline-none transition-colors focus:border-purple-400/70 focus:bg-slate-950"
+                />
+              </div>
 
-          <button
-            onClick={() => {
-              setSaveError("");
-              saveProfile.mutate({ name, age, gender, bio, avatar: avatar || undefined });
-            }}
-            disabled={saveProfile.isPending}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-60 shadow-lg"
-          >
-            {saved ? (
-              <><CheckCircle className="w-4 h-4" /> تم الحفظ!</>
-            ) : saveProfile.isPending ? "جاري الحفظ..." : (
-              <><Save className="w-4 h-4" /> حفظ التغييرات</>
-            )}
-          </button>
-          {saveError && (
-            <p role="alert" className="text-center text-sm text-red-300">
-              {saveError}
-            </p>
-          )}
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-white/60">العمر</label>
+                <input type="number" value={age} onChange={e => setAge(Number(e.target.value))} min={13} max={100}
+                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-colors focus:border-purple-400/70 focus:bg-slate-950"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-white/60">الجنس</label>
+                <div className="flex gap-2">
+                  {([{ v: "male", l: "ذكر" }, { v: "female", l: "أنثى" }, { v: "other", l: "آخر" }] as const).map(({ v, l }) => (
+                    <button key={v} onClick={() => setGender(v)}
+                      className={`flex-1 rounded-2xl border py-2.5 text-sm font-bold transition-all ${
+                        gender === v
+                          ? "border-purple-400/70 bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white shadow-lg shadow-purple-900/30"
+                          : "border-white/10 bg-white/[0.04] text-white/55 hover:border-purple-400/40 hover:text-white"
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-white/60">نبذة عنك</label>
+                <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="اكتب شيئاً عن نفسك..." rows={3}
+                  className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-white/25 outline-none transition-colors focus:border-purple-400/70 focus:bg-slate-950"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  setSaveError("");
+                  saveProfile.mutate({ name, age, gender, bio, avatar: avatar || undefined });
+                }}
+                disabled={saveProfile.isPending}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-fuchsia-500 via-purple-600 to-violet-600 py-3.5 font-bold text-white shadow-lg shadow-purple-900/30 transition hover:brightness-110 disabled:opacity-60"
+              >
+                {saved ? (
+                  <><CheckCircle className="h-4 w-4" /> تم الحفظ!</>
+                ) : saveProfile.isPending ? "جاري الحفظ..." : (
+                  <><Save className="h-4 w-4" /> حفظ التغييرات</>
+                )}
+              </button>
+              {saveError && (
+                <p role="alert" className="text-center text-sm text-red-300">
+                  {saveError}
+                </p>
+              )}
+            </div>
           </section>
         ) : (
-          <section className="order-3 bg-slate-800 rounded-2xl border border-slate-700 p-5">
-            <h2 className="font-bold text-white flex items-center gap-2 mb-4">
-              <User className="w-4 h-4 text-purple-400" /> بطاقة المستخدم
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-slate-900/70 border border-slate-700 p-3">
-                <p className="text-white/45 text-xs mb-1">العمر</p>
-                <p className="text-white font-bold">{u?.age ? `${u.age} سنة` : "غير محدد"}</p>
+          <section className="order-3 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 shadow-xl shadow-purple-950/20">
+            <div className="border-b border-white/10 bg-gradient-to-l from-purple-500/15 via-fuchsia-500/10 to-transparent px-5 py-4">
+              <h2 className="flex items-center gap-3 font-bold text-white">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/20 ring-1 ring-purple-300/20">
+                  <User className="h-5 w-5 text-purple-300" />
+                </span>
+                بطاقة المستخدم
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3 p-5">
+              <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                <p className="mb-1 text-xs text-white/45">العمر</p>
+                <p className="font-bold text-white">{u?.age ? `${u.age} سنة` : "غير محدد"}</p>
               </div>
-              <div className="rounded-xl bg-slate-900/70 border border-slate-700 p-3">
-                <p className="text-white/45 text-xs mb-1">الجنس</p>
-                <p className="text-white font-bold">
+              <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+                <p className="mb-1 text-xs text-white/45">الجنس</p>
+                <p className="font-bold text-white">
                   {u?.gender === "male" ? "ذكر" : u?.gender === "female" ? "أنثى" : "غير محدد"}
                 </p>
               </div>
             </div>
             {u?.bio && (
-              <p className="mt-3 rounded-xl bg-slate-900/70 border border-slate-700 p-3 text-white/70 text-sm leading-relaxed">
+              <p className="mx-5 mb-5 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm leading-relaxed text-white/70">
                 {u.bio}
               </p>
             )}
@@ -603,47 +620,72 @@ export default function Profile() {
         )}
 
         {/* ── Credits & Stars ───────────────────────────────────────────── */}
-        {isOwnProfile && <section className="order-5 bg-slate-800 rounded-2xl border border-slate-700 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-bold text-white flex items-center gap-2">
-              <Star className="w-4 h-4 text-yellow-400" /> رصيد النجوم
-            </h2>
-            <div className="flex items-center gap-1.5 bg-yellow-500/20 border border-yellow-500/40 rounded-full px-3 py-1">
-              <Star className="w-3.5 h-3.5 text-yellow-400" />
-              <span className="font-bold text-yellow-300 text-sm">{walletQuery.data?.wallet ?? 0}</span>
+        {isOwnProfile && <section className="order-5 overflow-hidden rounded-3xl border border-yellow-300/15 bg-gradient-to-b from-slate-800 to-slate-900 shadow-xl shadow-yellow-950/10">
+          <div className="border-b border-white/10 bg-gradient-to-l from-yellow-500/15 via-orange-500/10 to-transparent px-5 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-yellow-400/15 ring-1 ring-yellow-300/25">
+                  <Star className="h-5 w-5 fill-yellow-300 text-yellow-300" />
+                </span>
+                <div>
+                  <h2 className="font-bold text-white">رصيد النجوم</h2>
+                  <p className="mt-0.5 text-xs text-white/45">استخدمها داخل تجربتك في ConnectLive</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full border border-yellow-300/30 bg-yellow-400/10 px-3 py-1.5">
+                <Star className="h-3.5 w-3.5 fill-yellow-300 text-yellow-300" />
+                <span className="font-black text-yellow-200">{walletQuery.data?.wallet ?? 0}</span>
+              </div>
             </div>
           </div>
-          <p className="text-white/40 text-sm mb-4">استخدم نجومك لتفعيل رادار النجوم وإرسال هدايا افتراضية.</p>
 
-          <button onClick={() => setShowBuy(v => !v)}
-            className="w-full border-2 border-dashed border-purple-500/50 rounded-xl py-3 text-purple-300 font-semibold hover:bg-purple-500/10 transition-colors flex items-center justify-center gap-2"
-          >
-            <ShoppingCart className="w-4 h-4" />
-            {showBuy ? "إخفاء الباقات" : "شراء المزيد من النجوم"}
-          </button>
-
-          {showBuy && (
-            <div className="mt-4 space-y-3">
-              <div className="text-center py-2 bg-blue-500/10 border border-blue-500/30 rounded-xl text-sm text-blue-300 font-medium">
-                🔒 سيتم تفعيل الدفع قريباً
-              </div>
-              {CREDIT_PACKAGES.map(pkg => (
-                <div key={pkg.credits} className={`relative flex items-center justify-between p-4 rounded-xl border ${pkg.popular ? "border-purple-500/60 bg-purple-500/10" : "border-white/15 bg-white/5"}`}>
-                  {pkg.popular && (
-                    <span className="absolute -top-2.5 right-4 bg-purple-600 text-white text-xs px-2.5 py-0.5 rounded-full">الأكثر شيوعاً</span>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Star className="w-5 h-5 text-yellow-400" />
-                    <span className="font-bold text-white">{pkg.credits} نجمة</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-purple-300">{pkg.price}</span>
-                    <button disabled className="bg-white/10 text-white/30 text-sm px-3 py-1.5 rounded-lg cursor-not-allowed">قريباً</button>
-                  </div>
-                </div>
-              ))}
+          <div className="p-5">
+            <div className="mb-4 rounded-2xl border border-yellow-300/10 bg-yellow-300/[0.06] p-3.5">
+              <p className="text-sm leading-6 text-white/60">استخدم نجومك لتفعيل رادار النجوم وإرسال هدايا افتراضية.</p>
             </div>
-          )}
+
+            <button onClick={() => setShowBuy(v => !v)}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-purple-400/40 bg-gradient-to-l from-purple-600/20 to-fuchsia-500/20 py-3.5 font-bold text-purple-100 transition hover:border-purple-300/70 hover:from-purple-600/30 hover:to-fuchsia-500/30"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              {showBuy ? "إخفاء الباقات" : "شراء المزيد من النجوم"}
+            </button>
+
+            {showBuy && (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-500/10 px-3.5 py-3 text-sm font-medium text-blue-200">
+                  <span className="text-base">🔒</span>
+                  <span>الدفع الإلكتروني سيكون متاحًا قريبًا</span>
+                </div>
+                {CREDIT_PACKAGES.map(pkg => (
+                  <div key={pkg.credits} className={`relative flex items-center justify-between rounded-2xl border p-4 transition ${
+                    pkg.popular
+                      ? "border-purple-400/60 bg-gradient-to-l from-purple-500/20 to-fuchsia-500/10 shadow-lg shadow-purple-950/20"
+                      : "border-white/10 bg-white/[0.04] hover:border-white/20"
+                  }`}>
+                    {pkg.popular && (
+                      <span className="absolute -top-2.5 right-4 rounded-full border border-purple-300/30 bg-purple-600 px-2.5 py-1 text-[10px] font-bold text-white shadow-lg">
+                        الأكثر شيوعاً
+                      </span>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400/10">
+                        <Star className="h-4 w-4 fill-yellow-300 text-yellow-300" />
+                      </span>
+                      <div>
+                        <span className="block font-bold text-white">{pkg.credits} نجمة</span>
+                        <span className="text-xs text-white/40">باقة رصيد</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-black text-purple-200">{pkg.price}</span>
+                      <button disabled className="cursor-not-allowed rounded-xl bg-white/10 px-3 py-1.5 text-xs font-bold text-white/35">قريباً</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </section>}
 
       </div>
