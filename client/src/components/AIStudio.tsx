@@ -49,6 +49,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
   const [prompt, setPrompt] = useState("");
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageId, setImageId] = useState<number | null>(null);
   const [voiceText, setVoiceText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [mapAddress, setMapAddress] = useState("");
@@ -114,8 +115,25 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
         return;
       }
       setImageUrl(data.url);
+      setImageId(data.imageId);
       void utils.ai.listImages.invalidate();
       toast.success("تم إنشاء الصورة.");
+    },
+    onError: error => toast.error(error.message),
+  });
+  const downloadImageMutation = trpc.ai.downloadImage.useMutation({
+    onSuccess: data => {
+      const binary = window.atob(data.data);
+      const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+      const objectUrl = URL.createObjectURL(new Blob([bytes], { type: data.mimeType }));
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = data.fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      toast.success("بدأ تنزيل الصورة.");
     },
     onError: error => toast.error(error.message),
   });
@@ -167,6 +185,11 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
     if (!value || imageMutation.isPending) return;
     setImageUrl("");
     imageMutation.mutate({ prompt: value, quality: "medium" });
+  };
+
+  const downloadImage = (id: number | null) => {
+    if (!id || downloadImageMutation.isPending) return;
+    downloadImageMutation.mutate({ imageId: id });
   };
 
   const stopRecording = () => {
@@ -350,10 +373,15 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
               {imageUrl && (
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
                   <img src={imageUrl} alt="الصورة المنشأة بالذكاء الاصطناعي" className="max-h-[420px] w-full object-contain" />
-                  <a href={imageUrl} download className="flex items-center justify-center gap-2 border-t border-white/10 p-3 text-center text-sm font-bold text-pink-200 hover:bg-white/10">
+                  <button
+                    type="button"
+                    onClick={() => downloadImage(imageId)}
+                    disabled={!imageId || downloadImageMutation.isPending}
+                    className="flex w-full items-center justify-center gap-2 border-t border-white/10 p-3 text-center text-sm font-bold text-pink-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
                     <Download className="h-4 w-4" />
-                    تنزيل الصورة
-                  </a>
+                    {downloadImageMutation.isPending ? "جارٍ تجهيز التنزيل..." : "تنزيل الصورة"}
+                  </button>
                 </div>
               )}
               <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
@@ -372,22 +400,25 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                         className="group overflow-hidden rounded-2xl border border-white/10 bg-black/20 text-right transition hover:border-pink-300/50 hover:shadow-lg hover:shadow-pink-500/10"
                       >
                         <button
-                          onClick={() => setImageUrl(image.imageUrl)}
+                          onClick={() => {
+                            setImageUrl(image.imageUrl);
+                            setImageId(image.id);
+                          }}
                           className="block w-full text-right"
                           title={image.prompt}
                         >
                           <img src={image.imageUrl} alt={image.prompt} className="aspect-square w-full object-cover transition group-hover:scale-105" />
                           <span className="block truncate p-2 text-[11px] text-white/60">{image.prompt}</span>
                         </button>
-                        <a
-                          href={image.imageUrl}
-                          download
+                        <button
+                          type="button"
+                          onClick={() => downloadImage(image.id)}
                           className="flex items-center justify-center gap-1.5 border-t border-white/10 px-2 py-2 text-[11px] font-bold text-pink-200 transition hover:bg-pink-500/10"
                           aria-label={`تنزيل صورة: ${image.prompt}`}
                         >
                           <Download className="h-3.5 w-3.5" />
                           تنزيل
-                        </a>
+                        </button>
                       </div>
                     ))}
                   </div>

@@ -16,7 +16,7 @@ import {
   saveStoryComment, getStoryComments, recordStoryView, getStoryViewers,
   deleteStory, getStoryById,
   createAiConversation, getAiConversations, getAiConversation, getAiMessages, saveAiMessage,
-  saveAiImage, getAiImages,
+  saveAiImage, getAiImages, getAiImage,
   getDb,
 } from "./db";
 import { and, eq, gte, isNull, lt, or, sql, desc } from "drizzle-orm";
@@ -160,6 +160,55 @@ export const appRouter = router({
 
     listImages: protectedProcedure
       .query(async ({ ctx }) => getAiImages(ctx.user.id)),
+
+    downloadImage: protectedProcedure
+      .input(z.object({ imageId: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const image = await getAiImage(ctx.user.id, input.imageId);
+        if (!image) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "الصورة غير موجودة أو لا تملك صلاحية تنزيلها.",
+          });
+        }
+
+        try {
+          const response = await fetch(image.imageUrl, {
+            headers: { accept: "image/*" },
+          });
+          if (!response.ok) {
+            throw new Error(`Image download failed (${response.status})`);
+          }
+
+          const mimeType = response.headers.get("content-type")?.split(";")[0].trim() ?? "";
+          if (!mimeType.startsWith("image/")) {
+            throw new Error("The stored URL did not return an image.");
+          }
+
+          const contentLength = Number(response.headers.get("content-length") ?? 0);
+          if (contentLength > 15 * 1024 * 1024) {
+            throw new Error("The image is too large to download.");
+          }
+
+          const buffer = Buffer.from(await response.arrayBuffer());
+          if (buffer.length > 15 * 1024 * 1024) {
+            throw new Error("The image is too large to download.");
+          }
+
+          const extension = mimeType.split("/")[1]?.replace("jpeg", "jpg") || "png";
+          return {
+            data: buffer.toString("base64"),
+            mimeType,
+            fileName: `connectlive-ai-${image.id}.${extension}`,
+          };
+        } catch (error) {
+          console.error("[AI Image Download Error]", error);
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message: "تعذر تنزيل الصورة الآن. حاول مرة أخرى.",
+          });
+        }
+      }),
 
     chat: protectedProcedure
       .input(z.object({

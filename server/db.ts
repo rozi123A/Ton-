@@ -643,6 +643,18 @@ export async function getAiImages(userId: number): Promise<AiImage[]> {
     .orderBy(desc(aiImages.createdAt), desc(aiImages.id));
 }
 
+export async function getAiImage(userId: number, imageId: number): Promise<AiImage | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة حالياً.');
+
+  const result = await db
+    .select()
+    .from(aiImages)
+    .where(and(eq(aiImages.id, imageId), eq(aiImages.userId, userId)))
+    .limit(1);
+  return result[0];
+}
+
 // ── Gifts / Credits ──────────────────────────────────────────────────────────
 
 export async function getUserCredits(userId: number): Promise<number> {
