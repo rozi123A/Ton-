@@ -685,9 +685,6 @@ export default function ChatRoom() {
 
     const params = new URLSearchParams({
       peerId: myId,
-      name: myName,
-      avatar: myAvatar,
-      gender: myGender,
       filterGender: fg,
       filterCountry: fc,
     });
