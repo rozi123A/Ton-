@@ -516,43 +516,68 @@ export default function Profile() {
 
         {/* ── Private edit fields / public identity card ───────────────── */}
         {isOwnProfile ? (
-          <section className="order-3 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 shadow-xl shadow-purple-950/20">
-            <div className="border-b border-white/10 bg-gradient-to-l from-purple-500/15 via-fuchsia-500/10 to-transparent px-5 py-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/20 ring-1 ring-purple-300/20">
-                  <User className="h-5 w-5 text-purple-300" />
-                </span>
-                <div>
-                  <h2 className="font-bold text-white">معلوماتك</h2>
-                  <p className="mt-0.5 text-xs text-white/45">حدّث بياناتك لتظهر بصورة أفضل</p>
+          <section className="relative order-3 overflow-hidden rounded-[2rem] border border-purple-300/15 bg-[#172338] shadow-2xl shadow-purple-950/30">
+            <div className="pointer-events-none absolute -left-16 -top-20 h-44 w-44 rounded-full bg-fuchsia-500/20 blur-3xl" />
+            <div className="pointer-events-none absolute -right-20 bottom-20 h-52 w-52 rounded-full bg-purple-500/15 blur-3xl" />
+            <div className="relative border-b border-white/10 bg-gradient-to-l from-fuchsia-500/25 via-purple-500/15 to-transparent px-5 py-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-400/70 to-purple-600/70 shadow-lg shadow-purple-950/30 ring-1 ring-white/25">
+                    <User className="h-6 w-6 text-white" />
+                  </span>
+                  <div>
+                    <h2 className="font-black tracking-wide text-white">معلوماتك</h2>
+                    <p className="mt-1 text-xs text-white/55">حدّث بياناتك لتظهر بصورة أفضل</p>
+                  </div>
                 </div>
+                <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold text-purple-100">
+                  ملفك الشخصي
+                </span>
+              </div>
+              <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full w-1/3 rounded-full bg-gradient-to-l from-fuchsia-400 to-purple-400" />
               </div>
             </div>
 
-            <div className="space-y-4 p-5">
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-white/60">الاسم</label>
-                <input value={name} onChange={e => setName(e.target.value)} placeholder="اسمك"
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-white/25 outline-none transition-colors focus:border-purple-400/70 focus:bg-slate-950"
-                />
+            <div className="relative space-y-4 p-5">
+              <div className="group">
+                <label className="mb-2 flex items-center gap-2 text-xs font-bold text-white/65">
+                  <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_8px_rgba(232,121,249,0.8)]" />
+                  الاسم
+                </label>
+                <div className="relative">
+                  <User className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-300/60 transition-colors group-focus-within:text-fuchsia-300" />
+                  <input value={name} onChange={e => setName(e.target.value)} placeholder="اسمك"
+                    className="w-full rounded-2xl border border-white/10 bg-slate-950/65 py-3.5 pl-4 pr-11 text-white shadow-inner shadow-black/20 placeholder:text-white/25 outline-none transition-all focus:border-fuchsia-400/60 focus:bg-slate-950/90 focus:ring-4 focus:ring-fuchsia-500/10"
+                  />
+                </div>
+              </div>
+
+              <div className="group">
+                <label className="mb-2 flex items-center gap-2 text-xs font-bold text-white/65">
+                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
+                  العمر
+                </label>
+                <div className="relative">
+                  <Calendar className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-purple-300/60 transition-colors group-focus-within:text-fuchsia-300" />
+                  <input type="number" value={age} onChange={e => setAge(Number(e.target.value))} min={13} max={100}
+                    className="w-full rounded-2xl border border-white/10 bg-slate-950/65 py-3.5 pl-4 pr-11 text-white shadow-inner shadow-black/20 outline-none transition-all focus:border-fuchsia-400/60 focus:bg-slate-950/90 focus:ring-4 focus:ring-fuchsia-500/10"
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-white/60">العمر</label>
-                <input type="number" value={age} onChange={e => setAge(Number(e.target.value))} min={13} max={100}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white outline-none transition-colors focus:border-purple-400/70 focus:bg-slate-950"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-white/60">الجنس</label>
+                <label className="mb-2 flex items-center gap-2 text-xs font-bold text-white/65">
+                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
+                  الجنس
+                </label>
                 <div className="flex gap-2">
                   {([{ v: "male", l: "ذكر" }, { v: "female", l: "أنثى" }, { v: "other", l: "آخر" }] as const).map(({ v, l }) => (
                     <button key={v} onClick={() => setGender(v)}
                       className={`flex-1 rounded-2xl border py-2.5 text-sm font-bold transition-all ${
                         gender === v
-                          ? "border-purple-400/70 bg-gradient-to-r from-purple-600 to-fuchsia-500 text-white shadow-lg shadow-purple-900/30"
-                          : "border-white/10 bg-white/[0.04] text-white/55 hover:border-purple-400/40 hover:text-white"
+                          ? "border-fuchsia-300/70 bg-gradient-to-l from-fuchsia-500 to-purple-600 text-white shadow-lg shadow-purple-900/40 ring-2 ring-fuchsia-300/10"
+                          : "border-white/10 bg-slate-950/35 text-white/55 hover:border-purple-400/40 hover:bg-white/[0.08] hover:text-white"
                       }`}
                     >
                       {l}
@@ -561,10 +586,13 @@ export default function Profile() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-white/60">نبذة عنك</label>
+              <div className="group">
+                <label className="mb-2 flex items-center gap-2 text-xs font-bold text-white/65">
+                  <span className="h-1.5 w-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_8px_rgba(232,121,249,0.8)]" />
+                  نبذة عنك
+                </label>
                 <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="اكتب شيئاً عن نفسك..." rows={3}
-                  className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-white placeholder:text-white/25 outline-none transition-colors focus:border-purple-400/70 focus:bg-slate-950"
+                  className="w-full resize-none rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3.5 text-white shadow-inner shadow-black/20 placeholder:text-white/25 outline-none transition-all focus:border-fuchsia-400/60 focus:bg-slate-950/90 focus:ring-4 focus:ring-fuchsia-500/10"
                 />
               </div>
 
@@ -574,8 +602,9 @@ export default function Profile() {
                   saveProfile.mutate({ name, age, gender, bio, avatar: avatar || undefined });
                 }}
                 disabled={saveProfile.isPending}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-fuchsia-500 via-purple-600 to-violet-600 py-3.5 font-bold text-white shadow-lg shadow-purple-900/30 transition hover:brightness-110 disabled:opacity-60"
+                className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-l from-fuchsia-500 via-purple-600 to-violet-600 py-3.5 font-bold text-white shadow-lg shadow-purple-900/30 transition hover:brightness-110 disabled:opacity-60"
               >
+                <span className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-white/10 blur-xl" />
                 {saved ? (
                   <><CheckCircle className="h-4 w-4" /> تم الحفظ!</>
                 ) : saveProfile.isPending ? "جاري الحفظ..." : (
