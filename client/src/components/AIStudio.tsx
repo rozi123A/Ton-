@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  BrainCircuit,
   Image as ImageIcon,
   Loader2,
   MapPin,
@@ -10,6 +9,7 @@ import {
   Search,
   Send,
   Sparkles,
+  WandSparkles,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -214,7 +214,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
   };
 
   const tabs = [
-    { id: "chat" as const, label: "مساعد ذكي", icon: BrainCircuit },
+    { id: "chat" as const, label: "مساعد ذكي", icon: WandSparkles },
     { id: "image" as const, label: "توليد صورة", icon: ImageIcon },
     { id: "voice" as const, label: "تحويل صوت", icon: Mic },
     { id: "map" as const, label: "خرائط", icon: MapPin },
@@ -229,7 +229,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
           <div>
             <h2 className="flex items-center gap-2 text-lg font-black">
                <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 via-blue-500 to-purple-600 shadow-lg shadow-cyan-500/25">
-                 <BrainCircuit className="h-5 w-5 text-white" />
+                 <WandSparkles className="h-5 w-5 text-white" />
                </span>
               أدوات ConnectLive الذكية
             </h2>
@@ -354,18 +354,21 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                   </a>
                 </div>
               )}
-              {imagesQuery.data && imagesQuery.data.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-white/80">صورك السابقة</h3>
-                    {imagesQuery.isFetching && <Loader2 className="h-4 w-4 animate-spin text-white/40" />}
+              <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white/85">سجل الصور</h3>
+                    <p className="mt-1 text-[11px] text-white/45">تظهر هنا الصور التي أنشأتها في حسابك.</p>
                   </div>
+                  {imagesQuery.isFetching && <Loader2 className="h-4 w-4 animate-spin text-white/40" />}
+                </div>
+                {imagesQuery.data && imagesQuery.data.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                     {imagesQuery.data.map(image => (
                       <button
                         key={image.id}
                         onClick={() => setImageUrl(image.imageUrl)}
-                        className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] text-right transition hover:border-pink-300/50"
+                        className="group overflow-hidden rounded-2xl border border-white/10 bg-black/20 text-right transition hover:border-pink-300/50 hover:shadow-lg hover:shadow-pink-500/10"
                         title={image.prompt}
                       >
                         <img src={image.imageUrl} alt={image.prompt} className="aspect-square w-full object-cover transition group-hover:scale-105" />
@@ -373,8 +376,13 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="flex min-h-24 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 text-center text-white/40">
+                    <WandSparkles className="mb-2 h-5 w-5 text-pink-200/60" />
+                    <p className="text-xs">لا توجد صور محفوظة بعد</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

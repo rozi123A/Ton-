@@ -5,7 +5,7 @@ import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
   Flag, Volume2, VolumeX, Send, MessageSquare, X,
   SwitchCamera, Lock, Gift, Bell, Star, Search, ShoppingBag, Zap,
-  Users, UserRound, Heart, ChevronLeft, Globe, Bot, BrainCircuit, Play, Square
+  Users, UserRound, Heart, ChevronLeft, Globe, Bot, WandSparkles, Play, Square
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useTranslation } from '@/contexts/LanguageContext';
@@ -1604,7 +1604,7 @@ export default function ChatRoom() {
               className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl border border-cyan-300/40 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-600/25 py-2.5 md:py-3.5 text-sm font-bold text-cyan-50 transition hover:border-cyan-200/70 hover:from-cyan-500/30 hover:to-purple-600/35 active:scale-[0.98] shadow-md shadow-cyan-500/20"
           >
               <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-200 via-blue-500 to-purple-600 shadow-lg shadow-blue-500/30 transition group-hover:scale-110">
-                <BrainCircuit className="h-4 w-4 text-white md:h-5 md:w-5" />
+                <WandSparkles className="h-4 w-4 text-white md:h-5 md:w-5" />
               </span>
              <span>المساعد الذكي</span>
              <span className="rounded-full border border-cyan-200/25 bg-white/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-cyan-100/80">AI</span>
