@@ -228,36 +228,41 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" dir="rtl">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#080d1a] text-white" dir="rtl">
+      <div className="pointer-events-none fixed inset-0 -z-0 overflow-hidden">
+        <div className="absolute -right-32 top-24 h-72 w-72 rounded-full bg-purple-600/15 blur-3xl" />
+        <div className="absolute -left-40 top-[42%] h-96 w-96 rounded-full bg-fuchsia-500/10 blur-3xl" />
+        <div className="absolute bottom-0 right-1/3 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
+      </div>
 
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
       <input ref={storyFileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleStoryFileChange} />
 
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-slate-900 border-b border-slate-800">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4 max-w-lg">
-          <button onClick={() => setLocation("/")} className="text-white/70 hover:text-white transition-colors p-1">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0b1020]/80 shadow-lg shadow-black/20 backdrop-blur-xl">
+        <div className="container mx-auto flex max-w-lg items-center gap-2 px-4 py-3.5">
+          <button onClick={() => setLocation("/")} className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-white/70 transition hover:border-purple-300/40 hover:bg-purple-500/15 hover:text-white">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-bold text-white flex-1">
+          <h1 className="flex-1 text-lg font-black tracking-wide text-white md:text-xl">
             {isOwnProfile ? "الملف الشخصي" : `ملف ${u?.name || "مستخدم"}`}
           </h1>
           {isOwnProfile && u?.isPremium && (
-            <span className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 text-xs px-3 py-1 rounded-full font-bold">
+            <span className="flex items-center gap-1 rounded-full border border-yellow-300/40 bg-gradient-to-l from-yellow-300/20 to-orange-400/15 px-2.5 py-1.5 text-[10px] font-black text-yellow-200 shadow-lg shadow-yellow-950/20">
               <Crown className="w-3.5 h-3.5" /> VIP
             </span>
           )}
           {isOwnProfile && u?.role === 'admin' && (
             <button
               onClick={() => setLocation("/admin")}
-              className="flex items-center gap-1 bg-red-600/80 border border-red-500/60 text-white text-xs px-3 py-1.5 rounded-full font-bold"
+              className="flex items-center gap-1 rounded-full border border-red-300/35 bg-gradient-to-l from-red-600/90 to-rose-500/80 px-2.5 py-1.5 text-[10px] font-black text-white shadow-lg shadow-red-950/20 transition hover:brightness-110"
             >
               <Shield className="w-3.5 h-3.5" /> أدمن
             </button>
           )}
           <button
             onClick={() => setLocation("/chat")}
-            className="text-sm bg-gradient-to-r from-purple-600 to-pink-500 text-white px-4 py-1.5 rounded-full font-medium"
+            className="rounded-full border border-fuchsia-300/30 bg-gradient-to-l from-purple-600 to-fuchsia-500 px-3.5 py-2 text-xs font-black text-white shadow-lg shadow-purple-950/30 transition hover:brightness-110"
           >
             دردشة
           </button>
@@ -329,30 +334,33 @@ export default function Profile() {
         )}
 
         {/* ── Hero card ─────────────────────────────────────────────────── */}
-        <section className="order-1 bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden">
-          <div className="h-24 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 relative">
+        <section className="relative order-1 overflow-hidden rounded-[2rem] border border-purple-300/15 bg-[#141e32]/95 shadow-2xl shadow-purple-950/30">
+          <div className="relative h-32 overflow-hidden bg-gradient-to-l from-indigo-700 via-purple-700 to-fuchsia-500">
+            <div className="absolute -left-10 -top-20 h-56 w-56 rounded-full border-[28px] border-white/10" />
+            <div className="absolute -right-16 top-4 h-40 w-40 rounded-full bg-fuchsia-300/20 blur-2xl" />
+            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#141e32] to-transparent" />
             {isOwnProfile && u?.isPremium && (
-              <div className="absolute top-3 left-3 flex items-center gap-1 bg-yellow-400 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-full shadow">
+              <div className="absolute left-4 top-4 flex items-center gap-1 rounded-full border border-yellow-200/40 bg-yellow-300/90 px-3 py-1.5 text-xs font-black text-slate-900 shadow-xl shadow-yellow-950/20">
                 <Crown className="w-3.5 h-3.5" /> عضو VIP
               </div>
             )}
           </div>
 
-          <div className="px-6 pb-6">
-            <div className="flex items-end gap-4 -mt-12 mb-4">
+          <div className="relative px-5 pb-5 sm:px-6">
+            <div className="mb-5 -mt-16 flex items-end gap-4">
               <div className="relative group">
-                <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-4 border-slate-900 shadow-xl flex-shrink-0">
+                <div className="relative h-28 w-28 flex-shrink-0 overflow-hidden rounded-[2rem] border-4 border-[#141e32] bg-slate-950 shadow-2xl shadow-black/40 ring-1 ring-white/15">
                   {avatar ? (
                     <img src={avatar} alt={name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-purple-500/60 to-pink-500/60 flex items-center justify-center">
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-500/70 to-fuchsia-500/70">
                       <User className="w-10 h-10 text-white/70" />
                     </div>
                   )}
                   {isOwnProfile && (
                     <button
                       onClick={() => fileRef.current?.click()}
-                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       <Camera className="w-6 h-6 text-white" />
                     </button>
@@ -361,17 +369,17 @@ export default function Profile() {
                 {isOwnProfile && (
                   <button 
                     onClick={() => setShowStoryUpload(true)}
-                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-900 hover:scale-110 transition-transform"
+                    className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-2xl border-2 border-[#141e32] bg-gradient-to-br from-fuchsia-500 to-purple-600 shadow-lg shadow-purple-950/40 transition-transform hover:scale-110"
                   >
                     <PlusCircle className="w-5 h-5 text-white" />
                   </button>
                 )}
               </div>
 
-              <div className="flex-1 pt-14">
-                <p className="text-white font-bold text-lg leading-tight">{name || "مستخدم"}</p>
+              <div className="flex-1 pb-1">
+                <p className="text-lg font-black leading-tight text-white">{name || "مستخدم"}</p>
                 {isOwnProfile && memberSince && (
-                  <p className="text-white/50 text-xs flex items-center gap-1 mt-0.5">
+                  <p className="mt-1 flex items-center gap-1 text-xs text-white/50">
                     <Calendar className="w-3 h-3" /> عضو منذ {memberSince}
                   </p>
                 )}
@@ -379,8 +387,8 @@ export default function Profile() {
               {isOwnProfile && u?.isPremium && <Shield className="w-5 h-5 text-green-400 mb-1" />}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="rounded-2xl border border-yellow-300/10 bg-yellow-300/[0.06] p-3 text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Star className="w-3.5 h-3.5 text-yellow-400" />
                   <span className={`text-yellow-400 font-bold text-lg ${!isOwnProfile ? 'blur-[4px] select-none' : ''}`}>
@@ -389,7 +397,7 @@ export default function Profile() {
                 </div>
                 <p className="text-white/50 text-xs">نجوم</p>
               </div>
-              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+              <div className="rounded-2xl border border-purple-300/10 bg-purple-300/[0.06] p-3 text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Zap className="w-3.5 h-3.5 text-purple-400" />
                   <span className={`text-purple-400 font-bold text-lg ${!isOwnProfile ? 'blur-[4px] select-none' : ''}`}>
@@ -398,7 +406,7 @@ export default function Profile() {
                 </div>
                 <p className="text-white/50 text-xs">نقاط</p>
               </div>
-              <div className="bg-slate-900/50 rounded-xl p-3 text-center border border-slate-700">
+              <div className="rounded-2xl border border-emerald-300/10 bg-emerald-300/[0.06] p-3 text-center">
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Award className="w-3.5 h-3.5 text-green-400" />
                   <span className="text-green-400 font-bold text-lg">{isOwnProfile ? completionPct : '??'}%</span>
@@ -417,32 +425,35 @@ export default function Profile() {
 
         {/* ── Public stories and videos / My active stories ─────────────── */}
         {myStoriesQuery.data && myStoriesQuery.data.length > 0 && (
-          <section className="order-4 bg-slate-800 rounded-2xl border border-slate-700 p-5">
-            <h2 className="font-bold text-white flex items-center gap-2 mb-4">
-              <Play className="w-4 h-4 text-pink-400" />
+          <section className="order-6 relative overflow-hidden rounded-[2rem] border border-fuchsia-300/15 bg-gradient-to-b from-[#18243b] to-[#10192b] p-5 shadow-2xl shadow-purple-950/25">
+            <div className="pointer-events-none absolute -left-16 -top-20 h-44 w-44 rounded-full bg-fuchsia-500/15 blur-3xl" />
+            <h2 className="relative mb-4 flex items-center gap-3 font-black text-white">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500/80 to-purple-600/80 shadow-lg shadow-purple-950/30 ring-1 ring-white/20">
+                <Play className="h-4 w-4 fill-white text-white" />
+              </span>
               {isPublicProfile ? "قصص وفيديوهات المستخدم" : "قصصي النشطة"}
             </h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="relative grid grid-cols-2 gap-3">
               {myStoriesQuery.data.map((story: any, index: number) => (
                 <div 
                   key={story.id} 
                   onClick={() => setSelectedStoryIndex(index)}
-                  className="relative rounded-xl overflow-hidden bg-black aspect-[9/16] cursor-pointer group"
+                  className="group relative aspect-[9/16] cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-lg shadow-black/20 transition duration-300 hover:-translate-y-1 hover:border-fuchsia-300/40 hover:shadow-fuchsia-950/20"
                 >
                   {story.mediaType === "video" ? (
                     <video src={story.mediaUrl} className="w-full h-full object-cover" />
                   ) : (
                     <img src={story.mediaUrl} className="w-full h-full object-cover" />
                   )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-2 opacity-100 group-hover:from-black/80 transition-all">
+                    <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/75 via-black/10 to-transparent p-2 transition-all group-hover:from-black/90">
                       <div className="flex items-center justify-between">
                         {isOwnProfile ? (
                           <>
-                            <div className="flex gap-2 text-xs text-white">
-                              <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                            <div className="flex gap-1.5 text-[10px] text-white">
+                              <span className="flex items-center gap-1 rounded-full border border-white/10 bg-black/50 px-2 py-1 backdrop-blur-sm">
                                 <Eye className="w-3 h-3" /> {story.viewCount || 0}
                               </span>
-                              <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full">
+                              <span className="flex items-center gap-1 rounded-full border border-white/10 bg-black/50 px-2 py-1 backdrop-blur-sm">
                                 <MessageCircle className="w-3 h-3" /> {story.commentCount || 0}
                               </span>
                             </div>
@@ -453,13 +464,13 @@ export default function Profile() {
                                   deleteStory.mutate({ storyId: story.id });
                                 }
                               }}
-                              className="bg-red-500/80 p-1.5 rounded-full text-white hover:bg-red-600 transition-colors"
+                              className="rounded-xl border border-red-200/20 bg-red-500/80 p-1.5 text-white transition-colors hover:bg-red-600"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
                           </>
                         ) : (
-                          <span className="text-xs text-white/80 bg-black/40 px-2 py-1 rounded-full">
+                          <span className="rounded-full border border-white/10 bg-black/50 px-2 py-1 text-[10px] text-white/80 backdrop-blur-sm">
                             {story.mediaType === "video" ? "فيديو" : "قصة"}
                           </span>
                         )}
@@ -487,7 +498,7 @@ export default function Profile() {
 
         {/* ── Profile completion ────────────────────────────────────────── */}
         {isOwnProfile && completionPct < 100 && (
-          <section className="order-2" style={{ backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155', padding: '16px' }}>
+          <section className="order-3" style={{ backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155', padding: '16px' }}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-purple-400" />
@@ -516,7 +527,7 @@ export default function Profile() {
 
         {/* ── Private edit fields / public identity card ───────────────── */}
         {isOwnProfile ? (
-          <section className="relative order-3 overflow-hidden rounded-[2rem] border border-purple-300/15 bg-[#172338] shadow-2xl shadow-purple-950/30">
+          <section className="relative order-2 overflow-hidden rounded-[2rem] border border-purple-300/15 bg-[#172338] shadow-2xl shadow-purple-950/30">
             <div className="pointer-events-none absolute -left-16 -top-20 h-44 w-44 rounded-full bg-fuchsia-500/20 blur-3xl" />
             <div className="pointer-events-none absolute -right-20 bottom-20 h-52 w-52 rounded-full bg-purple-500/15 blur-3xl" />
             <div className="relative border-b border-white/10 bg-gradient-to-l from-fuchsia-500/25 via-purple-500/15 to-transparent px-5 py-5">
@@ -530,9 +541,6 @@ export default function Profile() {
                     <p className="mt-1 text-xs text-white/55">حدّث بياناتك لتظهر بصورة أفضل</p>
                   </div>
                 </div>
-                <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold text-purple-100">
-                  ملفك الشخصي
-                </span>
               </div>
               <div className="mt-4 h-1 overflow-hidden rounded-full bg-white/10">
                 <div className="h-full w-1/3 rounded-full bg-gradient-to-l from-fuchsia-400 to-purple-400" />
@@ -619,7 +627,7 @@ export default function Profile() {
             </div>
           </section>
         ) : (
-          <section className="order-3 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 shadow-xl shadow-purple-950/20">
+          <section className="order-2 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-800 to-slate-900 shadow-xl shadow-purple-950/20">
             <div className="border-b border-white/10 bg-gradient-to-l from-purple-500/15 via-fuchsia-500/10 to-transparent px-5 py-4">
               <h2 className="flex items-center gap-3 font-bold text-white">
                 <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-500/20 ring-1 ring-purple-300/20">
@@ -658,7 +666,6 @@ export default function Profile() {
                 </span>
                 <div>
                   <h2 className="font-bold text-white">رصيد النجوم</h2>
-                  <p className="mt-0.5 text-xs text-white/45">استخدمها داخل تجربتك في ConnectLive</p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 rounded-full border border-yellow-300/30 bg-yellow-400/10 px-3 py-1.5">
@@ -684,7 +691,7 @@ export default function Profile() {
               <div className="mt-4 space-y-3">
                 <div className="flex items-center gap-2 rounded-2xl border border-blue-400/20 bg-blue-500/10 px-3.5 py-3 text-sm font-medium text-blue-200">
                   <span className="text-base">🔒</span>
-                  <span>الدفع الإلكتروني سيكون متاحًا قريبًا</span>
+                  <span>سيتم تفعيل الدفع قريباً</span>
                 </div>
                 {CREDIT_PACKAGES.map(pkg => (
                   <div key={pkg.credits} className={`relative flex items-center justify-between rounded-2xl border p-4 transition ${
@@ -703,7 +710,6 @@ export default function Profile() {
                       </span>
                       <div>
                         <span className="block font-bold text-white">{pkg.credits} نجمة</span>
-                        <span className="text-xs text-white/40">باقة رصيد</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
