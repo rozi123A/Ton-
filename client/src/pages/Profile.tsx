@@ -264,7 +264,7 @@ export default function Profile() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6 max-w-lg space-y-4">
+      <div className="container mx-auto px-4 py-6 max-w-lg space-y-4 flex flex-col">
 
         {/* ── Story Upload Modal ─────────────────────────────────────────── */}
         {showStoryUpload && (
@@ -329,7 +329,7 @@ export default function Profile() {
         )}
 
         {/* ── Hero card ─────────────────────────────────────────────────── */}
-        <section className="bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden">
+        <section className="order-1 bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden">
           <div className="h-24 bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 relative">
             {isOwnProfile && u?.isPremium && (
               <div className="absolute top-3 left-3 flex items-center gap-1 bg-yellow-400 text-gray-900 text-xs font-bold px-2.5 py-1 rounded-full shadow">
@@ -417,7 +417,7 @@ export default function Profile() {
 
         {/* ── Public stories and videos / My active stories ─────────────── */}
         {myStoriesQuery.data && myStoriesQuery.data.length > 0 && (
-          <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
+          <section className="order-4 bg-slate-800 rounded-2xl border border-slate-700 p-5">
             <h2 className="font-bold text-white flex items-center gap-2 mb-4">
               <Play className="w-4 h-4 text-pink-400" />
               {isPublicProfile ? "قصص وفيديوهات المستخدم" : "قصصي النشطة"}
@@ -487,7 +487,7 @@ export default function Profile() {
 
         {/* ── Profile completion ────────────────────────────────────────── */}
         {isOwnProfile && completionPct < 100 && (
-          <section style={{ backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155', padding: '16px' }}>
+          <section className="order-2" style={{ backgroundColor: '#1e293b', borderRadius: '16px', border: '1px solid #334155', padding: '16px' }}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-purple-400" />
@@ -516,7 +516,7 @@ export default function Profile() {
 
         {/* ── Private edit fields / public identity card ───────────────── */}
         {isOwnProfile ? (
-          <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5 space-y-4">
+          <section className="order-3 bg-slate-800 rounded-2xl border border-slate-700 p-5 space-y-4">
             <h2 className="font-bold text-white flex items-center gap-2">
               <User className="w-4 h-4 text-purple-400" /> معلوماتك
             </h2>
@@ -578,7 +578,7 @@ export default function Profile() {
           )}
           </section>
         ) : (
-          <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
+          <section className="order-3 bg-slate-800 rounded-2xl border border-slate-700 p-5">
             <h2 className="font-bold text-white flex items-center gap-2 mb-4">
               <User className="w-4 h-4 text-purple-400" /> بطاقة المستخدم
             </h2>
@@ -603,7 +603,7 @@ export default function Profile() {
         )}
 
         {/* ── Credits & Stars ───────────────────────────────────────────── */}
-        {isOwnProfile && <section className="bg-slate-800 rounded-2xl border border-slate-700 p-5">
+        {isOwnProfile && <section className="order-5 bg-slate-800 rounded-2xl border border-slate-700 p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-bold text-white flex items-center gap-2">
               <Star className="w-4 h-4 text-yellow-400" /> رصيد النجوم
