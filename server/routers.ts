@@ -17,6 +17,7 @@ import {
   deleteStory, getStoryById,
   createAiConversation, getAiConversations, getAiConversation, getAiMessages, saveAiMessage,
   saveAiImage, getAiImages, getAiImage,
+   setUserVerified,
   getDb,
 } from "./db";
 import { and, eq, gte, isNull, lt, or, sql, desc } from "drizzle-orm";
@@ -1081,6 +1082,17 @@ export const appRouter = router({
       .input(z.object({ adminToken: z.string(), query: z.string().min(1).max(100) }))
       .query(async ({ input }) => {
         return searchUsers(input.query);
+      }),
+
+    setVerified: adminSessionProcedure
+      .input(z.object({
+        adminToken: z.string(),
+        userId: z.number().int().positive(),
+        verified: z.boolean(),
+      }))
+      .mutation(async ({ input }) => {
+        await setUserVerified(input.userId, input.verified);
+        return { success: true, verified: input.verified };
       }),
 
     /** DB health check — returns connection status and REAL row counts from DB */

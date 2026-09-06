@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
-import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, Shield, Eye, EyeOff, Video, Radio, X, MonitorPlay, Trash2, Play, Download, Wallet, Check, Ban, Clock, Star, Search, Bell, Wifi } from 'lucide-react';
+import { Users, Globe, Crown, RefreshCw, ArrowRight, Lock, Shield, Eye, EyeOff, Video, Radio, X, MonitorPlay, Trash2, Play, Download, Wallet, Check, Ban, Clock, Star, Search, Bell, Wifi, BadgeCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 type ActiveCall = {
@@ -579,7 +579,10 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
                 }} />
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'white' }}>{u.name || 'مستخدم جديد'}</p>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>{u.name || 'مستخدم جديد'}</span>
+                  {u.isVerified && <BadgeCheck style={{ width: '14px', color: '#38bdf8' }} />}
+                </p>
                 <p style={{ margin: 0, fontSize: '11px', color: '#6b7280' }}>
                   {u.gender ? (u.gender === 'male' ? 'ذكر' : u.gender === 'female' ? 'أنثى' : u.gender) : 'غير محدد'} 
                   {u.age ? ` • ${u.age} سنة` : ''} 
@@ -749,7 +752,10 @@ function SearchTab({ adminToken }: { adminToken: string }) {
             />
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <p style={{ margin: 0, fontSize: '15px', fontWeight: 800 }}>{u.name}</p>
+                <p style={{ margin: 0, fontSize: '15px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>{u.name}</span>
+                  {u.isVerified && <BadgeCheck style={{ width: '15px', color: '#38bdf8' }} />}
+                </p>
                 {u.isPremium && <Crown style={{ width: '14px', color: '#fbbf24' }} />}
                 {u.role === 'admin' && <Shield style={{ width: '14px', color: '#818cf8' }} />}
               </div>
@@ -779,6 +785,14 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
   );
 
   const user = results?.find(u => u.id === userId) || results?.[0];
+  const utils = trpc.useUtils();
+  const setVerifiedMutation = trpc.admin.setVerified.useMutation({
+    onSuccess: async ({ verified }) => {
+      toast.success(verified ? 'تم توثيق الحساب ✅' : 'تم إلغاء توثيق الحساب');
+      await utils.admin.searchUsers.invalidate({ adminToken, query: String(userId) });
+    },
+    onError: (error) => toast.error(error.message || 'تعذر تحديث حالة التوثيق'),
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -828,7 +842,10 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}>
-              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: 'white' }}>{user.name || 'مستخدم جديد'}</h2>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>{user.name || 'مستخدم جديد'}</span>
+                {user.isVerified && <BadgeCheck style={{ width: '19px', color: '#38bdf8' }} />}
+              </h2>
               {user.isPremium && <Crown style={{ width: '18px', color: '#fbbf24' }} />}
               {user.role === 'admin' && <Shield style={{ width: '18px', color: '#818cf8' }} />}
             </div>
@@ -859,6 +876,35 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
           </div>
 
           <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '10px' }}>
+            <button
+              onClick={() => setVerifiedMutation.mutate({
+                adminToken,
+                userId: user.id,
+                verified: !user.isVerified,
+              })}
+              disabled={setVerifiedMutation.isPending}
+              style={{
+                flex: 1,
+                backgroundColor: user.isVerified ? '#334155' : '#0369a1',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: setVerifiedMutation.isPending ? 'wait' : 'pointer',
+                opacity: setVerifiedMutation.isPending ? 0.65 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              <BadgeCheck style={{ width: '16px' }} />
+              {setVerifiedMutation.isPending
+                ? 'جاري التحديث...'
+                : user.isVerified ? 'إلغاء التوثيق' : 'توثيق الحساب'}
+            </button>
             <button
               onClick={() => alert(`معرف المستخدم: ${user.id}\nالاسم: ${user.name}\nالإيميل: ${(user as { email?: string | null }).email || 'غير متوفر'}`)}
               style={{

@@ -16,6 +16,7 @@ import FaceFiltersPanel from '@/components/FaceFiltersPanel';
 import FriendsPanel from '@/components/FriendsPanel';
 import DirectMessagePanel from '@/components/DirectMessagePanel';
 import UserProfileModal from '@/components/UserProfileModal';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import PremiumMessageBubble from "@/components/PremiumMessageBubble";
 import AIStudio from "@/components/AIStudio";
 import { playMessageSound, playFriendSound, playRingSound } from '@/lib/notificationSound';
@@ -111,6 +112,7 @@ export default function ChatRoom() {
   const [status,       setStatus]      = useState<Status>('idle');
   const [peerName,     setPeerName]    = useState('');
   const [peerAvatar,   setPeerAvatar]  = useState('');
+  const [peerUserId,   setPeerUserId]  = useState<number | null>(null);
   const [isMicOn,      setIsMicOn]     = useState(true);
   const [isVideoOn,    setIsVideoOn]   = useState(true);
   const [isSpeakerOn,  setIsSpeakerOn] = useState(true);
@@ -142,6 +144,10 @@ export default function ChatRoom() {
   const [bonusCountdown, setBonusCountdown] = useState<string | null>(null);
   const [showConvertModal, setShowConvertModal] = useState(false);
   const { data: dbFriends, refetch: refetchFriends } = trpc.social.getFriends.useQuery(undefined, { enabled: !!user });
+  const { data: peerProfile } = trpc.users.getPublicProfile.useQuery(peerUserId ?? 0, {
+    enabled: !!peerUserId,
+    staleTime: 30_000,
+  });
   const { data: unreadDmData, refetch: refetchUnread } = trpc.messages.getUnreadCount.useQuery(undefined, {
     enabled: !!user,
     refetchInterval: 8000,
@@ -329,7 +335,7 @@ export default function ChatRoom() {
   }, []);
   const resetRemote = useCallback(() => {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-    setPeerName(''); setPeerAvatar(''); setPeerVideoOff(false);
+    setPeerName(''); setPeerAvatar(''); setPeerUserId(null); setPeerVideoOff(false);
   }, []);
 
   const showGiftAnim = useCallback((emoji: string, name: string, senderName: string) => {
@@ -502,6 +508,7 @@ export default function ChatRoom() {
   const finalizeMatch = useCallback((match: PendingMatch) => {
     setPeerName(match.name);
     setPeerAvatar(match.avatar);
+    setPeerUserId(match.userId ?? null);
     (window as any).currentPeerUserId = match.userId;
     (window as any).peerNameForRec = match.name;
     setPendingMatch(null);
@@ -1136,7 +1143,10 @@ export default function ChatRoom() {
                 className="relative w-24 h-24 rounded-full border-4 border-purple-400 object-cover shadow-2xl"
               />
             </div>
-            <h2 className="text-white font-bold text-xl mb-1">{pendingMatch.name}</h2>
+            <h2 className="flex items-center justify-center gap-1.5 text-white font-bold text-xl mb-1">
+              <span>{pendingMatch.name}</span>
+              {pendingMatch.userId && peerProfile?.isVerified && <VerifiedBadge size={18} />}
+            </h2>
             <p className="text-purple-300 text-sm mb-6 animate-pulse">📞 جاري الاتصال...</p>
             <div className="flex gap-4 w-full">
               <button
@@ -1305,11 +1315,12 @@ export default function ChatRoom() {
                         : <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl">👤</div>}
                       <span className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow-md" />
                     </div>
-                    <button
-                      className="text-white font-semibold text-lg hover:text-purple-300 transition-colors"
+                     <button
+                       className="flex items-center justify-center gap-1.5 text-white font-semibold text-lg hover:text-purple-300 transition-colors"
                       onClick={() => { const uid = (window as any).currentPeerUserId; if (uid) setViewProfileUserId(uid); }}
                     >
-                      {peerName}
+                       <span>{peerName}</span>
+                       {peerProfile?.isVerified && <VerifiedBadge size={18} />}
                     </button>
                     <p className="text-white/50 text-sm mt-1">اضغط لعرض الملف الشخصي</p>
                   </>
@@ -1796,8 +1807,9 @@ export default function ChatRoom() {
             id: String(f.id),
             name: f.name || 'مستخدم',
             avatar: f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.id}`,
-            status: f.isOnline ? 'online' : 'offline',
+             status: f.isOnline && f.lastSeen && new Date(f.lastSeen).getTime() > Date.now() - 2 * 60 * 1000 ? 'online' : 'offline',
             lastSeen: f.lastSeen ? new Date(f.lastSeen).toLocaleString('ar') : '',
+             isVerified: Boolean(f.isVerified),
             userId: f.id,
           }))}
           onClose={() => setShowFriends(false)}

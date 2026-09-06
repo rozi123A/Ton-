@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import StoryViewer from "@/components/StoryViewer";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import {
   Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
   User, Calendar, Zap, Crown, Camera,
@@ -377,7 +378,14 @@ export default function Profile() {
               </div>
 
               <div className="flex-1 pb-1">
-                <p className="text-lg font-black leading-tight text-white">{name || "مستخدم"}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-lg font-black leading-tight text-white">{name || "مستخدم"}</p>
+                  {u?.isVerified && <VerifiedBadge size={18} />}
+                </div>
+                <p className={`mt-1 flex items-center gap-1 text-[11px] font-semibold ${u?.isOnline ? "text-emerald-400" : "text-white/40"}`}>
+                  <span className={`h-2 w-2 rounded-full ${u?.isOnline ? "bg-emerald-400" : "bg-white/25"}`} />
+                  {u?.isOnline ? "متصل الآن" : "غير متصل"}
+                </p>
                 {isOwnProfile && memberSince && (
                   <p className="mt-1 flex items-center gap-1 text-xs text-white/50">
                     <Calendar className="w-3 h-3" /> عضو منذ {memberSince}

@@ -114,6 +114,7 @@ export async function ensureSchema(): Promise<void> {
        credits       INTEGER NOT NULL DEFAULT 100,
        wallet        INTEGER NOT NULL DEFAULT 0,
        "isPremium"   BOOLEAN NOT NULL DEFAULT false,
+       "isVerified"  BOOLEAN NOT NULL DEFAULT false,
        "premiumExpiresAt" TIMESTAMP,
        "isOnline"    BOOLEAN NOT NULL DEFAULT false,
        "lastSeen"    TIMESTAMP NOT NULL DEFAULT now(),
@@ -258,6 +259,7 @@ export async function ensureSchema(): Promise<void> {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS credits       INTEGER   NOT NULL DEFAULT 100`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet        INTEGER   NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "isPremium"   BOOLEAN   NOT NULL DEFAULT false`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS "isVerified"  BOOLEAN   NOT NULL DEFAULT false`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "premiumExpiresAt" TIMESTAMP`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileViews" INTEGER  NOT NULL DEFAULT 0`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS country       VARCHAR(10)`,
@@ -414,6 +416,7 @@ export async function getUsersByGender(gender: 'male' | 'female' | 'other') {
       country: users.country,
       isOnline: users.isOnline,
       isPremium: users.isPremium,
+      isVerified: users.isVerified,
       lastSeen: users.lastSeen,
     }).from(users).where(and(eq(users.gender, gender), ne(users.role, 'admin')));
   } catch (error) {
@@ -440,6 +443,9 @@ export async function getRecentUsers(limit = 20) {
         lastSignedIn: users.lastSignedIn,
         profileViews: users.profileViews,
         country: users.country,
+        isOnline: users.isOnline,
+        isVerified: users.isVerified,
+        lastSeen: users.lastSeen,
       })
       .from(users)
       .where(isNotNull(users.name))
@@ -770,7 +776,7 @@ export async function getNewRegistrations(limit = 50): Promise<Array<{
   id: number; name: string | null; country: string | null; avatar: string | null;
   gender: string | null; age: number | null; role: 'user' | 'admin';
   createdAt: Date; lastSignedIn: Date; loginMethod: string | null; isPremium: boolean;
-  isOnline: boolean; lastSeen: Date;
+  isVerified: boolean; isOnline: boolean; lastSeen: Date;
 }>> {
   const db = await getDb();
   if (!db) {
@@ -784,6 +790,7 @@ export async function getNewRegistrations(limit = 50): Promise<Array<{
         gender: users.gender, age: users.age, role: users.role,
         createdAt: users.createdAt, lastSignedIn: users.lastSignedIn, loginMethod: users.loginMethod,
         isPremium: users.isPremium,
+        isVerified: users.isVerified,
         isOnline: users.isOnline,
         lastSeen: users.lastSeen,
       })
@@ -846,6 +853,9 @@ export async function getUserPublicProfile(userId: number) {
       bio: users.bio,
       role: users.role,
       isPremium: users.isPremium,
+      isVerified: users.isVerified,
+      isOnline: users.isOnline,
+      lastSeen: users.lastSeen,
       premiumExpiresAt: users.premiumExpiresAt,
     }).from(users).where(eq(users.id, userId)).limit(1);
     const profile = rows[0] ?? null;
@@ -864,6 +874,9 @@ export async function getUserPublicProfile(userId: number) {
       avatar: profile.avatar,
       bio: profile.bio,
       isPremium,
+      isVerified: profile.isVerified,
+      isOnline: profile.isOnline && profile.lastSeen.getTime() > Date.now() - 2 * 60 * 1000,
+      lastSeen: profile.lastSeen,
     };
   } catch (err) {
     console.error('[Database] getUserPublicProfile failed:', err);
@@ -960,6 +973,7 @@ export async function getFriends(userId: number) {
       country: users.country,
       isOnline: users.isOnline,
       isPremium: users.isPremium,
+       isVerified: users.isVerified,
       lastSeen: users.lastSeen,
     }).from(users).where(sql`${users.id} IN (${sql.join(friendIds, sql`, `)})`);
   } catch (err) {
@@ -1168,7 +1182,8 @@ export async function getPremiumCount(): Promise<number> {
 export async function searchUsers(query: string): Promise<Array<{
   id: number; name: string | null; country: string | null; avatar: string | null;
   gender: string | null; age: number | null; role: 'user' | 'admin';
-  createdAt: Date; loginMethod: string | null; isPremium: boolean; credits: number; wallet: number;
+  createdAt: Date; loginMethod: string | null; isPremium: boolean; isVerified: boolean;
+  isOnline: boolean; lastSeen: Date; credits: number; wallet: number;
 }>> {
   const db = await getDb();
   if (!db) return [];
@@ -1182,7 +1197,9 @@ export async function searchUsers(query: string): Promise<Array<{
           id: users.id, name: users.name, country: users.country, avatar: users.avatar,
           gender: users.gender, age: users.age, role: users.role,
           createdAt: users.createdAt, loginMethod: users.loginMethod,
-          isPremium: users.isPremium, credits: users.credits, wallet: users.wallet,
+           isPremium: users.isPremium, isVerified: users.isVerified,
+           isOnline: users.isOnline, lastSeen: users.lastSeen,
+           credits: users.credits, wallet: users.wallet,
         })
         .from(users)
         .where(sql`(${users.id} = ${idNum} OR lower(${users.name}) like lower(${'%' + trimmed + '%'}))`)
@@ -1195,7 +1212,9 @@ export async function searchUsers(query: string): Promise<Array<{
         id: users.id, name: users.name, country: users.country, avatar: users.avatar,
         gender: users.gender, age: users.age, role: users.role,
         createdAt: users.createdAt, loginMethod: users.loginMethod,
-        isPremium: users.isPremium, credits: users.credits, wallet: users.wallet,
+         isPremium: users.isPremium, isVerified: users.isVerified,
+         isOnline: users.isOnline, lastSeen: users.lastSeen,
+         credits: users.credits, wallet: users.wallet,
       })
       .from(users)
       .where(sql`lower(${users.name}) like lower(${'%' + trimmed + '%'})`)
@@ -1518,4 +1537,12 @@ export async function updateUserOffline(
   } catch (err) {
     console.error('[Database] updateUserOffline failed:', err);
   }
+}
+
+export async function setUserVerified(userId: number, verified: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('قاعدة البيانات غير متاحة');
+  await db.update(users)
+    .set({ isVerified: verified, updatedAt: new Date() })
+    .where(eq(users.id, userId));
 }

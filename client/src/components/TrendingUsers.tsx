@@ -5,6 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import UserProfileModal from "@/components/UserProfileModal";
 import StoryViewer from "@/components/StoryViewer";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 /** Convert ISO country code → emoji flag */
 function countryFlag(code: string | null | undefined): string {
@@ -26,12 +27,12 @@ const COUNTRY_NAMES: Record<string, string> = {
 };
 
 const MOCK_USERS = [
-  { id: -1, name: "سارة",  age: 22, online: true, profileViews: 1250, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sara",     country: null },
-  { id: -2, name: "احمد",  age: 25, online: true, profileViews: 980,  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed",    country: null },
-  { id: -3, name: "فاطمة", age: 20, online: true, profileViews: 1540, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima",   country: null },
-  { id: -4, name: "محمد",  age: 23, online: true, profileViews: 1120, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mohammed", country: null },
-  { id: -5, name: "ليلى",  age: 21, online: true, profileViews: 1890, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Layla",    country: null },
-  { id: -6, name: "علي",   age: 24, online: true, profileViews: 2100, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ali",      country: null },
+  { id: -1, name: "سارة",  age: 22, online: true, isVerified: false, profileViews: 1250, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sara",     country: null },
+  { id: -2, name: "احمد",  age: 25, online: true, isVerified: false, profileViews: 980,  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed",    country: null },
+  { id: -3, name: "فاطمة", age: 20, online: true, isVerified: false, profileViews: 1540, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima",   country: null },
+  { id: -4, name: "محمد",  age: 23, online: true, isVerified: false, profileViews: 1120, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mohammed", country: null },
+  { id: -5, name: "ليلى",  age: 21, online: true, isVerified: false, profileViews: 1890, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Layla",    country: null },
+  { id: -6, name: "علي",   age: 24, online: true, isVerified: false, profileViews: 2100, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ali",      country: null },
 ];
 
 type DisplayUser = {
@@ -39,6 +40,7 @@ type DisplayUser = {
   name: string;
   age: number;
   online: boolean;
+  isVerified: boolean;
   profileViews: number;
   avatar: string;
   country: string | null;
@@ -119,7 +121,10 @@ function UserCard({ user, onViewProfile, onOpenStory }: {
           className={`font-bold text-lg text-gray-900 mb-1 ${user.id > 0 ? 'cursor-pointer hover:text-purple-600 transition-colors' : ''}`}
           onClick={() => user.id > 0 && onViewProfile?.(user.id)}
         >
-          {user.name}
+          <span className="inline-flex items-center gap-1">
+            {user.name}
+            {user.isVerified && <VerifiedBadge size={17} />}
+          </span>
         </h3>
 
         {/* Real country flag + name under the username */}
@@ -136,14 +141,14 @@ function UserCard({ user, onViewProfile, onOpenStory }: {
           <p className="text-sm text-gray-500 mb-4">{user.age} {t('profile.years')}</p>
         )}
 
-        <div className="flex items-center justify-center gap-4 text-sm text-gray-600 mb-4">
+          <div className="flex items-center justify-center gap-4 text-sm text-gray-600 mb-4">
           <div className="flex items-center gap-1" title="عدد زيارات الملف الشخصي">
             <UserCheck className="w-4 h-4 text-purple-600" />
             <span className="font-semibold text-purple-700">{user.profileViews.toLocaleString('ar')}</span>
           </div>
           <div className="flex items-center gap-1">
-            <Heart className="w-4 h-4 text-pink-600" />
-            <span>{t('chat.online')}</span>
+            <span className={`h-2.5 w-2.5 rounded-full ${user.online ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+            <span>{user.online ? t('profile.online') : t('profile.offline')}</span>
           </div>
         </div>
 
@@ -203,7 +208,8 @@ export default function TrendingUsers() {
         id: u.id,
         name: u.name || 'مستخدم',
         age: u.age ?? 0,
-        online: true,
+        online: Boolean(u.isOnline && u.lastSeen && new Date(u.lastSeen).getTime() > Date.now() - 2 * 60 * 1000),
+        isVerified: Boolean(u.isVerified),
         profileViews: u.profileViews ?? 0,
         avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || String(u.id))}`,
         country: u.country ?? null,

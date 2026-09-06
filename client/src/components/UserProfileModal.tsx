@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { useTranslation } from "@/contexts/LanguageContext";
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import VerifiedBadge from '@/components/VerifiedBadge';
 
 interface UserProfileModalProps {
   userId: number;
@@ -87,7 +88,10 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
             {/* Info container - added pt-12 to push text below the gradient banner area */}
             <div className="pt-11 flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-white font-black text-lg leading-tight truncate">{profile.name || 'مستخدم'}</h2>
+                <h2 className="flex items-center gap-1.5 text-white font-black text-lg leading-tight truncate">
+                  <span className="truncate">{profile.name || 'مستخدم'}</span>
+                  {profile.isVerified && <VerifiedBadge size={18} />}
+                </h2>
               </div>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 {profile.age && (
@@ -98,6 +102,10 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
                     {profile.gender === 'male' ? t('profile.male') : profile.gender === 'female' ? t('profile.female') : ''}
                   </span>
                 )}
+              </div>
+              <div className={`mt-1 flex items-center gap-1 text-[11px] font-semibold ${profile.isOnline ? 'text-emerald-400' : 'text-white/40'}`}>
+                <span className={`h-2 w-2 rounded-full ${profile.isOnline ? 'bg-emerald-400' : 'bg-white/30'}`} />
+                {profile.isOnline ? t('profile.online') : t('profile.offline')}
               </div>
               
               {/* Stars and Points (Blurred) */}

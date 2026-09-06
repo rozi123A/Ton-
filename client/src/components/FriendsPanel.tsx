@@ -2,6 +2,7 @@ import { Heart, X, MessageCircle, Video, UserPlus, Check, Clock, Bell, Eye, Chec
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
+import VerifiedBadge from '@/components/VerifiedBadge';
 
 interface Friend {
   id: string;
@@ -9,6 +10,7 @@ interface Friend {
   avatar: string;
   status: 'online' | 'offline';
   lastSeen: string;
+  isVerified?: boolean;
   userId?: number;
 }
 
@@ -255,7 +257,10 @@ export default function FriendsPanel({
                           <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900" />
                         </div>
                         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => friend.userId && onViewProfile?.(friend.userId)}>
-                          <p className="text-white font-semibold text-sm truncate">{friend.name}</p>
+                           <p className="flex items-center gap-1 text-white font-semibold text-sm truncate">
+                             <span className="truncate">{friend.name}</span>
+                             {friend.isVerified && <VerifiedBadge size={14} />}
+                           </p>
                           <p className="text-green-400 text-xs">متصل الآن</p>
                         </div>
                         <div className="flex gap-1">
@@ -301,7 +306,10 @@ export default function FriendsPanel({
                           <span className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900" />
                         </div>
                         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => friend.userId && onViewProfile?.(friend.userId)}>
-                          <p className="text-white font-semibold text-sm truncate">{friend.name}</p>
+                           <p className="flex items-center gap-1 text-white font-semibold text-sm truncate">
+                             <span className="truncate">{friend.name}</span>
+                             {friend.isVerified && <VerifiedBadge size={14} />}
+                           </p>
                           <p className="text-white/40 text-xs flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             آخر ظهور: {friend.lastSeen}
