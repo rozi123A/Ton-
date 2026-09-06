@@ -33,6 +33,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
+import { sendUserNotification } from "./_core/userNotifications";
 
 const avatarSchema = z.union([
   z.string().url().max(512),
@@ -791,16 +792,19 @@ export const appRouter = router({
         if (presence.becameActive && ctx.user.id > 0) {
           const friends = await getFriends(ctx.user.id);
           await Promise.all(
-            friends.map((friend) =>
-              createNotification(friend.id, {
+            friends.flatMap((friend) => {
+              const notification = {
                 type: 'friend-online',
                 title: `${ctx.user.name || 'صديقك'} نشط الآن`,
                 message: `${ctx.user.name || 'صديقك'} دخل إلى الموقع`,
                 fromName: ctx.user.name || 'مستخدم',
                 fromAvatar: ctx.user.avatar || '',
                 fromUserId: ctx.user.id,
-              }),
-            ),
+                ts: Date.now(),
+              } as const;
+              sendUserNotification(String(friend.id), notification);
+              return [createNotification(friend.id, notification)];
+            }),
           );
         }
 
@@ -1262,13 +1266,17 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.id <= 0) throw new Error("يجب تسجيل الدخول لإضافة أصدقاء");
         await createFriendRequest(ctx.user.id, input.receiverId);
-        await createNotification(input.receiverId, {
+        const notification = {
           type: 'friend-request',
           fromName: ctx.user.name || 'مستخدم',
           fromAvatar: ctx.user.avatar || '',
           fromUserId: ctx.user.id,
           message: 'أرسل لك طلب صداقة جديد',
-        });
+          title: 'طلب صداقة جديد',
+          ts: Date.now(),
+        } as const;
+        sendUserNotification(String(input.receiverId), notification);
+        await createNotification(input.receiverId, notification);
         return { success: true };
       }),
 
@@ -1277,13 +1285,17 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.id <= 0) throw new Error("يجب تسجيل الدخول لقبول الصداقة");
         await acceptFriendRequest(input.senderId, ctx.user.id);
-        await createNotification(input.senderId, {
+        const notification = {
           type: 'friend-accepted',
           fromName: ctx.user.name || 'مستخدم',
           fromAvatar: ctx.user.avatar || '',
           fromUserId: ctx.user.id,
           message: 'قبل طلب صداقتك',
-        });
+          title: 'تم قبول طلب الصداقة',
+          ts: Date.now(),
+        } as const;
+        sendUserNotification(String(input.senderId), notification);
+        await createNotification(input.senderId, notification);
         return { success: true };
       }),
 

@@ -46,10 +46,10 @@ export default function FriendsPanel({
   const offlineFriends = friends.filter(f => f.status === 'offline');
 
   const utils = trpc.useUtils();
-  const markAllReadMutation = trpc.messages.markAllRead.useMutation({
+  const markAllReadMutation = trpc.notifications.markAsRead.useMutation({
     onSuccess: () => {
       toast.success('تم تحديد الكل كمقروء');
-      utils.messages.getUnreadCount.invalidate();
+      utils.notifications.get.invalidate();
     },
     onError: () => toast.error('حدث خطأ أثناء تحديث الرسائل'),
   });

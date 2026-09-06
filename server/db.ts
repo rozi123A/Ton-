@@ -1085,11 +1085,14 @@ export async function createNotification(userId: number, data: {
   fromName?: string;
   fromAvatar?: string;
   fromUserId?: number;
+  ts?: number;
 }) {
   const db = await getDb();
   if (!db) return;
   try {
-    await db.insert(notifications).values({ userId, ...data, isRead: false });
+    // ts is used by the live SSE payload but is not a database column.
+    const { ts: _liveTimestamp, ...notificationData } = data;
+    await db.insert(notifications).values({ userId, ...notificationData, isRead: false });
   } catch (err) {
     console.error('[Database] createNotification failed:', err);
   }

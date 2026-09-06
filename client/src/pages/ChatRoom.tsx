@@ -143,7 +143,16 @@ export default function ChatRoom() {
   const [showDailyBonus, setShowDailyBonus] = useState(true);
   const [bonusCountdown, setBonusCountdown] = useState<string | null>(null);
   const [showConvertModal, setShowConvertModal] = useState(false);
-  const { data: dbFriends, refetch: refetchFriends } = trpc.social.getFriends.useQuery(undefined, { enabled: !!user });
+  const { data: dbFriends, refetch: refetchFriends } = trpc.social.getFriends.useQuery(undefined, {
+    enabled: !!user,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+  });
+  const { data: incomingFriendRequests } = trpc.social.getIncomingRequests.useQuery(undefined, {
+    enabled: !!user,
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+  });
   const { data: peerProfile } = trpc.users.getPublicProfile.useQuery(peerUserId ?? 0, {
     enabled: !!peerUserId,
     staleTime: 30_000,
@@ -153,6 +162,7 @@ export default function ChatRoom() {
     refetchInterval: 8000,
   });
   const unreadDmCount = unreadDmData?.count ?? 0;
+  const incomingFriendRequestCount = incomingFriendRequests?.length ?? 0;
   const sendFriendRequestMutation = trpc.social.sendRequest.useMutation({
     onSuccess: () => toast.success('تم إرسال طلب الصداقة بنجاح'),
     onError: (err) => toast.error(err.message),
@@ -178,6 +188,25 @@ export default function ChatRoom() {
     }
     prevUnreadRef.current = unreadDmCount;
   }, [unreadDmCount, dmTarget]);
+
+  // Friend requests need a visible signal even when the notification bell is
+  // not open. Do not toast the initial list; only announce newly arrived ones.
+  const previousFriendRequestCountRef = useRef(0);
+  useEffect(() => {
+    if (incomingFriendRequests === undefined) return;
+    if (
+      previousFriendRequestCountRef.current > 0 &&
+      incomingFriendRequestCount > previousFriendRequestCountRef.current
+    ) {
+      const added = incomingFriendRequestCount - previousFriendRequestCountRef.current;
+      playFriendSound();
+      toast(`لديك ${added} ${added === 1 ? 'طلب صداقة جديد' : 'طلبات صداقة جديدة'} 🤝`, {
+        description: 'افتح قائمة الأصدقاء لرؤية الطلب وقبوله',
+        duration: 6000,
+      });
+    }
+    previousFriendRequestCountRef.current = incomingFriendRequestCount;
+  }, [incomingFriendRequests, incomingFriendRequestCount]);
 
   const [friendReqBanner, setFriendReqBanner] = useState<{name:string;avatar:string;fromPeerId?:string;fromUserId?:number} | null>(null);
   const [lastIncomingMsg, setLastIncomingMsg] = useState('');
@@ -1549,6 +1578,11 @@ export default function ChatRoom() {
                 {unreadDmCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-gray-900 text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5" style={{boxShadow:'0 0 8px rgba(234,179,8,0.9)'}}>
                     {unreadDmCount > 99 ? '99+' : unreadDmCount}
+                  </span>
+                )}
+                {incomingFriendRequestCount > 0 && (
+                  <span className="absolute -bottom-1.5 -left-1.5 bg-red-500 text-white text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5 animate-pulse" style={{boxShadow:'0 0 8px rgba(239,68,68,0.9)'}}>
+                    {incomingFriendRequestCount > 99 ? '99+' : incomingFriendRequestCount}
                   </span>
                 )}
               </div>

@@ -18,6 +18,11 @@ import rateLimit from "express-rate-limit";
 import { validateEnv } from "./env";
 import { sql } from "drizzle-orm";
 import { sdk } from "./sdk";
+import {
+  registerUserNotificationClient,
+  type NotifPayload,
+  sendUserNotification,
+} from "./userNotifications";
 
 // ── Signaling via Server-Sent Events (SSE) ────────────────────────────────────
 
@@ -756,34 +761,6 @@ function registerAdminMonitorRoutes(app: express.Express) {
   });
 }
 
-// ── User Notification System (SSE per userId) ─────────────────────────────────
-
-interface NotifPayload {
-  type: string;
-  title?: string;
-  message?: string;
-  fromName?: string;
-  fromAvatar?: string;
-  ts: number;
-  [key: string]: unknown;
-}
-
-const notifyClients = new Map<string, Response>();
-const pendingNotifs = new Map<string, NotifPayload[]>();
-const MAX_PENDING = 30;
-
-function sendUserNotification(userId: string, notif: NotifPayload) {
-  const client = notifyClients.get(userId);
-  if (client && !client.writableEnded) {
-    sseEvent(client, notif);
-  } else {
-    const queue = pendingNotifs.get(userId) || [];
-    queue.push(notif);
-    if (queue.length > MAX_PENDING) queue.shift();
-    pendingNotifs.set(userId, queue);
-  }
-}
-
 function registerNotifyRoutes(app: express.Express) {
   app.get("/api/notify/stream", async (req: Request, res: Response) => {
     const user = await sdk.authenticateRequest(req).catch(() => null);
@@ -810,13 +787,7 @@ function registerNotifyRoutes(app: express.Express) {
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
 
-    notifyClients.set(userId, res);
-
-    const pending = pendingNotifs.get(userId) || [];
-    pending.forEach(n => sseEvent(res, n));
-    pendingNotifs.delete(userId);
-
-    sseEvent(res, { type: "connected", ts: Date.now() });
+    const unregister = registerUserNotificationClient(userId, res);
 
     const keepAlive = setInterval(() => {
       if (!res.writableEnded) res.write(": ping\n\n");
@@ -824,7 +795,7 @@ function registerNotifyRoutes(app: express.Express) {
     }, 25000);
 
     req.on("close", () => {
-      if (notifyClients.get(userId) === res) notifyClients.delete(userId);
+      unregister();
       clearInterval(keepAlive);
     });
   });

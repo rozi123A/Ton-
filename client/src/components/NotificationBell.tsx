@@ -35,25 +35,30 @@ function saveStored(notifs: AppNotif[]) {
   } catch {}
 }
 
-function requestBrowserPermission() {
+async function requestBrowserPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission().catch(() => {});
+    return Notification.requestPermission().catch(() => 'denied' as NotificationPermission);
   }
+  return 'Notification' in window ? Notification.permission : 'denied';
 }
 
 function showBrowserNotif(title: string, body: string, icon?: string) {
-  if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+  if ('Notification' in window && Notification.permission === 'granted') {
     const options = {
       body,
       icon: icon || '/favicon.ico',
+      image: icon || undefined,
       badge: '/favicon.ico',
       dir: 'rtl' as const,
       lang: 'ar',
+      renotify: true,
+      tag: `friend-notification-${Date.now()}`,
+      data: { url: '/' },
     };
 
     // Service-worker notifications are the form Android browsers can place in
     // the system notification shade while the tab is in the background.
-    void navigator.serviceWorker?.getRegistration('/notification-sw.js')
+    void navigator.serviceWorker?.getRegistration()
       .then((registration) => {
         if (registration) {
           return registration.showNotification(title, options);
@@ -117,11 +122,22 @@ export default function NotificationBell() {
       const knownIds = knownDbIdsRef.current;
       if (knownIds) {
         formatted
-          .filter(n => !knownIds.has(n.id) && n.type === 'friend-online')
+          .filter(n =>
+            !knownIds.has(n.id) &&
+            (n.type === 'friend-online' || n.type === 'friend-request' || n.type === 'friend-accepted'),
+          )
           .forEach(n => {
             showBrowserNotif(
-              n.title || 'صديقك نشط الآن',
-              n.message || (n.fromName ? `${n.fromName} دخل إلى الموقع` : 'دخل صديقك إلى الموقع'),
+              n.title || (
+                n.type === 'friend-request' ? 'طلب صداقة جديد' :
+                n.type === 'friend-accepted' ? 'تم قبول طلب الصداقة' :
+                'صديقك نشط الآن'
+              ),
+              n.message || (
+                n.type === 'friend-online'
+                  ? (n.fromName ? `${n.fromName} دخل إلى الموقع` : 'دخل صديقك إلى الموقع')
+                  : (n.fromName ? `من ${n.fromName}` : 'لديك إشعار جديد')
+              ),
               n.fromAvatar,
             );
             playFriendSound();
@@ -275,7 +291,11 @@ export default function NotificationBell() {
     <div className="relative" ref={dropdownRef}>
       {/* Bell button */}
       <button
-        onClick={() => { setOpen(o => !o); if (!open) markAllRead(); }}
+      onClick={() => {
+        void requestBrowserPermission();
+        setOpen(o => !o);
+        if (!open) markAllRead();
+      }}
         className={
           unread > 0
             ? "relative p-2 rounded-full transition-all duration-200 bg-red-50 hover:bg-red-100 ring-2 ring-red-200 shadow-sm shadow-red-100"
