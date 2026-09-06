@@ -204,7 +204,13 @@ export default function Login() {
             )}
 
             {/* Hidden file input */}
-            <input ref={fileRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileChange} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
 
             {/* Photo — clickable circle only, no label */}
             <div className="flex justify-center">
