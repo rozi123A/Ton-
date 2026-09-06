@@ -7,7 +7,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import {
   Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
   User, Calendar, Zap, Crown, Camera,
-  Award, TrendingUp, Shield, PlusCircle, Play, Image as ImageIcon, X, Eye, MessageCircle, Trash2
+  Award, TrendingUp, Shield, PlusCircle, Play, Image as ImageIcon, X, Eye, MessageCircle, Trash2, Video
 } from "lucide-react";
 
 async function compressImage(file: File, maxPx = 1200): Promise<string> {
@@ -370,6 +370,8 @@ export default function Profile() {
                 {isOwnProfile && (
                   <button 
                     onClick={() => setShowStoryUpload(true)}
+                    aria-label="إضافة قصة أو فيديو"
+                    title="إضافة قصة أو فيديو"
                     className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-2xl border-2 border-[#141e32] bg-gradient-to-br from-fuchsia-500 to-purple-600 shadow-lg shadow-purple-950/40 transition-transform hover:scale-110"
                   >
                     <PlusCircle className="w-5 h-5 text-white" />
@@ -430,6 +432,37 @@ export default function Profile() {
             )}
           </div>
         </section>
+
+        {/* ── Story/video publishing CTA for every user's own profile ─────── */}
+        {isOwnProfile && (
+          <section className="order-2 relative overflow-hidden rounded-[2rem] border border-fuchsia-300/20 bg-gradient-to-l from-fuchsia-600/20 via-purple-600/20 to-indigo-600/20 p-5 shadow-xl shadow-purple-950/20">
+            <div className="pointer-events-none absolute -left-10 -top-12 h-32 w-32 rounded-full bg-fuchsia-400/20 blur-3xl" />
+            <div className="pointer-events-none absolute -right-12 -bottom-16 h-40 w-40 rounded-full bg-purple-400/20 blur-3xl" />
+            <div className="relative flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-400 to-purple-600 shadow-lg shadow-purple-950/30 ring-1 ring-white/25">
+                <Video className="h-5 w-5 text-white" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-black text-white">انشر قصتك أو فيديوك</h2>
+                <p className="mt-1 text-xs leading-5 text-white/65">
+                  شارك لحظتك مع الآخرين — أضف صورة أو فيديو قصير يظهر في قصصك.
+                </p>
+              </div>
+            </div>
+            <div className="relative mt-4 flex items-center gap-2">
+              <button
+                onClick={() => setShowStoryUpload(true)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-fuchsia-500 to-purple-600 py-3 text-sm font-black text-white shadow-lg shadow-purple-950/30 transition hover:brightness-110"
+              >
+                <PlusCircle className="h-4 w-4" />
+                إضافة قصة أو فيديو
+              </button>
+              <span className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-[10px] font-bold text-white/55">
+                صورة • فيديو
+              </span>
+            </div>
+          </section>
+        )}
 
         {/* ── Public stories and videos / My active stories ─────────────── */}
         {myStoriesQuery.data && myStoriesQuery.data.length > 0 && (
