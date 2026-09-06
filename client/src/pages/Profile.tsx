@@ -7,7 +7,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import {
   Save, ArrowLeft, Star, ShoppingCart, CheckCircle,
   User, Calendar, Zap, Crown, Camera,
-  Award, TrendingUp, Shield, PlusCircle, Play, Image as ImageIcon, ImagePlus, X, Eye, MessageCircle, Trash2
+  Award, TrendingUp, Shield, PlusCircle, Play, Image as ImageIcon, Video, X, Eye, MessageCircle, Trash2
 } from "lucide-react";
 
 async function compressImage(file: File, maxPx = 1200): Promise<string> {
@@ -374,7 +374,7 @@ export default function Profile() {
                     title="إضافة قصة أو فيديو"
                     className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-2xl border-2 border-[#141e32] bg-gradient-to-br from-fuchsia-500 to-purple-600 shadow-lg shadow-purple-950/40 transition-transform hover:scale-110"
                   >
-                    <ImagePlus className="w-5 h-5 text-white" />
+                    <Video className="w-5 h-5 text-white" />
                   </button>
                 )}
               </div>

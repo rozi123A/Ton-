@@ -448,7 +448,7 @@ export async function getRecentUsers(limit = 20) {
         lastSeen: users.lastSeen,
       })
       .from(users)
-      .where(isNotNull(users.name))
+      .where(and(isNotNull(users.name), ne(users.role, 'admin')))
       .orderBy(desc(users.lastSignedIn))
       .limit(limit);
   } catch (error) {
