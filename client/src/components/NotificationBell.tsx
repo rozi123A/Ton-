@@ -217,7 +217,6 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
-    void requestBrowserPermission().then(setNotificationPermission);
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/notification-sw.js').catch(() => {});
     }
@@ -289,7 +288,37 @@ export default function NotificationBell() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
+      {notificationPermission === 'default' && (
+        <div
+          role="status"
+          dir="rtl"
+          className="fixed bottom-4 left-4 right-4 z-[110] mx-auto max-w-md rounded-2xl border border-purple-200 bg-white p-4 text-right shadow-2xl"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-full bg-purple-100 p-2 text-purple-700">
+              <Bell className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-gray-900">فعّل إشعارات الهاتف</p>
+              <p className="mt-1 text-xs leading-5 text-gray-600">
+                اعرف فورًا عند وصول طلب صداقة أو دخول صديق، مع اسمه وصورته.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  void requestBrowserPermission().then(setNotificationPermission);
+                }}
+                className="mt-3 w-full rounded-xl bg-purple-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-purple-700"
+              >
+                السماح بالإشعارات
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="relative" ref={dropdownRef}>
       {/* Bell button */}
       <button
       onClick={() => {
@@ -405,24 +434,9 @@ export default function NotificationBell() {
             )}
           </div>
 
-          {notificationPermission === 'default' && (
-            <div className="border-t border-purple-100 bg-purple-50 px-4 py-3 text-right">
-              <p className="text-xs font-bold text-purple-800">فعّل إشعارات الهاتف</p>
-              <p className="mt-1 text-[11px] leading-5 text-purple-600">
-                حتى يصلك اسم وصورة الصديق عند وصول طلب أو دخوله للموقع.
-              </p>
-              <button
-                onClick={() => {
-                  void requestBrowserPermission().then(setNotificationPermission);
-                }}
-                className="mt-2 w-full rounded-lg bg-purple-600 py-2 text-xs font-bold text-white hover:bg-purple-700"
-              >
-                السماح بالإشعارات
-              </button>
-            </div>
-          )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
