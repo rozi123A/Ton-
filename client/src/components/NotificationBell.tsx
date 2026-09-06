@@ -2,6 +2,7 @@ import { Bell, X, UserPlus, Heart, Check, Radio } from 'lucide-react';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useTranslation } from '@/contexts/LanguageContext';
 import { playFriendSound, playMessageSound } from '@/lib/notificationSound';
 import { trpc } from '@/lib/trpc';
 
@@ -73,12 +74,12 @@ function showBrowserNotif(title: string, body: string, icon?: string) {
   }
 }
 
-function timeAgo(ts: number): string {
+function timeAgo(ts: number, t: (key: string) => string): string {
   const diff = Math.floor((Date.now() - ts) / 1000);
-  if (diff < 60) return 'الآن';
-  if (diff < 3600) return `منذ ${Math.floor(diff / 60)} دقيقة`;
-  if (diff < 86400) return `منذ ${Math.floor(diff / 3600)} ساعة`;
-  return `منذ ${Math.floor(diff / 86400)} يوم`;
+  if (diff < 60) return t('notifications.now');
+  if (diff < 3600) return t('notifications.minutes').replace('{count}', String(Math.floor(diff / 60)));
+  if (diff < 86400) return t('notifications.hours').replace('{count}', String(Math.floor(diff / 3600)));
+  return t('notifications.days').replace('{count}', String(Math.floor(diff / 86400)));
 }
 
 function NotifIcon({ type }: { type: string }) {
@@ -91,6 +92,7 @@ function NotifIcon({ type }: { type: string }) {
 export default function NotificationBell() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
+  const { language, t } = useTranslation();
   const userId = (user as { id?: number } | null)?.id;
   const [notifs, setNotifs] = useState<AppNotif[]>(loadStored);
   const [open, setOpen] = useState(false);
@@ -152,7 +154,7 @@ export default function NotificationBell() {
         return formatted;
       });
     }
-  }, [dbNotifs]);
+  }, [dbNotifs, t]);
 
   const markReadMutation = trpc.notifications.markAsRead.useMutation({
     onSuccess: () => refetchNotifs()
@@ -211,7 +213,7 @@ export default function NotificationBell() {
     } else {
       playMessageSound();
     }
-  }, []);
+  }, [t]);
 
   // Connect to notification stream
   useEffect(() => {
@@ -292,26 +294,24 @@ export default function NotificationBell() {
       {notificationPermission === 'default' && (
         <div
           role="status"
-          dir="rtl"
-          className="fixed bottom-4 left-4 right-4 z-[110] mx-auto max-w-md rounded-2xl border border-purple-200 bg-white p-4 text-right shadow-2xl"
+          dir={language === 'ar' ? 'rtl' : 'ltr'}
+          className="fixed bottom-4 left-4 right-4 z-[110] mx-auto max-w-sm rounded-xl border border-gray-200 bg-white/95 p-3 text-right shadow-lg backdrop-blur-sm"
         >
           <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-full bg-purple-100 p-2 text-purple-700">
-              <Bell className="h-5 w-5" />
+            <div className="mt-0.5 rounded-lg bg-purple-100 p-1.5 text-purple-700">
+              <Bell className="h-4 w-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-gray-900">فعّل إشعارات الهاتف</p>
-              <p className="mt-1 text-xs leading-5 text-gray-600">
-                اعرف فورًا عند وصول طلب صداقة أو دخول صديق، مع اسمه وصورته.
-              </p>
+              <p className="text-xs font-bold text-gray-900">{t('notifications.enable_title')}</p>
+              <p className="mt-0.5 text-[11px] leading-4 text-gray-500">{t('notifications.enable_description')}</p>
               <button
                 type="button"
                 onClick={() => {
                   void requestBrowserPermission().then(setNotificationPermission);
                 }}
-                className="mt-3 w-full rounded-xl bg-purple-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-purple-700"
+                className="mt-2 rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-purple-700"
               >
-                السماح بالإشعارات
+                {t('notifications.enable_button')}
               </button>
             </div>
           </div>
@@ -357,17 +357,17 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
             <div className="flex items-center gap-2">
               <Bell className="w-4 h-4 text-purple-600" />
-              <span className="font-bold text-gray-800 text-sm">الإشعارات</span>
+              <span className="font-bold text-gray-800 text-sm">{t('notifications.title')}</span>
               {unread > 0 && (
                 <span className="bg-purple-100 text-purple-700 text-xs font-bold rounded-full px-2 py-0.5">
-                  {unread} جديد
+                  {unread} {t('notifications.new_count')}
                 </span>
               )}
             </div>
             {notifs.length > 0 && (
               <button onClick={markAllRead} className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1">
                 <Check className="w-3 h-3" />
-                قراءة الكل
+                {t('notifications.mark_all')}
               </button>
             )}
           </div>
@@ -377,8 +377,8 @@ export default function NotificationBell() {
             {notifs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <Bell className="w-10 h-10 text-gray-200 mb-2" />
-                <p className="text-gray-400 text-sm font-medium">لا توجد إشعارات بعد</p>
-                <p className="text-gray-300 text-xs mt-1">ستظهر هنا عند وصول رسالة أو طلب صداقة</p>
+                <p className="text-gray-400 text-sm font-medium">{t('notifications.empty_title')}</p>
+                <p className="text-gray-300 text-xs mt-1">{t('notifications.empty_description')}</p>
               </div>
             ) : (
               notifs.map(n => (
@@ -412,9 +412,10 @@ export default function NotificationBell() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 leading-tight">
                       {n.title || (
-                        n.type === 'friend-request' ? 'طلب صداقة' :
-                        n.type === 'friend-accepted' ? 'قبول طلب الصداقة' :
-                        n.type === 'new-message' ? 'رسالة جديدة' : 'إشعار'
+                        n.type === 'friend-request' ? t('notifications.friend_request') :
+                        n.type === 'friend-accepted' ? t('notifications.friend_accepted') :
+                        n.type === 'friend-online' ? t('notifications.friend_online') :
+                        t('notifications.general')
                       )}
                     </p>
                     {(n.message || n.fromName) && (
@@ -422,7 +423,7 @@ export default function NotificationBell() {
                         {n.message || (n.fromName ? `من ${n.fromName}` : '')}
                       </p>
                     )}
-                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.ts)}</p>
+                    <p className="text-[10px] text-gray-400 mt-1">{timeAgo(n.ts, t)}</p>
                   </div>
 
                   {/* Delete */}

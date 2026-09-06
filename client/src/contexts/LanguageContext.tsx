@@ -124,6 +124,24 @@ const translations: Record<Language, Record<string, string>> = {
     "common.save": "حفظ",
     "common.cancel": "إلغاء",
     "common.loading": "جاري التحميل...",
+
+     // Notifications
+     "notifications.enable_title": "فعّل الإشعارات",
+     "notifications.enable_description": "تنبيه سريع عند وصول طلب صداقة أو دخول صديق.",
+     "notifications.enable_button": "السماح",
+     "notifications.title": "الإشعارات",
+     "notifications.mark_all": "قراءة الكل",
+     "notifications.new_count": "جديد",
+     "notifications.empty_title": "لا توجد إشعارات",
+     "notifications.empty_description": "ستظهر هنا طلبات الصداقة وتنبيهات الأصدقاء.",
+     "notifications.friend_request": "طلب صداقة جديد",
+     "notifications.friend_accepted": "تم قبول طلب الصداقة",
+     "notifications.friend_online": "صديقك نشط الآن",
+     "notifications.general": "إشعار جديد",
+     "notifications.now": "الآن",
+     "notifications.minutes": "منذ {count} دقيقة",
+     "notifications.hours": "منذ {count} ساعة",
+     "notifications.days": "منذ {count} يوم",
   },
   en: {
     // Nav
@@ -239,6 +257,24 @@ const translations: Record<Language, Record<string, string>> = {
     "common.save": "Save",
     "common.cancel": "Cancel",
     "common.loading": "Loading...",
+
+     // Notifications
+     "notifications.enable_title": "Enable notifications",
+     "notifications.enable_description": "Get quick alerts for friend requests and active friends.",
+     "notifications.enable_button": "Allow",
+     "notifications.title": "Notifications",
+     "notifications.mark_all": "Mark all as read",
+     "notifications.new_count": "new",
+     "notifications.empty_title": "No notifications",
+     "notifications.empty_description": "Friend requests and activity alerts will appear here.",
+     "notifications.friend_request": "New friend request",
+     "notifications.friend_accepted": "Friend request accepted",
+     "notifications.friend_online": "Your friend is online",
+     "notifications.general": "New notification",
+     "notifications.now": "Now",
+     "notifications.minutes": "{count} minutes ago",
+     "notifications.hours": "{count} hours ago",
+     "notifications.days": "{count} days ago",
   },
   fr: {
     // Nav
@@ -354,6 +390,24 @@ const translations: Record<Language, Record<string, string>> = {
     "common.save": "Enregistrer",
     "common.cancel": "Annuler",
     "common.loading": "Chargement...",
+
+     // Notifications
+     "notifications.enable_title": "Activer les notifications",
+     "notifications.enable_description": "Recevez une alerte pour les demandes et les amis actifs.",
+     "notifications.enable_button": "Autoriser",
+     "notifications.title": "Notifications",
+     "notifications.mark_all": "Tout marquer comme lu",
+     "notifications.new_count": "nouveau",
+     "notifications.empty_title": "Aucune notification",
+     "notifications.empty_description": "Les demandes et alertes de vos amis apparaîtront ici.",
+     "notifications.friend_request": "Nouvelle demande d'ami",
+     "notifications.friend_accepted": "Demande d'ami acceptée",
+     "notifications.friend_online": "Votre ami est en ligne",
+     "notifications.general": "Nouvelle notification",
+     "notifications.now": "À l'instant",
+     "notifications.minutes": "Il y a {count} min",
+     "notifications.hours": "Il y a {count} h",
+     "notifications.days": "Il y a {count} j",
   }
 };
 
@@ -361,7 +415,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
-    return (localStorage.getItem('app_lang') as Language) || 'ar';
+    const saved = localStorage.getItem('app_lang');
+    return saved === 'ar' || saved === 'en' || saved === 'fr' ? saved : 'ar';
   });
 
   const setLanguage = (lang: Language) => {
@@ -370,7 +425,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   };
 
   const t = (key: string) => {
-    return translations[language][key] || key;
+    return translations[language]?.[key] || translations.ar[key] || key;
   };
 
   const isRTL = language === 'ar';
