@@ -1498,14 +1498,31 @@ export async function updateUserPresence(
   userId: number,
   openId: string,
   name?: string | null,
-): Promise<void> {
+): Promise<{ becameActive: boolean }> {
   const db = await getDb();
-  if (!db) return;
+  if (!db) return { becameActive: false };
   try {
     const now = new Date();
+    const whereClause = userId > 0 ? eq(users.id, userId) : eq(users.openId, openId);
+    const previous = await db
+      .select({ isOnline: users.isOnline, lastSeen: users.lastSeen })
+      .from(users)
+      .where(whereClause)
+      .limit(1);
+    const previousLastSeen = previous[0]?.lastSeen instanceof Date
+      ? previous[0].lastSeen.getTime()
+      : previous[0]?.lastSeen
+        ? new Date(previous[0].lastSeen).getTime()
+        : 0;
+    // A user who has not pinged for 90 seconds is treated as offline even if
+    // the browser did not get a chance to call the logout endpoint.
+    const wasActive = Boolean(
+      previous[0]?.isOnline && previousLastSeen > now.getTime() - 90_000,
+    );
+
     const updated = await db.update(users)
       .set({ isOnline: true, lastSeen: now })
-      .where(userId > 0 ? eq(users.id, userId) : eq(users.openId, openId))
+      .where(whereClause)
       .returning({ id: users.id });
 
     // Guest authentication can briefly return a virtual user with id -1
@@ -1519,8 +1536,10 @@ export async function updateUserPresence(
         lastSignedIn: now,
       });
     }
+    return { becameActive: !wasActive };
   } catch (err) {
     console.error('[Database] updateUserPresence failed:', err);
+    return { becameActive: false };
   }
 }
 

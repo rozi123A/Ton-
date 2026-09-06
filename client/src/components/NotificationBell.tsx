@@ -1,4 +1,4 @@
-import { Bell, X, UserPlus, Heart, Check } from 'lucide-react';
+import { Bell, X, UserPlus, Heart, Check, Radio } from 'lucide-react';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -43,9 +43,28 @@ function requestBrowserPermission() {
 
 function showBrowserNotif(title: string, body: string, icon?: string) {
   if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
-    try {
-      new Notification(title, { body, icon: icon || '/favicon.ico' });
-    } catch {}
+    const options = {
+      body,
+      icon: icon || '/favicon.ico',
+      badge: '/favicon.ico',
+      dir: 'rtl' as const,
+      lang: 'ar',
+    };
+
+    // Service-worker notifications are the form Android browsers can place in
+    // the system notification shade while the tab is in the background.
+    void navigator.serviceWorker?.getRegistration('/notification-sw.js')
+      .then((registration) => {
+        if (registration) {
+          return registration.showNotification(title, options);
+        }
+        new Notification(title, options);
+      })
+      .catch(() => {
+        try {
+          new Notification(title, options);
+        } catch {}
+      });
   }
 }
 
@@ -60,6 +79,7 @@ function timeAgo(ts: number): string {
 function NotifIcon({ type }: { type: string }) {
   if (type === 'friend-request')  return <UserPlus className="w-4 h-4 text-purple-400" />;
   if (type === 'friend-accepted') return <Heart className="w-4 h-4 text-pink-400" />;
+  if (type === 'friend-online') return <Radio className="w-4 h-4 text-emerald-500" />;
   return <Bell className="w-4 h-4 text-yellow-400" />;
 }
 
@@ -71,6 +91,7 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const knownDbIdsRef = useRef<Set<string> | null>(null);
 
   const { data: dbNotifs, refetch: refetchNotifs } = trpc.notifications.get.useQuery(undefined, {
     enabled: isAuthenticated && !!userId,
@@ -93,9 +114,24 @@ export default function NotificationBell() {
           read: n.isRead
         }));
       
+      const knownIds = knownDbIdsRef.current;
+      if (knownIds) {
+        formatted
+          .filter(n => !knownIds.has(n.id) && n.type === 'friend-online')
+          .forEach(n => {
+            showBrowserNotif(
+              n.title || 'صديقك نشط الآن',
+              n.message || (n.fromName ? `${n.fromName} دخل إلى الموقع` : 'دخل صديقك إلى الموقع'),
+              n.fromAvatar,
+            );
+            playFriendSound();
+          });
+      }
+      knownDbIdsRef.current = new Set(formatted.map(n => n.id));
+
       // Update state without triggering addNotif logic (which plays sound)
       setNotifs(prev => {
-        // Just sync with DB, don't play sound here as SSE handles live notifications
+        // Just sync with DB. Live SSE notifications are handled separately.
         return formatted;
       });
     }
@@ -165,6 +201,9 @@ export default function NotificationBell() {
     if (!isAuthenticated || !userId) return;
 
     requestBrowserPermission();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/notification-sw.js').catch(() => {});
+    }
 
     const connect = () => {
       if (esRef.current) esRef.current.close();

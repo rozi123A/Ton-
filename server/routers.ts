@@ -784,8 +784,27 @@ export const appRouter = router({
     /** Presence ping — updates lastSignedIn and isOnline so admin stats are accurate */
     ping: protectedProcedure
       .mutation(async ({ ctx }) => {
-        await updateUserPresence(ctx.user.id, ctx.user.openId, ctx.user.name);
-        return { success: true };
+        const presence = await updateUserPresence(ctx.user.id, ctx.user.openId, ctx.user.name);
+
+        // Only notify on the transition to active. This prevents the 30-second
+        // heartbeat from repeatedly notifying every friend.
+        if (presence.becameActive && ctx.user.id > 0) {
+          const friends = await getFriends(ctx.user.id);
+          await Promise.all(
+            friends.map((friend) =>
+              createNotification(friend.id, {
+                type: 'friend-online',
+                title: `${ctx.user.name || 'صديقك'} نشط الآن`,
+                message: `${ctx.user.name || 'صديقك'} دخل إلى الموقع`,
+                fromName: ctx.user.name || 'مستخدم',
+                fromAvatar: ctx.user.avatar || '',
+                fromUserId: ctx.user.id,
+              }),
+            ),
+          );
+        }
+
+        return { success: true, becameActive: presence.becameActive };
       }),
   }),
 
