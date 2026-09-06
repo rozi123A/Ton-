@@ -70,7 +70,15 @@ function App() {
   // firing it while unauthenticated returns UNAUTHORIZED which the global error
   // handler treats as a redirect signal — sending the user away from /login.
   const { isAuthenticated } = useAuth();
-  const presencePing = trpc.users.ping.useMutation();
+  const utils = trpc.useUtils();
+  const presencePing = trpc.users.ping.useMutation({
+    onSuccess: () => {
+      // A user's presence can be recorded just after the friends query starts.
+      // Refresh the cached friends list immediately so the green status dot
+      // does not require a full page reload.
+      void utils.social.getFriends.invalidate();
+    },
+  });
   const presencePingRef = useRef(presencePing);
   presencePingRef.current = presencePing;
   useEffect(() => {

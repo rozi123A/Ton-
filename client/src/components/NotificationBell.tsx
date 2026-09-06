@@ -94,6 +94,7 @@ export default function NotificationBell() {
   const userId = (user as { id?: number } | null)?.id;
   const [notifs, setNotifs] = useState<AppNotif[]>(loadStored);
   const [open, setOpen] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const esRef = useRef<EventSource | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const knownDbIdsRef = useRef<Set<string> | null>(null);
@@ -216,7 +217,7 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
-    requestBrowserPermission();
+    void requestBrowserPermission().then(setNotificationPermission);
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/notification-sw.js').catch(() => {});
     }
@@ -292,10 +293,12 @@ export default function NotificationBell() {
       {/* Bell button */}
       <button
       onClick={() => {
-        void requestBrowserPermission();
-        setOpen(o => !o);
-        if (!open) markAllRead();
-      }}
+          if (notificationPermission === 'default') {
+            void requestBrowserPermission().then(setNotificationPermission);
+          }
+          setOpen(o => !o);
+          if (!open) markAllRead();
+        }}
         className={
           unread > 0
             ? "relative p-2 rounded-full transition-all duration-200 bg-red-50 hover:bg-red-100 ring-2 ring-red-200 shadow-sm shadow-red-100"
@@ -401,6 +404,23 @@ export default function NotificationBell() {
               ))
             )}
           </div>
+
+          {notificationPermission === 'default' && (
+            <div className="border-t border-purple-100 bg-purple-50 px-4 py-3 text-right">
+              <p className="text-xs font-bold text-purple-800">فعّل إشعارات الهاتف</p>
+              <p className="mt-1 text-[11px] leading-5 text-purple-600">
+                حتى يصلك اسم وصورة الصديق عند وصول طلب أو دخوله للموقع.
+              </p>
+              <button
+                onClick={() => {
+                  void requestBrowserPermission().then(setNotificationPermission);
+                }}
+                className="mt-2 w-full rounded-lg bg-purple-600 py-2 text-xs font-bold text-white hover:bg-purple-700"
+              >
+                السماح بالإشعارات
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
