@@ -77,6 +77,8 @@ function App() {
       // Refresh the cached friends list immediately so the green status dot
       // does not require a full page reload.
       void utils.social.getFriends.invalidate();
+      // The home/admin user cards use a separate recent-users query.
+      void utils.users.getRecent.invalidate();
     },
   });
   const presencePingRef = useRef(presencePing);

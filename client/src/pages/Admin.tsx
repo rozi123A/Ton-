@@ -446,7 +446,7 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
       enabled: statsEnabled,
       retry: 2,
       staleTime: 0,
-      refetchInterval: 3000,
+      refetchInterval: 1000,
     },
   );
 
