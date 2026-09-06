@@ -5,6 +5,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { useTranslation } from '@/contexts/LanguageContext';
 import { playFriendSound, playMessageSound } from '@/lib/notificationSound';
 import { trpc } from '@/lib/trpc';
+import { COOKIE_NAME, GUEST_SESSION_ACTIVE_KEY, GUEST_TOKEN_KEY } from '@shared/const';
 
 interface AppNotif {
   id: string;
@@ -97,7 +98,8 @@ export default function NotificationBell() {
   const [notifs, setNotifs] = useState<AppNotif[]>(loadStored);
   const [open, setOpen] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
-  const esRef = useRef<EventSource | null>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
+  const streamRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const knownDbIdsRef = useRef<Set<string> | null>(null);
 
@@ -223,37 +225,87 @@ export default function NotificationBell() {
       navigator.serviceWorker.register('/notification-sw.js').catch(() => {});
     }
 
-    const connect = () => {
-      if (esRef.current) esRef.current.close();
-      // The server derives the user identity from the authenticated session.
-      // Never send a user ID from the browser as an authorization signal.
-      const es = new EventSource('/api/notify/stream');
-      esRef.current = es;
+    const getStreamHeaders = (): HeadersInit => {
+      try {
+        const guestToken = localStorage.getItem(GUEST_TOKEN_KEY);
+        const guestSessionActive = localStorage.getItem(GUEST_SESSION_ACTIVE_KEY) === '1';
+        if (guestToken && guestSessionActive) {
+          return { Authorization: `Bearer ${guestToken}` };
+        }
 
-      es.onmessage = (e) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.type === 'connected' || data.type === 'new-message') return;
-          addNotif({
-            type: data.type,
-            title: data.title,
-            message: data.message,
-            fromName: data.fromName,
-            fromAvatar: data.fromAvatar,
-            fromUserId: data.fromUserId,
-            ts: data.ts || Date.now(),
-          });
-        } catch {}
-      };
-
-      es.onerror = () => {
-        es.close();
-        setTimeout(connect, 5000);
-      };
+        const rawCookie = sessionStorage.getItem('manus-cookie');
+        const cookiePair = rawCookie
+          ?.split(';')
+          .find((part) => part.trim().startsWith(`${COOKIE_NAME}=`));
+        const sessionToken = cookiePair?.trim().slice(`${COOKIE_NAME}=`.length);
+        return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {};
+      } catch {
+        return {};
+      }
     };
 
-    connect();
-    return () => { esRef.current?.close(); };
+    const connect = async () => {
+      const controller = new AbortController();
+      streamAbortRef.current = controller;
+
+      try {
+        const response = await fetch('/api/notify/stream', {
+          credentials: 'include',
+          headers: getStreamHeaders(),
+          signal: controller.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(`Notification stream failed: ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (!controller.signal.aborted) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || '';
+
+          for (const event of events) {
+            const dataLine = event
+              .split('\n')
+              .find((line) => line.startsWith('data:'));
+            if (!dataLine) continue;
+
+            try {
+              const data = JSON.parse(dataLine.slice(5).trim());
+              if (data.type === 'connected' || data.type === 'new-message') continue;
+              addNotif({
+                type: data.type,
+                title: data.title,
+                message: data.message,
+                fromName: data.fromName,
+                fromAvatar: data.fromAvatar,
+                fromUserId: data.fromUserId,
+                ts: data.ts || Date.now(),
+              });
+            } catch {
+              // Ignore malformed keep-alive/event chunks and keep the stream alive.
+            }
+          }
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.warn('[Notifications] stream disconnected; retrying', error);
+          streamRetryRef.current = setTimeout(() => void connect(), 5000);
+        }
+      }
+    };
+
+    void connect();
+    return () => {
+      streamAbortRef.current?.abort();
+      if (streamRetryRef.current) clearTimeout(streamRetryRef.current);
+    };
   }, [isAuthenticated, userId, addNotif]);
 
   // Close dropdown on outside click
