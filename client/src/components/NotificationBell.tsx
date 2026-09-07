@@ -21,6 +21,7 @@ interface AppNotif {
 
 const STORAGE_KEY = 'app_notifications';
 const MAX_STORED = 50;
+let notificationRegistrationPromise: Promise<ServiceWorkerRegistration | null> | null = null;
 
 function loadStored(): AppNotif[] {
   try {
@@ -44,35 +45,59 @@ async function requestBrowserPermission() {
   return 'Notification' in window ? Notification.permission : 'denied';
 }
 
-function showBrowserNotif(title: string, body: string, icon?: string) {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    const options = {
-      body,
-      icon: icon || '/favicon.ico',
-      image: icon || undefined,
-      badge: '/favicon.ico',
-      dir: 'rtl' as const,
-      lang: 'ar',
-      renotify: true,
-      tag: `friend-notification-${Date.now()}`,
-      data: { url: '/' },
-    };
+async function getNotificationRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
 
-    // Service-worker notifications are the form Android browsers can place in
-    // the system notification shade while the tab is in the background.
-    void navigator.serviceWorker?.getRegistration()
-      .then((registration) => {
-        if (registration) {
-          return registration.showNotification(title, options);
-        }
-        new Notification(title, options);
-      })
-      .catch(() => {
-        try {
-          new Notification(title, options);
-        } catch {}
-      });
+  if (!notificationRegistrationPromise) {
+    notificationRegistrationPromise = (async () => {
+      try {
+        const existing = await navigator.serviceWorker.getRegistration('/');
+        const registration = existing ?? await navigator.serviceWorker.register('/notification-sw.js', {
+          scope: '/',
+        });
+
+        // Android needs an active service worker for showNotification().
+        return registration.active ? registration : await navigator.serviceWorker.ready;
+      } catch {
+        return null;
+      }
+    })();
   }
+
+  return notificationRegistrationPromise;
+}
+
+async function showBrowserNotif(title: string, body: string, icon?: string) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const options = {
+    body,
+    icon: icon || '/favicon.ico',
+    image: icon || undefined,
+    badge: '/favicon.ico',
+    dir: 'rtl' as const,
+    lang: 'ar',
+    renotify: true,
+    tag: `friend-notification-${Date.now()}`,
+    data: { url: '/' },
+  };
+
+  // Wait for the service worker instead of racing registration. Android
+  // browsers generally ignore/throw for the Notification constructor, while
+  // ServiceWorkerRegistration.showNotification() reaches the system shade.
+  try {
+    const registration = await getNotificationRegistration();
+    if (registration) {
+      await registration.showNotification(title, options);
+      return;
+    }
+  } catch {}
+
+  // Desktop browsers can still support the constructor if a service worker
+  // is unavailable, so keep it as a final fallback.
+  try {
+    new Notification(title, options);
+  } catch {}
 }
 
 function timeAgo(ts: number, t: (key: string) => string): string {
@@ -233,9 +258,7 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/notification-sw.js').catch(() => {});
-    }
+    void getNotificationRegistration();
 
     const getStreamHeaders = (): HeadersInit => {
       try {
