@@ -53,13 +53,25 @@ async function getNotificationRegistration(): Promise<ServiceWorkerRegistration 
     notificationRegistrationPromise = (async () => {
       try {
         const existing = await navigator.serviceWorker.getRegistration('/');
-        const registration = existing ?? await navigator.serviceWorker.register('/notification-sw.js', {
-          scope: '/',
-        });
+        const registration = existing ?? await withTimeout(
+          navigator.serviceWorker.register('/notification-sw.js', { scope: '/' }),
+          10_000,
+          'Service worker registration',
+        );
 
         // Android needs an active service worker for showNotification().
-        return registration.active ? registration : await navigator.serviceWorker.ready;
+        if (registration.active) return registration;
+        const ready = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<null>(resolve => window.setTimeout(() => resolve(null), 10_000)),
+        ]);
+        if (!ready) {
+          notificationRegistrationPromise = null;
+          return null;
+        }
+        return ready;
       } catch {
+        notificationRegistrationPromise = null;
         return null;
       }
     })();
@@ -79,6 +91,13 @@ function fromBase64Url(value: string): ArrayBuffer {
   const padding = '='.repeat((4 - (value.length % 4)) % 4);
   const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + padding);
   return Uint8Array.from(binary, char => char.charCodeAt(0)).buffer as ArrayBuffer;
+}
+
+function withTimeout<T>(promise: Promise<T>, milliseconds: number, label: string): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    window.setTimeout(() => reject(new Error(`${label} timed out`)), milliseconds);
+  });
+  return Promise.race([promise, timeout]);
 }
 
 async function showBrowserNotif(title: string, body: string, icon?: string) {
@@ -296,16 +315,24 @@ export default function NotificationBell() {
 
     try {
       setPushRegistrationStatus('registering');
-      let subscription = await registration.pushManager.getSubscription();
+      let subscription = await withTimeout(
+        registration.pushManager.getSubscription(),
+        10_000,
+        'Push subscription lookup',
+      );
       const previousVapidKey = localStorage.getItem(PUSH_VAPID_KEY_STORAGE);
       if (subscription && previousVapidKey && previousVapidKey !== vapidPublicKey) {
         await subscription.unsubscribe();
         subscription = null;
       }
-      subscription = subscription ?? await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: fromBase64Url(vapidPublicKey),
-      });
+      subscription = subscription ?? await withTimeout(
+        registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: fromBase64Url(vapidPublicKey),
+        }),
+        15_000,
+        'Push subscription creation',
+      );
       const p256dh = subscription.getKey('p256dh');
       const auth = subscription.getKey('auth');
       if (!p256dh || !auth) {
@@ -313,13 +340,17 @@ export default function NotificationBell() {
         return false;
       }
 
-      await pushSubscribeMutation.mutateAsync({
-        endpoint: subscription.endpoint,
-        keys: {
-          p256dh: toBase64Url(p256dh),
-          auth: toBase64Url(auth),
-        },
-      });
+      await withTimeout(
+        pushSubscribeMutation.mutateAsync({
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: toBase64Url(p256dh),
+            auth: toBase64Url(auth),
+          },
+        }),
+        15_000,
+        'Push subscription save',
+      );
       localStorage.setItem(PUSH_VAPID_KEY_STORAGE, vapidPublicKey);
       setPushRegistrationStatus('registered');
       return true;
@@ -561,24 +592,30 @@ export default function NotificationBell() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {notificationPermission === 'granted' && (
+              {(
+                notificationPermission !== 'granted' ||
+                pushRegistrationStatus !== 'registered'
+              ) ? (
                 <button
                   type="button"
                   onClick={() => {
-                    if (pushRegistrationStatus === 'registered') {
-                      void testPhoneNotification();
-                    } else {
-                      void activatePhoneNotifications();
-                    }
+                    void activatePhoneNotifications();
                   }}
                   disabled={pushTestMutation.isPending || testStatus === 'sending' || pushRegistrationStatus === 'registering'}
                   className="rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-bold text-purple-700 hover:bg-purple-200 disabled:opacity-50"
                 >
                   {pushRegistrationStatus === 'registering'
                     ? t('notifications.activate_push_registering')
-                    : pushRegistrationStatus === 'registered'
-                      ? (testStatus === 'sending' ? '...' : t('notifications.test_push'))
-                      : t('notifications.activate_push')}
+                    : t('notifications.activate_push')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void testPhoneNotification()}
+                  disabled={pushTestMutation.isPending || testStatus === 'sending'}
+                  className="rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-bold text-purple-700 hover:bg-purple-200 disabled:opacity-50"
+                >
+                  {testStatus === 'sending' ? '...' : t('notifications.test_push')}
                 </button>
               )}
               {notifs.length > 0 && (
