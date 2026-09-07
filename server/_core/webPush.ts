@@ -49,10 +49,12 @@ export function getVapidPublicKey(): string | null {
 export async function sendWebPushNotification(
   userId: number,
   notification: { type: string; title?: string; message?: string; fromName?: string; fromAvatar?: string },
-) {
+): Promise<{ sent: number; failed: number }> {
+  let sent = 0;
+  let failed = 0;
   try {
     const keys = getVapidKeys();
-    if (!keys) return;
+    if (!keys) return { sent, failed: 1 };
 
     // Use the maintained Web Push implementation for payload encryption and
     // provider headers. This is more reliable across Chrome/Android push
@@ -84,6 +86,7 @@ export async function sendWebPushNotification(
           }),
           { TTL: PUSH_TTL_SECONDS, urgency: "normal" },
         );
+        sent += 1;
       } catch (error) {
         const statusCode = typeof error === "object" && error !== null && "statusCode" in error
           ? (error as { statusCode?: number }).statusCode
@@ -91,10 +94,13 @@ export async function sendWebPushNotification(
         if (statusCode === 404 || statusCode === 410) {
           await deletePushSubscription(subscription.endpoint);
         }
+        failed += 1;
         console.warn("[WebPush] Failed to deliver notification:", error);
       }
     }));
   } catch (error) {
+    failed += 1;
     console.warn("[WebPush] Could not load subscriptions:", error);
   }
+  return { sent, failed };
 }
