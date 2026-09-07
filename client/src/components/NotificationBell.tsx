@@ -143,6 +143,7 @@ export default function NotificationBell() {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
     return Notification.permission;
   });
+  const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'error'>('idle');
   const streamAbortRef = useRef<AbortController | null>(null);
   const streamRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -165,7 +166,11 @@ export default function NotificationBell() {
     enabled: isAuthenticated && !!userId,
     staleTime: Infinity,
   });
-  const pushSubscribeMutation = trpc.push.subscribe.useMutation();
+  const pushSubscribeMutation = trpc.push.subscribe.useMutation({
+    onSuccess: () => setPushStatus('enabled'),
+    onError: () => setPushStatus('error'),
+  });
+  const pushTestMutation = trpc.push.test.useMutation();
 
   useEffect(() => {
     if (dbNotifs) {
@@ -304,6 +309,7 @@ export default function NotificationBell() {
         },
       });
     } catch (error) {
+      setPushStatus('error');
       console.warn('[Notifications] Push subscription failed', error);
     }
   }, [notificationPermission, pushSubscribeMutation, vapidPublicKey]);
@@ -449,18 +455,37 @@ export default function NotificationBell() {
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-gray-900">{t('notifications.enable_title')}</p>
               <p className="mt-0.5 text-[11px] leading-4 text-gray-500">{t('notifications.enable_description')}</p>
-              <button
-                type="button"
-                onClick={() => {
-                  void requestBrowserPermission().then(setNotificationPermission);
-                }}
-                className="mt-2 rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-purple-700"
-              >
-                {t('notifications.enable_button')}
-              </button>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void requestBrowserPermission().then(setNotificationPermission);
+                  }}
+                  className="rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-purple-700"
+                >
+                  {t('notifications.enable_button')}
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {notificationPermission === 'granted' && pushStatus === 'enabled' && (
+        <button
+          type="button"
+          onClick={() => pushTestMutation.mutate()}
+          disabled={pushTestMutation.isPending}
+          className="fixed bottom-4 left-4 z-[109] rounded-lg border border-purple-200 bg-white/95 px-3 py-1.5 text-[11px] font-bold text-purple-700 shadow backdrop-blur-sm disabled:opacity-60"
+        >
+          {pushTestMutation.isPending ? 'جارٍ إرسال الاختبار…' : 'اختبار إشعار الهاتف'}
+        </button>
+      )}
+
+      {pushStatus === 'error' && (
+        <p className="fixed bottom-4 left-4 right-4 z-[109] mx-auto max-w-sm rounded-lg border border-red-200 bg-red-50/95 px-3 py-2 text-center text-[11px] font-semibold text-red-700 shadow backdrop-blur-sm">
+          تعذر تسجيل هذا الهاتف للإشعارات. افتح الموقع عبر HTTPS وتأكد من السماح بالإشعارات.
+        </p>
       )}
 
       <div className="relative" ref={dropdownRef}>

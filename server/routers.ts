@@ -850,6 +850,15 @@ export const appRouter = router({
           });
         }
         await saveMessage(ctx.user.id, input.receiverId, input.content);
+        await sendWebPushNotification(input.receiverId, {
+          type: 'new-message',
+          title: `رسالة من ${ctx.user.name || 'مستخدم'}`,
+          message: input.content.slice(0, 180),
+          fromName: ctx.user.name || 'مستخدم',
+          fromAvatar: ctx.user.avatar || '',
+          fromUserId: ctx.user.id,
+          targetUrl: '/chat',
+        });
         return { success: true };
       }),
 
@@ -1376,6 +1385,17 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         await savePushSubscription(ctx.user.id, input);
+        return { success: true };
+      }),
+
+    test: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await sendWebPushNotification(ctx.user.id, {
+          type: 'test',
+          title: 'إشعارات الهاتف مفعّلة',
+          message: 'إذا ظهر هذا الإشعار، فسيصلك تنبيه عند الرسائل والأنشطة الجديدة.',
+          targetUrl: '/chat',
+        });
         return { success: true };
       }),
 

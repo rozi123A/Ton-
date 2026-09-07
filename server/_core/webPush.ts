@@ -129,13 +129,21 @@ export async function sendWebPushNotification(
     fromName?: string;
     fromAvatar?: string;
     fromUserId?: number;
+    targetUrl?: string;
   },
 ) {
   try {
     const keys = getVapidKeys();
-    if (!keys) return;
+    if (!keys) {
+      console.warn("[WebPush] VAPID keys unavailable; SESSION_SECRET/JWT_SECRET must be at least 32 characters");
+      return;
+    }
 
     const subscriptions = await getPushSubscriptions(userId);
+    if (subscriptions.length === 0) {
+      console.info(`[WebPush] No registered device for user ${userId}`);
+      return;
+    }
     await Promise.all(subscriptions.map(async (subscription) => {
       try {
       const endpoint = new URL(subscription.endpoint);
@@ -153,9 +161,9 @@ export async function sendWebPushNotification(
         tag,
         timestamp: Date.now(),
         data: {
-          url: notification.fromUserId
+          url: notification.targetUrl || (notification.fromUserId
             ? `/profile?userId=${notification.fromUserId}`
-            : "/",
+            : "/"),
           tag,
         },
       }));
@@ -174,6 +182,14 @@ export async function sendWebPushNotification(
 
       if (response.status === 404 || response.status === 410) {
         await deletePushSubscription(subscription.endpoint);
+        console.warn(`[WebPush] Removed expired device subscription for user ${userId}`);
+      } else if (!response.ok) {
+        const providerMessage = await response.text().catch(() => "");
+        console.warn(
+          `[WebPush] Provider rejected notification for user ${userId}: HTTP ${response.status}${providerMessage ? ` (${providerMessage.slice(0, 160)})` : ""}`,
+        );
+      } else {
+        console.info(`[WebPush] Notification accepted for user ${userId}`);
       }
       } catch (error) {
         console.warn("[WebPush] Failed to deliver notification:", error);
