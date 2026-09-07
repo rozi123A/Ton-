@@ -51,14 +51,20 @@ async function getNotificationRegistration(): Promise<ServiceWorkerRegistration 
   if (!notificationRegistrationPromise) {
     notificationRegistrationPromise = (async () => {
       try {
-        const existing = await navigator.serviceWorker.getRegistration('/');
-        const registration = existing ?? await navigator.serviceWorker.register('/notification-sw.js', {
+        const registration = await navigator.serviceWorker.register('/notification-sw.js', {
           scope: '/',
         });
+        await registration.update().catch(() => undefined);
+
+        // Replace an older worker immediately after a deployment.
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
 
         // Android needs an active service worker for showNotification().
         return registration.active ? registration : await navigator.serviceWorker.ready;
       } catch {
+        notificationRegistrationPromise = null;
         return null;
       }
     })();
@@ -143,7 +149,7 @@ export default function NotificationBell() {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
     return Notification.permission;
   });
-  const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'error'>('idle');
+  const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'error' | 'unsupported'>('idle');
   const streamAbortRef = useRef<AbortController | null>(null);
   const streamRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -282,14 +288,18 @@ export default function NotificationBell() {
   }, [t]);
 
   const syncPushSubscription = useCallback(async () => {
-    if (
-      !vapidPublicKey ||
-      notificationPermission !== 'granted' ||
-      !('PushManager' in window)
-    ) return;
+    if (notificationPermission !== 'granted') return;
+    if (vapidPublicKey === undefined) return;
+    if (!vapidPublicKey || !('PushManager' in window) || !('serviceWorker' in navigator)) {
+      setPushStatus('unsupported');
+      return;
+    }
 
     const registration = await getNotificationRegistration();
-    if (!registration) return;
+    if (!registration) {
+      setPushStatus('error');
+      return;
+    }
 
     try {
       const existing = await registration.pushManager.getSubscription();
@@ -471,6 +481,26 @@ export default function NotificationBell() {
         </div>
       )}
 
+      {notificationPermission === 'denied' && (
+        <div
+          role="status"
+          dir={language === 'ar' ? 'rtl' : 'ltr'}
+          className="fixed bottom-4 left-4 right-4 z-[110] mx-auto max-w-sm rounded-xl border border-amber-200 bg-amber-50/95 p-3 text-right shadow-lg backdrop-blur-sm"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-lg bg-amber-100 p-1.5 text-amber-700">
+              <Bell className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-amber-900">إشعارات الهاتف محظورة</p>
+              <p className="mt-0.5 text-[11px] leading-4 text-amber-800">
+                افتح إعدادات Chrome &gt; إعدادات الموقع &gt; الإشعارات، اسمح لـ SuperLive، ثم أعد فتح الموقع.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {notificationPermission === 'granted' && pushStatus === 'enabled' && (
         <button
           type="button"
@@ -482,9 +512,11 @@ export default function NotificationBell() {
         </button>
       )}
 
-      {pushStatus === 'error' && (
+      {(pushStatus === 'error' || pushStatus === 'unsupported') && (
         <p className="fixed bottom-4 left-4 right-4 z-[109] mx-auto max-w-sm rounded-lg border border-red-200 bg-red-50/95 px-3 py-2 text-center text-[11px] font-semibold text-red-700 shadow backdrop-blur-sm">
-          تعذر تسجيل هذا الهاتف للإشعارات. افتح الموقع عبر HTTPS وتأكد من السماح بالإشعارات.
+          {pushStatus === 'unsupported'
+            ? 'هذا المتصفح لا يدعم إشعارات Push في الخلفية. استخدم Chrome على Android عبر HTTPS.'
+            : 'تعذر تسجيل هذا الهاتف للإشعارات. افتح الموقع عبر HTTPS وتأكد من السماح بالإشعارات.'}
         </p>
       )}
 
