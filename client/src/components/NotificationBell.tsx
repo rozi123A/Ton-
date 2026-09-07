@@ -74,10 +74,14 @@ function toBase64Url(value: ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
-function fromBase64Url(value: string): Uint8Array {
+function fromBase64Url(value: string): ArrayBuffer {
   const padding = '='.repeat((4 - (value.length % 4)) % 4);
   const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + padding);
-  return Uint8Array.from(binary, char => char.charCodeAt(0));
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes.buffer;
 }
 
 async function showBrowserNotif(title: string, body: string, icon?: string) {

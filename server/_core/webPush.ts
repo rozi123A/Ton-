@@ -29,7 +29,7 @@ function hkdfExtract(salt: Buffer, ikm: Buffer): Buffer {
 
 function hkdfExpand(prk: Buffer, info: Buffer, length: number): Buffer {
   const chunks: Buffer[] = [];
-  let previous = Buffer.alloc(0);
+  let previous: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   for (let counter = 1; Buffer.concat(chunks).length < length; counter += 1) {
     previous = hmac(prk, Buffer.concat([previous, info, Buffer.from([counter])]));
     chunks.push(previous);
@@ -122,7 +122,14 @@ function encryptPayload(subscription: PushSubscriptionRecord, payload: string): 
 
 export async function sendWebPushNotification(
   userId: number,
-  notification: { type: string; title?: string; message?: string; fromName?: string; fromAvatar?: string },
+  notification: {
+    type: string;
+    title?: string;
+    message?: string;
+    fromName?: string;
+    fromAvatar?: string;
+    fromUserId?: number;
+  },
 ) {
   try {
     const keys = getVapidKeys();
@@ -136,11 +143,21 @@ export async function sendWebPushNotification(
       const icon = notification.fromAvatar && notification.fromAvatar.length < 2048
         ? notification.fromAvatar
         : "/favicon.ico";
+      const tag = `ton-${notification.type}-${notification.fromUserId ?? userId}`;
       const body = encryptPayload(subscription, JSON.stringify({
         title: notification.title || "إشعار جديد",
         body: notification.message || (notification.fromName ? `من ${notification.fromName}` : ""),
         icon,
-        data: { url: "/" },
+        image: icon === "/favicon.ico" ? undefined : icon,
+        badge: "/favicon.ico",
+        tag,
+        timestamp: Date.now(),
+        data: {
+          url: notification.fromUserId
+            ? `/profile?userId=${notification.fromUserId}`
+            : "/",
+          tag,
+        },
       }));
 
       const response = await fetch(subscription.endpoint, {
@@ -151,7 +168,7 @@ export async function sendWebPushNotification(
           "Content-Encoding": "aes128gcm",
           TTL: String(PUSH_TTL_SECONDS),
         },
-        body,
+        body: body as unknown as BodyInit,
         signal: AbortSignal.timeout(10_000),
       });
 

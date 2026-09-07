@@ -549,14 +549,18 @@ export const appRouter = router({
         // Story comments belong in notifications, not in the private-message
         // inbox. The old implementation copied them into messages, which made
         // the friends badge show unread messages with an empty chat.
-        await createNotification(story.userId, {
+        const notification = {
           type: 'story-comment',
           title: 'تعليق جديد على قصتك',
           message: input.content,
           fromName: ctx.user.name || 'مستخدم',
           fromAvatar: ctx.user.avatar || '',
           fromUserId: ctx.user.id,
-        });
+        } as const;
+        await Promise.all([
+          createNotification(story.userId, notification),
+          sendWebPushNotification(story.userId, notification),
+        ]);
 
         return { success: true };
       }),
@@ -782,11 +786,15 @@ export const appRouter = router({
 			          });
 			        }
 			
-			        await createNotification(ctx.user.id, {
+        const notification = {
 			          type: 'system',
 			          title: 'مكافأة يومية 🎁',
 			          message: `لقد حصلت على 10 نقاط و 5 نجوم مجانية! (تم الاستلام في ${new Date().toLocaleString('ar')})`,
-			        });
+        } as const;
+        await Promise.all([
+          createNotification(ctx.user.id, notification),
+          sendWebPushNotification(ctx.user.id, notification),
+        ]);
 			
 			        return { success: true, starsGained: 5, creditsGained: 10 };
 			      }),
@@ -922,11 +930,15 @@ export const appRouter = router({
           itemType: input.itemType,
           itemAmount: storedItemAmount,
         });
-        await createNotification(ctx.user.id, {
+        const notification = {
           type: 'system',
           title: 'تم استلام طلب الدفع',
           message: 'سنراجع طلب الدفع ونحدّث حالته بعد التحقق من العملية.',
-        });
+        } as const;
+        await Promise.all([
+          createNotification(ctx.user.id, notification),
+          sendWebPushNotification(ctx.user.id, notification),
+        ]);
         return { success: true };
       }),
 
@@ -993,13 +1005,18 @@ export const appRouter = router({
         if (!saved) throw new Error('تعذر إرسال الهدية أو رصيد النقاط غير كافٍ');
         
         if (receiverId > 0) {
-          await createNotification(receiverId, {
+          const notification = {
             type: 'gift',
+            title: 'هدية جديدة',
             fromName: ctx.user.name || 'مستخدم',
             fromAvatar: ctx.user.avatar || '',
             fromUserId: ctx.user.id,
             message: `أرسل لك هدية: ${input.giftType}`,
-          });
+          } as const;
+          await Promise.all([
+            createNotification(receiverId, notification),
+            sendWebPushNotification(receiverId, notification),
+          ]);
         }
         
         const newBalance = await getUserCredits(ctx.user.id);
@@ -1057,11 +1074,15 @@ export const appRouter = router({
         const COST = 50000;
         const ok = await upgradeWithCredits(ctx.user.id, COST);
         if (!ok) throw new Error("فشل خصم النقاط، حاول مجدداً.");
-        await createNotification(ctx.user.id, {
+        const notification = {
           type: 'system',
           title: '🎉 مرحباً بك في Premium!',
           message: `تم اشتراكك بـ ${COST} نقطة. استمتع بجميع الميزات الحصرية!`,
-        });
+        } as const;
+        await Promise.all([
+          createNotification(ctx.user.id, notification),
+          sendWebPushNotification(ctx.user.id, notification),
+        ]);
         return { success: true };
       }),
 

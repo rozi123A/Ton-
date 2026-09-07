@@ -7,15 +7,19 @@ self.addEventListener("push", (event) => {
   }
 
   const title = data.title || "إشعار جديد";
+  const notificationData = data.data || {};
   const options = {
     body: data.body || "لديك إشعار جديد من الموقع",
     icon: data.icon || "/favicon.ico",
+    image: data.image || data.icon || undefined,
     badge: data.badge || "/favicon.ico",
     dir: "rtl",
     lang: "ar",
-    tag: `ton-push-${Date.now()}`,
+    tag: data.tag || notificationData.tag || `ton-push-${Date.now()}`,
     renotify: true,
-    data: data.data || { url: "/" },
+    timestamp: data.timestamp || Date.now(),
+    vibrate: [200, 100, 200],
+    data: notificationData,
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -28,7 +32,12 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       const existing = clients.find((client) => "focus" in client);
-      if (existing) return existing.focus();
+      if (existing) {
+        if ("navigate" in existing && existing.url !== targetUrl) {
+          return existing.navigate(targetUrl).then(() => existing.focus());
+        }
+        return existing.focus();
+      }
       return self.clients.openWindow(targetUrl);
     }),
   );
