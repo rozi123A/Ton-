@@ -10,6 +10,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: data.body || "لديك إشعار جديد من الموقع",
     icon: data.icon || "/favicon.ico",
+    image: data.image || data.icon || undefined,
     badge: data.badge || "/favicon.ico",
     dir: "rtl",
     lang: "ar",

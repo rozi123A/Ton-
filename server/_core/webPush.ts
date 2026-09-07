@@ -28,8 +28,8 @@ function hkdfExtract(salt: Buffer, ikm: Buffer): Buffer {
 }
 
 function hkdfExpand(prk: Buffer, info: Buffer, length: number): Buffer {
-  const chunks: Buffer[] = [];
-  let previous = Buffer.alloc(0);
+  const chunks: Buffer<ArrayBufferLike>[] = [];
+  let previous: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   for (let counter = 1; Buffer.concat(chunks).length < length; counter += 1) {
     previous = hmac(prk, Buffer.concat([previous, info, Buffer.from([counter])]));
     chunks.push(previous);
@@ -133,6 +133,9 @@ export async function sendWebPushNotification(
       try {
       const endpoint = new URL(subscription.endpoint);
       const token = await createVapidToken(endpoint.origin, keys);
+      // Keep the sender's avatar in the OS notification when it is a normal
+      // URL or a compact data URL. Large inline avatars make Web Push payloads
+      // exceed provider limits, so the service worker falls back to the app icon.
       const icon = notification.fromAvatar && notification.fromAvatar.length < 2048
         ? notification.fromAvatar
         : "/favicon.ico";
@@ -140,6 +143,7 @@ export async function sendWebPushNotification(
         title: notification.title || "إشعار جديد",
         body: notification.message || (notification.fromName ? `من ${notification.fromName}` : ""),
         icon,
+        image: icon,
         data: { url: "/" },
       }));
 
@@ -151,7 +155,7 @@ export async function sendWebPushNotification(
           "Content-Encoding": "aes128gcm",
           TTL: String(PUSH_TTL_SECONDS),
         },
-        body,
+        body: body as unknown as BodyInit,
         signal: AbortSignal.timeout(10_000),
       });
 
