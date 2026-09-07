@@ -487,7 +487,10 @@ export const appRouter = router({
             message: "يجب رفع الفيديو إلى التخزين قبل نشر القصة.",
           });
         }
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        // Stories are permanent posts. Keep the legacy column populated with a
+        // safe far-future value so existing databases do not need a destructive
+        // migration before new stories can be published.
+        const expiresAt = new Date("9999-12-31T23:59:59.999Z");
         await saveStory({
           userId: ctx.user.id,
           mediaUrl: input.mediaUrl,

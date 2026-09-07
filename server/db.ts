@@ -1376,9 +1376,9 @@ export async function getActiveStories() {
   const db = await getDb();
   if (!db) return [];
   try {
-    const now = new Date();
-    
-    // Get all active stories with user info
+    // The legacy expiresAt column is intentionally not used anymore:
+    // stories are permanent posts, including stories created before this
+    // behavior changed.
     const activeStories = await db
       .select({
         id: stories.id,
@@ -1392,7 +1392,6 @@ export async function getActiveStories() {
       })
       .from(stories)
       .innerJoin(users, eq(stories.userId, users.id))
-      .where(gt(stories.expiresAt, now))
       .orderBy(desc(stories.createdAt));
 
     // For each story, get view count and comment count
@@ -1418,11 +1417,10 @@ export async function getUserStories(userId: number) {
   const db = await getDb();
   if (!db) return [];
   try {
-    const now = new Date();
     const userStories = await db
       .select()
       .from(stories)
-      .where(and(eq(stories.userId, userId), gt(stories.expiresAt, now)))
+      .where(eq(stories.userId, userId))
       .orderBy(desc(stories.createdAt));
 
     // Add stats to user stories too
@@ -1459,7 +1457,7 @@ export async function getPublicUserStories(userId: number) {
         expiresAt: stories.expiresAt,
       })
       .from(stories)
-      .where(and(eq(stories.userId, userId), gt(stories.expiresAt, new Date())))
+      .where(eq(stories.userId, userId))
       .orderBy(desc(stories.createdAt));
   } catch (err) {
     console.error('[Database] getPublicUserStories failed:', err);
