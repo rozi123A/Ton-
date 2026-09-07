@@ -11,6 +11,7 @@ import {
   createFriendRequest, acceptFriendRequest, getFriends, getIncomingFriendRequests,
   getUserPublicProfile, getFriendStatus,
   createNotification, getNotifications, markNotificationsAsRead,
+  savePushSubscription, deletePushSubscription,
   getUnreadMessageCount,   markMessagesRead, updateUserPresence, updateUserOffline,
   saveStory, getActiveStories, getUserStories, getPublicUserStories,
   saveStoryComment, getStoryComments, recordStoryView, getStoryViewers,
@@ -34,6 +35,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
 import { sendUserNotification } from "./_core/userNotifications";
+import { getVapidPublicKey, sendWebPushNotification } from "./_core/webPush";
 
 const avatarSchema = z.union([
   z.string().url().max(512),
@@ -796,7 +798,7 @@ export const appRouter = router({
 
         // Only notify on the transition to active. This prevents the 30-second
         // heartbeat from repeatedly notifying every friend.
-        if (presence.becameActive && ctx.user.id > 0) {
+        if (presence.becameActive && ctx.user.id > 0 && ctx.user.role !== 'admin') {
           const friends = await getFriends(ctx.user.id);
           await Promise.all(
             friends.flatMap((friend) => {
@@ -810,7 +812,10 @@ export const appRouter = router({
                 ts: Date.now(),
               } as const;
               sendUserNotification(String(friend.id), notification);
-              return [createNotification(friend.id, notification)];
+              return [
+                createNotification(friend.id, notification),
+                sendWebPushNotification(friend.id, notification),
+              ];
             }),
           );
         }
@@ -1283,7 +1288,10 @@ export const appRouter = router({
           ts: Date.now(),
         } as const;
         sendUserNotification(String(input.receiverId), notification);
-        await createNotification(input.receiverId, notification);
+        await Promise.all([
+          createNotification(input.receiverId, notification),
+          sendWebPushNotification(input.receiverId, notification),
+        ]);
         return { success: true };
       }),
 
@@ -1302,7 +1310,10 @@ export const appRouter = router({
           ts: Date.now(),
         } as const;
         sendUserNotification(String(input.senderId), notification);
-        await createNotification(input.senderId, notification);
+        await Promise.all([
+          createNotification(input.senderId, notification),
+          sendWebPushNotification(input.senderId, notification),
+        ]);
         return { success: true };
       }),
 
@@ -1327,6 +1338,30 @@ export const appRouter = router({
     markAsRead: protectedProcedure
       .mutation(async ({ ctx }) => {
         await markNotificationsAsRead(ctx.user.id);
+        return { success: true };
+      }),
+  }),
+
+  push: router({
+    publicKey: publicProcedure.query(() => getVapidPublicKey()),
+
+    subscribe: protectedProcedure
+      .input(z.object({
+        endpoint: z.string().url().max(2048),
+        keys: z.object({
+          p256dh: z.string().min(16).max(256),
+          auth: z.string().min(8).max(256),
+        }),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await savePushSubscription(ctx.user.id, input);
+        return { success: true };
+      }),
+
+    unsubscribe: protectedProcedure
+      .input(z.object({ endpoint: z.string().url().max(2048) }))
+      .mutation(async ({ input }) => {
+        await deletePushSubscription(input.endpoint);
         return { success: true };
       }),
   }),

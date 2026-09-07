@@ -67,6 +67,19 @@ async function getNotificationRegistration(): Promise<ServiceWorkerRegistration 
   return notificationRegistrationPromise;
 }
 
+function toBase64Url(value: ArrayBuffer): string {
+  const bytes = new Uint8Array(value);
+  let binary = '';
+  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function fromBase64Url(value: string): Uint8Array {
+  const padding = '='.repeat((4 - (value.length % 4)) % 4);
+  const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + padding);
+  return Uint8Array.from(binary, char => char.charCodeAt(0));
+}
+
 async function showBrowserNotif(title: string, body: string, icon?: string) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
@@ -144,6 +157,11 @@ export default function NotificationBell() {
     enabled: isAuthenticated && !!userId,
     refetchInterval: 15_000, // Poll DB every 15s for new notifications
   });
+  const { data: vapidPublicKey } = trpc.push.publicKey.useQuery(undefined, {
+    enabled: isAuthenticated && !!userId,
+    staleTime: Infinity,
+  });
+  const pushSubscribeMutation = trpc.push.subscribe.useMutation();
 
   useEffect(() => {
     if (dbNotifs) {
@@ -253,6 +271,42 @@ export default function NotificationBell() {
       playMessageSound();
     }
   }, [t]);
+
+  const syncPushSubscription = useCallback(async () => {
+    if (
+      !vapidPublicKey ||
+      notificationPermission !== 'granted' ||
+      !('PushManager' in window)
+    ) return;
+
+    const registration = await getNotificationRegistration();
+    if (!registration) return;
+
+    try {
+      const existing = await registration.pushManager.getSubscription();
+      const subscription = existing ?? await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: fromBase64Url(vapidPublicKey),
+      });
+      const p256dh = subscription.getKey('p256dh');
+      const auth = subscription.getKey('auth');
+      if (!p256dh || !auth) return;
+
+      pushSubscribeMutation.mutate({
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: toBase64Url(p256dh),
+          auth: toBase64Url(auth),
+        },
+      });
+    } catch (error) {
+      console.warn('[Notifications] Push subscription failed', error);
+    }
+  }, [notificationPermission, pushSubscribeMutation, vapidPublicKey]);
+
+  useEffect(() => {
+    void syncPushSubscription();
+  }, [syncPushSubscription]);
 
   // Connect to notification stream
   useEffect(() => {

@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import { and, desc, eq, gte, isNotNull, isNull, lte, ne, or, sql, gt } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql, gt } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, paymentRequests, stories, InsertStory, storyComments, storyViews, InsertStoryComment, InsertStoryView, aiConversations, aiMessages, aiImages, AiConversation, AiMessage, AiImage } from '../drizzle/schema';
+import { InsertUser, users, InsertMessage, messages, gifts, friendRequests, friends, notifications, pushSubscriptions, paymentRequests, stories, InsertStory, storyComments, storyViews, InsertStoryComment, InsertStoryView, aiConversations, aiMessages, aiImages, AiConversation, AiMessage, AiImage } from '../drizzle/schema';
 import { ENV } from './_core/env';
 
 /** Strip query params unsupported by postgres.js (e.g. channel_binding from Neon) */
@@ -184,6 +184,15 @@ export async function ensureSchema(): Promise<void> {
        "fromUserId" INTEGER,
        "isRead"    BOOLEAN NOT NULL DEFAULT false,
        "createdAt" TIMESTAMP NOT NULL DEFAULT now()
+     )`,
+     `CREATE TABLE IF NOT EXISTS push_subscriptions (
+       id           SERIAL PRIMARY KEY,
+       "userId"     INTEGER NOT NULL,
+       endpoint     TEXT NOT NULL UNIQUE,
+       p256dh       TEXT NOT NULL,
+       auth         TEXT NOT NULL,
+       "createdAt"  TIMESTAMP NOT NULL DEFAULT now(),
+       "updatedAt" TIMESTAMP NOT NULL DEFAULT now()
      )`,
     `CREATE TABLE IF NOT EXISTS payment_requests (
        id              SERIAL PRIMARY KEY,
@@ -975,11 +984,61 @@ export async function getFriends(userId: number) {
       isPremium: users.isPremium,
        isVerified: users.isVerified,
       lastSeen: users.lastSeen,
-    }).from(users).where(sql`${users.id} IN (${sql.join(friendIds, sql`, `)})`);
+    }).from(users).where(and(inArray(users.id, friendIds), ne(users.role, 'admin')));
   } catch (err) {
     console.error('[Database] getFriends failed:', err);
     return [];
   }
+}
+
+export interface PushSubscriptionRecord {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+export async function savePushSubscription(userId: number, subscription: PushSubscriptionRecord) {
+  const db = await getDb();
+  if (!db || userId <= 0) return;
+  await db.insert(pushSubscriptions)
+    .values({
+      userId,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+      updatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: pushSubscriptions.endpoint,
+      set: {
+        userId,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+        updatedAt: new Date(),
+      },
+    });
+}
+
+export async function getPushSubscriptions(userId: number): Promise<PushSubscriptionRecord[]> {
+  const db = await getDb();
+  if (!db || userId <= 0) return [];
+  const rows = await db.select({
+    endpoint: pushSubscriptions.endpoint,
+    p256dh: pushSubscriptions.p256dh,
+    auth: pushSubscriptions.auth,
+  }).from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
+  return rows.map(row => ({
+    endpoint: row.endpoint,
+    keys: { p256dh: row.p256dh, auth: row.auth },
+  }));
+}
+
+export async function deletePushSubscription(endpoint: string) {
+  const db = await getDb();
+  if (!db || !endpoint) return;
+  await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
 }
 
 // ── Payment Requests ──────────────────────────────────────────────────────────
@@ -1102,7 +1161,18 @@ export async function getNotifications(userId: number) {
   const db = await getDb();
   if (!db) return [];
   try {
-    return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+    return await db.select()
+      .from(notifications)
+      .where(sql`${notifications.userId} = ${userId}
+        AND (
+          ${notifications.fromUserId} IS NULL
+          OR NOT EXISTS (
+            SELECT 1 FROM users sender
+            WHERE sender.id = ${notifications.fromUserId}
+              AND sender.role = 'admin'
+          )
+        )`)
+      .orderBy(desc(notifications.createdAt));
   } catch (err) {
     console.error('[Database] getNotifications failed:', err);
     return [];
