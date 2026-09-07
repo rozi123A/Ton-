@@ -29,7 +29,7 @@ function hkdfExtract(salt: Buffer, ikm: Buffer): Buffer {
 
 function hkdfExpand(prk: Buffer, info: Buffer, length: number): Buffer {
   const chunks: Buffer[] = [];
-  let previous: Buffer<ArrayBufferLike> = Buffer.alloc(0);
+  let previous = Buffer.alloc(0);
   for (let counter = 1; Buffer.concat(chunks).length < length; counter += 1) {
     previous = hmac(prk, Buffer.concat([previous, info, Buffer.from([counter])]));
     chunks.push(previous);
@@ -122,50 +122,25 @@ function encryptPayload(subscription: PushSubscriptionRecord, payload: string): 
 
 export async function sendWebPushNotification(
   userId: number,
-  notification: {
-    type: string;
-    title?: string;
-    message?: string;
-    fromName?: string;
-    fromAvatar?: string;
-    fromUserId?: number;
-    targetUrl?: string;
-  },
+  notification: { type: string; title?: string; message?: string; fromName?: string; fromAvatar?: string },
 ) {
   try {
     const keys = getVapidKeys();
-    if (!keys) {
-      console.warn("[WebPush] VAPID keys unavailable; SESSION_SECRET/JWT_SECRET must be at least 32 characters");
-      return;
-    }
+    if (!keys) return;
 
     const subscriptions = await getPushSubscriptions(userId);
-    if (subscriptions.length === 0) {
-      console.info(`[WebPush] No registered device for user ${userId}`);
-      return;
-    }
     await Promise.all(subscriptions.map(async (subscription) => {
       try {
       const endpoint = new URL(subscription.endpoint);
       const token = await createVapidToken(endpoint.origin, keys);
       const icon = notification.fromAvatar && notification.fromAvatar.length < 2048
         ? notification.fromAvatar
-        : "/superlive-icon.svg";
-      const tag = `ton-${notification.type}-${notification.fromUserId ?? userId}`;
+        : "/favicon.ico";
       const body = encryptPayload(subscription, JSON.stringify({
         title: notification.title || "إشعار جديد",
         body: notification.message || (notification.fromName ? `من ${notification.fromName}` : ""),
         icon,
-        image: icon === "/superlive-icon.svg" ? undefined : icon,
-        badge: "/superlive-icon.svg",
-        tag,
-        timestamp: Date.now(),
-        data: {
-          url: notification.targetUrl || (notification.fromUserId
-            ? `/profile?userId=${notification.fromUserId}`
-            : "/"),
-          tag,
-        },
+        data: { url: "/" },
       }));
 
       const response = await fetch(subscription.endpoint, {
@@ -176,20 +151,12 @@ export async function sendWebPushNotification(
           "Content-Encoding": "aes128gcm",
           TTL: String(PUSH_TTL_SECONDS),
         },
-        body: body as unknown as BodyInit,
+        body,
         signal: AbortSignal.timeout(10_000),
       });
 
       if (response.status === 404 || response.status === 410) {
         await deletePushSubscription(subscription.endpoint);
-        console.warn(`[WebPush] Removed expired device subscription for user ${userId}`);
-      } else if (!response.ok) {
-        const providerMessage = await response.text().catch(() => "");
-        console.warn(
-          `[WebPush] Provider rejected notification for user ${userId}: HTTP ${response.status}${providerMessage ? ` (${providerMessage.slice(0, 160)})` : ""}`,
-        );
-      } else {
-        console.info(`[WebPush] Notification accepted for user ${userId}`);
       }
       } catch (error) {
         console.warn("[WebPush] Failed to deliver notification:", error);

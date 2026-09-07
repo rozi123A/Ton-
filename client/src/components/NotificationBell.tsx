@@ -51,20 +51,14 @@ async function getNotificationRegistration(): Promise<ServiceWorkerRegistration 
   if (!notificationRegistrationPromise) {
     notificationRegistrationPromise = (async () => {
       try {
-        const registration = await navigator.serviceWorker.register('/notification-sw.js', {
+        const existing = await navigator.serviceWorker.getRegistration('/');
+        const registration = existing ?? await navigator.serviceWorker.register('/notification-sw.js', {
           scope: '/',
         });
-        await registration.update().catch(() => undefined);
-
-        // Replace an older worker immediately after a deployment.
-        if (registration.waiting) {
-          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        }
 
         // Android needs an active service worker for showNotification().
         return registration.active ? registration : await navigator.serviceWorker.ready;
       } catch {
-        notificationRegistrationPromise = null;
         return null;
       }
     })();
@@ -80,14 +74,10 @@ function toBase64Url(value: ArrayBuffer): string {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
-function fromBase64Url(value: string): ArrayBuffer {
+function fromBase64Url(value: string): Uint8Array {
   const padding = '='.repeat((4 - (value.length % 4)) % 4);
   const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/') + padding);
-  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes.buffer;
+  return Uint8Array.from(binary, char => char.charCodeAt(0));
 }
 
 async function showBrowserNotif(title: string, body: string, icon?: string) {
@@ -95,9 +85,9 @@ async function showBrowserNotif(title: string, body: string, icon?: string) {
 
   const options = {
     body,
-    icon: icon || '/superlive-icon.svg',
+    icon: icon || '/favicon.ico',
     image: icon || undefined,
-    badge: '/superlive-icon.svg',
+    badge: '/favicon.ico',
     dir: 'rtl' as const,
     lang: 'ar',
     renotify: true,
@@ -149,7 +139,6 @@ export default function NotificationBell() {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
     return Notification.permission;
   });
-  const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'error' | 'unsupported'>('idle');
   const streamAbortRef = useRef<AbortController | null>(null);
   const streamRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -172,11 +161,7 @@ export default function NotificationBell() {
     enabled: isAuthenticated && !!userId,
     staleTime: Infinity,
   });
-  const pushSubscribeMutation = trpc.push.subscribe.useMutation({
-    onSuccess: () => setPushStatus('enabled'),
-    onError: () => setPushStatus('error'),
-  });
-  const pushTestMutation = trpc.push.test.useMutation();
+  const pushSubscribeMutation = trpc.push.subscribe.useMutation();
 
   useEffect(() => {
     if (dbNotifs) {
@@ -288,18 +273,14 @@ export default function NotificationBell() {
   }, [t]);
 
   const syncPushSubscription = useCallback(async () => {
-    if (notificationPermission !== 'granted') return;
-    if (vapidPublicKey === undefined) return;
-    if (!vapidPublicKey || !('PushManager' in window) || !('serviceWorker' in navigator)) {
-      setPushStatus('unsupported');
-      return;
-    }
+    if (
+      !vapidPublicKey ||
+      notificationPermission !== 'granted' ||
+      !('PushManager' in window)
+    ) return;
 
     const registration = await getNotificationRegistration();
-    if (!registration) {
-      setPushStatus('error');
-      return;
-    }
+    if (!registration) return;
 
     try {
       const existing = await registration.pushManager.getSubscription();
@@ -319,7 +300,6 @@ export default function NotificationBell() {
         },
       });
     } catch (error) {
-      setPushStatus('error');
       console.warn('[Notifications] Push subscription failed', error);
     }
   }, [notificationPermission, pushSubscribeMutation, vapidPublicKey]);
@@ -465,59 +445,18 @@ export default function NotificationBell() {
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-gray-900">{t('notifications.enable_title')}</p>
               <p className="mt-0.5 text-[11px] leading-4 text-gray-500">{t('notifications.enable_description')}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void requestBrowserPermission().then(setNotificationPermission);
-                  }}
-                  className="rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-purple-700"
-                >
-                  {t('notifications.enable_button')}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void requestBrowserPermission().then(setNotificationPermission);
+                }}
+                className="mt-2 rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-purple-700"
+              >
+                {t('notifications.enable_button')}
+              </button>
             </div>
           </div>
         </div>
-      )}
-
-      {notificationPermission === 'denied' && (
-        <div
-          role="status"
-          dir={language === 'ar' ? 'rtl' : 'ltr'}
-          className="fixed bottom-4 left-4 right-4 z-[110] mx-auto max-w-sm rounded-xl border border-amber-200 bg-amber-50/95 p-3 text-right shadow-lg backdrop-blur-sm"
-        >
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 rounded-lg bg-amber-100 p-1.5 text-amber-700">
-              <Bell className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-amber-900">إشعارات الهاتف محظورة</p>
-              <p className="mt-0.5 text-[11px] leading-4 text-amber-800">
-                افتح إعدادات Chrome &gt; إعدادات الموقع &gt; الإشعارات، اسمح لـ SuperLive، ثم أعد فتح الموقع.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {notificationPermission === 'granted' && pushStatus === 'enabled' && (
-        <button
-          type="button"
-          onClick={() => pushTestMutation.mutate()}
-          disabled={pushTestMutation.isPending}
-          className="fixed bottom-4 left-4 z-[109] rounded-lg border border-purple-200 bg-white/95 px-3 py-1.5 text-[11px] font-bold text-purple-700 shadow backdrop-blur-sm disabled:opacity-60"
-        >
-          {pushTestMutation.isPending ? 'جارٍ إرسال الاختبار…' : 'اختبار إشعار الهاتف'}
-        </button>
-      )}
-
-      {(pushStatus === 'error' || pushStatus === 'unsupported') && (
-        <p className="fixed bottom-4 left-4 right-4 z-[109] mx-auto max-w-sm rounded-lg border border-red-200 bg-red-50/95 px-3 py-2 text-center text-[11px] font-semibold text-red-700 shadow backdrop-blur-sm">
-          {pushStatus === 'unsupported'
-            ? 'هذا المتصفح لا يدعم إشعارات Push في الخلفية. استخدم Chrome على Android عبر HTTPS.'
-            : 'تعذر تسجيل هذا الهاتف للإشعارات. افتح الموقع عبر HTTPS وتأكد من السماح بالإشعارات.'}
-        </p>
       )}
 
       <div className="relative" ref={dropdownRef}>

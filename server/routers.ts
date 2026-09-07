@@ -51,16 +51,6 @@ const aiMessageSchema = z.object({
 
 const GUEST_SAVE_RETRY_DELAYS_MS = [0, 10_000, 30_000, 60_000];
 
-async function sendFriendPushNotification(
-  senderId: number,
-  receiverId: number,
-  notification: Parameters<typeof sendWebPushNotification>[1],
-) {
-  if (senderId <= 0 || receiverId <= 0) return;
-  if (await getFriendStatus(senderId, receiverId) !== 'friends') return;
-  await sendWebPushNotification(receiverId, notification);
-}
-
 async function saveGuestRegistrationWithRetry(input: {
   openId: string;
   name: string;
@@ -559,18 +549,14 @@ export const appRouter = router({
         // Story comments belong in notifications, not in the private-message
         // inbox. The old implementation copied them into messages, which made
         // the friends badge show unread messages with an empty chat.
-        const notification = {
+        await createNotification(story.userId, {
           type: 'story-comment',
           title: 'تعليق جديد على قصتك',
           message: input.content,
           fromName: ctx.user.name || 'مستخدم',
           fromAvatar: ctx.user.avatar || '',
           fromUserId: ctx.user.id,
-        } as const;
-        await Promise.all([
-          createNotification(story.userId, notification),
-          sendFriendPushNotification(ctx.user.id, story.userId, notification),
-        ]);
+        });
 
         return { success: true };
       }),
@@ -796,15 +782,11 @@ export const appRouter = router({
 			          });
 			        }
 			
-        const notification = {
+			        await createNotification(ctx.user.id, {
 			          type: 'system',
 			          title: 'مكافأة يومية 🎁',
 			          message: `لقد حصلت على 10 نقاط و 5 نجوم مجانية! (تم الاستلام في ${new Date().toLocaleString('ar')})`,
-        } as const;
-        await Promise.all([
-          createNotification(ctx.user.id, notification),
-          sendWebPushNotification(ctx.user.id, notification),
-        ]);
+			        });
 			
 			        return { success: true, starsGained: 5, creditsGained: 10 };
 			      }),
@@ -860,15 +842,6 @@ export const appRouter = router({
           });
         }
         await saveMessage(ctx.user.id, input.receiverId, input.content);
-        await sendFriendPushNotification(ctx.user.id, input.receiverId, {
-          type: 'new-message',
-          title: `رسالة من ${ctx.user.name || 'مستخدم'}`,
-          message: input.content.slice(0, 180),
-          fromName: ctx.user.name || 'مستخدم',
-          fromAvatar: ctx.user.avatar || '',
-          fromUserId: ctx.user.id,
-          targetUrl: '/chat',
-        });
         return { success: true };
       }),
 
@@ -949,15 +922,11 @@ export const appRouter = router({
           itemType: input.itemType,
           itemAmount: storedItemAmount,
         });
-        const notification = {
+        await createNotification(ctx.user.id, {
           type: 'system',
           title: 'تم استلام طلب الدفع',
           message: 'سنراجع طلب الدفع ونحدّث حالته بعد التحقق من العملية.',
-        } as const;
-        await Promise.all([
-          createNotification(ctx.user.id, notification),
-          sendWebPushNotification(ctx.user.id, notification),
-        ]);
+        });
         return { success: true };
       }),
 
@@ -1024,18 +993,13 @@ export const appRouter = router({
         if (!saved) throw new Error('تعذر إرسال الهدية أو رصيد النقاط غير كافٍ');
         
         if (receiverId > 0) {
-          const notification = {
+          await createNotification(receiverId, {
             type: 'gift',
-            title: 'هدية جديدة',
             fromName: ctx.user.name || 'مستخدم',
             fromAvatar: ctx.user.avatar || '',
             fromUserId: ctx.user.id,
             message: `أرسل لك هدية: ${input.giftType}`,
-          } as const;
-          await Promise.all([
-            createNotification(receiverId, notification),
-            sendFriendPushNotification(ctx.user.id, receiverId, notification),
-          ]);
+          });
         }
         
         const newBalance = await getUserCredits(ctx.user.id);
@@ -1093,15 +1057,11 @@ export const appRouter = router({
         const COST = 50000;
         const ok = await upgradeWithCredits(ctx.user.id, COST);
         if (!ok) throw new Error("فشل خصم النقاط، حاول مجدداً.");
-        const notification = {
+        await createNotification(ctx.user.id, {
           type: 'system',
           title: '🎉 مرحباً بك في Premium!',
           message: `تم اشتراكك بـ ${COST} نقطة. استمتع بجميع الميزات الحصرية!`,
-        } as const;
-        await Promise.all([
-          createNotification(ctx.user.id, notification),
-          sendWebPushNotification(ctx.user.id, notification),
-        ]);
+        });
         return { success: true };
       }),
 
@@ -1328,7 +1288,10 @@ export const appRouter = router({
           ts: Date.now(),
         } as const;
         sendUserNotification(String(input.receiverId), notification);
-        await createNotification(input.receiverId, notification);
+        await Promise.all([
+          createNotification(input.receiverId, notification),
+          sendWebPushNotification(input.receiverId, notification),
+        ]);
         return { success: true };
       }),
 
@@ -1349,7 +1312,7 @@ export const appRouter = router({
         sendUserNotification(String(input.senderId), notification);
         await Promise.all([
           createNotification(input.senderId, notification),
-          sendFriendPushNotification(ctx.user.id, input.senderId, notification),
+          sendWebPushNotification(input.senderId, notification),
         ]);
         return { success: true };
       }),
@@ -1392,17 +1355,6 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         await savePushSubscription(ctx.user.id, input);
-        return { success: true };
-      }),
-
-    test: protectedProcedure
-      .mutation(async ({ ctx }) => {
-        await sendWebPushNotification(ctx.user.id, {
-          type: 'test',
-          title: 'إشعارات الهاتف مفعّلة',
-          message: 'إذا ظهر هذا الإشعار، فسيصلك تنبيه عند الرسائل والأنشطة الجديدة.',
-          targetUrl: '/chat',
-        });
         return { success: true };
       }),
 
