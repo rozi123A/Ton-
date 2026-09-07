@@ -97,11 +97,23 @@ export default function NotificationBell() {
   const userId = (user as { id?: number } | null)?.id;
   const [notifs, setNotifs] = useState<AppNotif[]>(loadStored);
   const [open, setOpen] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
+    return Notification.permission;
+  });
   const streamAbortRef = useRef<AbortController | null>(null);
   const streamRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const knownDbIdsRef = useRef<Set<string> | null>(null);
+
+  // Permission is owned by the browser, not React state. Re-read it whenever
+  // the bell mounts so the prompt disappears after Android permission is
+  // granted, including after navigating away and back.
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
 
   const { data: dbNotifs, refetch: refetchNotifs } = trpc.notifications.get.useQuery(undefined, {
     enabled: isAuthenticated && !!userId,

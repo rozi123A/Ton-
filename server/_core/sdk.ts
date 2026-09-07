@@ -5,8 +5,6 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
-import { users } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
 import * as db from "../db";
 import { ENV } from "./env";
 import type {
@@ -342,25 +340,9 @@ class SDKServer {
       throw ForbiddenError("User not found");
     }
 
-    // Always update lastSignedIn, lastSeen, and isOnline synchronously on every request
-    try {
-      await db.upsertUser({
-        openId: user.openId,
-        name: user.name,
-        loginMethod: user.loginMethod,
-        lastSignedIn: signedInAt,
-      });
-      // Also update isOnline and lastSeen explicitly in users table
-      const database = await db.getDb();
-      if (database && user.id > 0) {
-        await database.update(users)
-          .set({ isOnline: true, lastSeen: signedInAt, lastSignedIn: signedInAt })
-          .where(eq(users.id, user.id));
-      }
-    } catch (e) {
-      console.warn('[Auth] Failed to update presence/lastSignedIn:', e);
-    }
-
+    // Do not update presence from ordinary authenticated requests. The
+    // explicit users.ping heartbeat owns lastSeen/isOnline so the transition
+    // from offline to online can trigger one friend-online notification.
     return user;
   }
 }
