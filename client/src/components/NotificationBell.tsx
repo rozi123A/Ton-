@@ -20,6 +20,7 @@ interface AppNotif {
 }
 
 const STORAGE_KEY = 'app_notifications';
+const PUSH_VAPID_KEY_STORAGE = 'push_vapid_public_key';
 const MAX_STORED = 50;
 let notificationRegistrationPromise: Promise<ServiceWorkerRegistration | null> | null = null;
 
@@ -139,6 +140,7 @@ export default function NotificationBell() {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
     return Notification.permission;
   });
+  const [pushRegistrationStatus, setPushRegistrationStatus] = useState<'idle' | 'registering' | 'registered' | 'failed'>('idle');
   const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'sent' | 'missing'>('idle');
   const streamAbortRef = useRef<AbortController | null>(null);
   const streamRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -274,25 +276,42 @@ export default function NotificationBell() {
     }
   }, [t]);
 
-  const syncPushSubscription = useCallback(async () => {
+  const syncPushSubscription = useCallback(async (
+    requestedPermission: NotificationPermission = notificationPermission,
+  ): Promise<boolean> => {
     if (
       !vapidPublicKey ||
-      notificationPermission !== 'granted' ||
+      requestedPermission !== 'granted' ||
       !('PushManager' in window)
-    ) return;
+    ) {
+      setPushRegistrationStatus('failed');
+      return false;
+    }
 
     const registration = await getNotificationRegistration();
-    if (!registration) return;
+    if (!registration) {
+      setPushRegistrationStatus('failed');
+      return false;
+    }
 
     try {
-      const existing = await registration.pushManager.getSubscription();
-      const subscription = existing ?? await registration.pushManager.subscribe({
+      setPushRegistrationStatus('registering');
+      let subscription = await registration.pushManager.getSubscription();
+      const previousVapidKey = localStorage.getItem(PUSH_VAPID_KEY_STORAGE);
+      if (subscription && previousVapidKey && previousVapidKey !== vapidPublicKey) {
+        await subscription.unsubscribe();
+        subscription = null;
+      }
+      subscription = subscription ?? await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: fromBase64Url(vapidPublicKey),
       });
       const p256dh = subscription.getKey('p256dh');
       const auth = subscription.getKey('auth');
-      if (!p256dh || !auth) return;
+      if (!p256dh || !auth) {
+        setPushRegistrationStatus('failed');
+        return false;
+      }
 
       await pushSubscribeMutation.mutateAsync({
         endpoint: subscription.endpoint,
@@ -301,28 +320,46 @@ export default function NotificationBell() {
           auth: toBase64Url(auth),
         },
       });
+      localStorage.setItem(PUSH_VAPID_KEY_STORAGE, vapidPublicKey);
+      setPushRegistrationStatus('registered');
+      return true;
     } catch (error) {
+      setPushRegistrationStatus('failed');
       console.warn('[Notifications] Push subscription failed', error);
+      return false;
     }
   }, [notificationPermission, pushSubscribeMutation, vapidPublicKey]);
 
+  const activatePhoneNotifications = useCallback(async () => {
+    const permission = await requestBrowserPermission();
+    setNotificationPermission(permission);
+    if (permission !== 'granted') {
+      setPushRegistrationStatus('failed');
+      return false;
+    }
+    return syncPushSubscription(permission);
+  }, [syncPushSubscription]);
+
   const testPhoneNotification = useCallback(async () => {
     if (notificationPermission !== 'granted') {
-      const permission = await requestBrowserPermission();
-      setNotificationPermission(permission);
+      await activatePhoneNotifications();
       return;
     }
 
     try {
       setTestStatus('sending');
-      await syncPushSubscription();
+      const registered = await syncPushSubscription('granted');
+      if (!registered) {
+        setTestStatus('missing');
+        return;
+      }
       const result = await pushTestMutation.mutateAsync();
       setTestStatus(result.sent > 0 ? 'sent' : 'missing');
     } catch (error) {
       setTestStatus('missing');
       console.warn('[Notifications] Phone notification test failed', error);
     }
-  }, [notificationPermission, pushTestMutation, syncPushSubscription]);
+  }, [activatePhoneNotifications, notificationPermission, pushTestMutation, syncPushSubscription]);
 
   useEffect(() => {
     void syncPushSubscription();
@@ -467,9 +504,7 @@ export default function NotificationBell() {
               <p className="mt-0.5 text-[11px] leading-4 text-gray-500">{t('notifications.enable_description')}</p>
               <button
                 type="button"
-                onClick={() => {
-                  void requestBrowserPermission().then(setNotificationPermission);
-                }}
+                onClick={() => void activatePhoneNotifications()}
                 className="mt-2 rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-purple-700"
               >
                 {t('notifications.enable_button')}
@@ -484,7 +519,7 @@ export default function NotificationBell() {
       <button
       onClick={() => {
           if (notificationPermission === 'default') {
-            void requestBrowserPermission().then(setNotificationPermission);
+            void activatePhoneNotifications();
           }
           setOpen(o => !o);
           if (!open) markAllRead();
@@ -529,11 +564,21 @@ export default function NotificationBell() {
               {notificationPermission === 'granted' && (
                 <button
                   type="button"
-                  onClick={() => void testPhoneNotification()}
-                  disabled={pushTestMutation.isPending || testStatus === 'sending'}
+                  onClick={() => {
+                    if (pushRegistrationStatus === 'registered') {
+                      void testPhoneNotification();
+                    } else {
+                      void activatePhoneNotifications();
+                    }
+                  }}
+                  disabled={pushTestMutation.isPending || testStatus === 'sending' || pushRegistrationStatus === 'registering'}
                   className="rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-bold text-purple-700 hover:bg-purple-200 disabled:opacity-50"
                 >
-                  {testStatus === 'sending' ? '...' : t('notifications.test_push')}
+                  {pushRegistrationStatus === 'registering'
+                    ? t('notifications.activate_push_registering')
+                    : pushRegistrationStatus === 'registered'
+                      ? (testStatus === 'sending' ? '...' : t('notifications.test_push'))
+                      : t('notifications.activate_push')}
                 </button>
               )}
               {notifs.length > 0 && (
@@ -546,7 +591,13 @@ export default function NotificationBell() {
           </div>
           {notificationPermission === 'granted' && (
             <div className="border-b border-gray-100 px-4 py-2 text-[10px] leading-4 text-gray-500">
-              <p>{t('notifications.test_push_description')}</p>
+              <p>
+                {pushRegistrationStatus === 'registered'
+                  ? t('notifications.test_push_description')
+                  : pushRegistrationStatus === 'failed'
+                    ? t('notifications.activate_push_failed')
+                    : t('notifications.activate_push')}
+              </p>
               {testStatus === 'sent' && (
                 <p className="mt-1 font-semibold text-emerald-600">{t('notifications.test_push_sent')}</p>
               )}
