@@ -1363,13 +1363,13 @@ export const appRouter = router({
 
     test: protectedProcedure
       .mutation(async ({ ctx }) => {
-        await sendWebPushNotification(ctx.user.id, {
+        const result = await sendWebPushNotification(ctx.user.id, {
           type: "push-test",
           title: "اختبار إشعارات الهاتف",
           message: "إذا ظهر هذا في لوحة إشعارات الهاتف، فالإشعارات تعمل بشكل صحيح.",
           fromName: "ConnectLive",
         });
-        return { success: true };
+        return { success: result.sent > 0, ...result };
       }),
 
     unsubscribe: protectedProcedure

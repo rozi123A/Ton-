@@ -139,6 +139,7 @@ export default function NotificationBell() {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'denied';
     return Notification.permission;
   });
+  const [testStatus, setTestStatus] = useState<'idle' | 'sending' | 'sent' | 'missing'>('idle');
   const streamAbortRef = useRef<AbortController | null>(null);
   const streamRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -313,9 +314,12 @@ export default function NotificationBell() {
     }
 
     try {
+      setTestStatus('sending');
       await syncPushSubscription();
-      await pushTestMutation.mutateAsync();
+      const result = await pushTestMutation.mutateAsync();
+      setTestStatus(result.sent > 0 ? 'sent' : 'missing');
     } catch (error) {
+      setTestStatus('missing');
       console.warn('[Notifications] Phone notification test failed', error);
     }
   }, [notificationPermission, pushTestMutation, syncPushSubscription]);
@@ -526,10 +530,10 @@ export default function NotificationBell() {
                 <button
                   type="button"
                   onClick={() => void testPhoneNotification()}
-                  disabled={pushTestMutation.isPending}
+                  disabled={pushTestMutation.isPending || testStatus === 'sending'}
                   className="rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-bold text-purple-700 hover:bg-purple-200 disabled:opacity-50"
                 >
-                  {pushTestMutation.isPending ? '...' : t('notifications.test_push')}
+                  {testStatus === 'sending' ? '...' : t('notifications.test_push')}
                 </button>
               )}
               {notifs.length > 0 && (
@@ -541,9 +545,15 @@ export default function NotificationBell() {
             </div>
           </div>
           {notificationPermission === 'granted' && (
-            <p className="border-b border-gray-100 px-4 py-2 text-[10px] leading-4 text-gray-500">
-              {t('notifications.test_push_description')}
-            </p>
+            <div className="border-b border-gray-100 px-4 py-2 text-[10px] leading-4 text-gray-500">
+              <p>{t('notifications.test_push_description')}</p>
+              {testStatus === 'sent' && (
+                <p className="mt-1 font-semibold text-emerald-600">{t('notifications.test_push_sent')}</p>
+              )}
+              {testStatus === 'missing' && (
+                <p className="mt-1 font-semibold text-red-600">{t('notifications.test_push_missing')}</p>
+              )}
+            </div>
           )}
 
           {/* List */}
