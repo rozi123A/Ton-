@@ -162,6 +162,7 @@ export default function NotificationBell() {
     staleTime: Infinity,
   });
   const pushSubscribeMutation = trpc.push.subscribe.useMutation();
+  const pushTestMutation = trpc.push.test.useMutation();
 
   useEffect(() => {
     if (dbNotifs) {
@@ -292,7 +293,7 @@ export default function NotificationBell() {
       const auth = subscription.getKey('auth');
       if (!p256dh || !auth) return;
 
-      pushSubscribeMutation.mutate({
+      await pushSubscribeMutation.mutateAsync({
         endpoint: subscription.endpoint,
         keys: {
           p256dh: toBase64Url(p256dh),
@@ -303,6 +304,21 @@ export default function NotificationBell() {
       console.warn('[Notifications] Push subscription failed', error);
     }
   }, [notificationPermission, pushSubscribeMutation, vapidPublicKey]);
+
+  const testPhoneNotification = useCallback(async () => {
+    if (notificationPermission !== 'granted') {
+      const permission = await requestBrowserPermission();
+      setNotificationPermission(permission);
+      return;
+    }
+
+    try {
+      await syncPushSubscription();
+      await pushTestMutation.mutateAsync();
+    } catch (error) {
+      console.warn('[Notifications] Phone notification test failed', error);
+    }
+  }, [notificationPermission, pushTestMutation, syncPushSubscription]);
 
   useEffect(() => {
     void syncPushSubscription();
@@ -505,13 +521,30 @@ export default function NotificationBell() {
                 </span>
               )}
             </div>
-            {notifs.length > 0 && (
-              <button onClick={markAllRead} className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1">
-                <Check className="w-3 h-3" />
-                {t('notifications.mark_all')}
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {notificationPermission === 'granted' && (
+                <button
+                  type="button"
+                  onClick={() => void testPhoneNotification()}
+                  disabled={pushTestMutation.isPending}
+                  className="rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-bold text-purple-700 hover:bg-purple-200 disabled:opacity-50"
+                >
+                  {pushTestMutation.isPending ? '...' : t('notifications.test_push')}
+                </button>
+              )}
+              {notifs.length > 0 && (
+                <button onClick={markAllRead} className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  {t('notifications.mark_all')}
+                </button>
+              )}
+            </div>
           </div>
+          {notificationPermission === 'granted' && (
+            <p className="border-b border-gray-100 px-4 py-2 text-[10px] leading-4 text-gray-500">
+              {t('notifications.test_push_description')}
+            </p>
+          )}
 
           {/* List */}
           <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
