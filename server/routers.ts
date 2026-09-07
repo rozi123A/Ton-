@@ -51,6 +51,16 @@ const aiMessageSchema = z.object({
 
 const GUEST_SAVE_RETRY_DELAYS_MS = [0, 10_000, 30_000, 60_000];
 
+async function sendFriendPushNotification(
+  senderId: number,
+  receiverId: number,
+  notification: Parameters<typeof sendWebPushNotification>[1],
+) {
+  if (senderId <= 0 || receiverId <= 0) return;
+  if (await getFriendStatus(senderId, receiverId) !== 'friends') return;
+  await sendWebPushNotification(receiverId, notification);
+}
+
 async function saveGuestRegistrationWithRetry(input: {
   openId: string;
   name: string;
@@ -559,7 +569,7 @@ export const appRouter = router({
         } as const;
         await Promise.all([
           createNotification(story.userId, notification),
-          sendWebPushNotification(story.userId, notification),
+          sendFriendPushNotification(ctx.user.id, story.userId, notification),
         ]);
 
         return { success: true };
@@ -850,7 +860,7 @@ export const appRouter = router({
           });
         }
         await saveMessage(ctx.user.id, input.receiverId, input.content);
-        await sendWebPushNotification(input.receiverId, {
+        await sendFriendPushNotification(ctx.user.id, input.receiverId, {
           type: 'new-message',
           title: `رسالة من ${ctx.user.name || 'مستخدم'}`,
           message: input.content.slice(0, 180),
@@ -1024,7 +1034,7 @@ export const appRouter = router({
           } as const;
           await Promise.all([
             createNotification(receiverId, notification),
-            sendWebPushNotification(receiverId, notification),
+            sendFriendPushNotification(ctx.user.id, receiverId, notification),
           ]);
         }
         
@@ -1318,10 +1328,7 @@ export const appRouter = router({
           ts: Date.now(),
         } as const;
         sendUserNotification(String(input.receiverId), notification);
-        await Promise.all([
-          createNotification(input.receiverId, notification),
-          sendWebPushNotification(input.receiverId, notification),
-        ]);
+        await createNotification(input.receiverId, notification);
         return { success: true };
       }),
 
@@ -1342,7 +1349,7 @@ export const appRouter = router({
         sendUserNotification(String(input.senderId), notification);
         await Promise.all([
           createNotification(input.senderId, notification),
-          sendWebPushNotification(input.senderId, notification),
+          sendFriendPushNotification(ctx.user.id, input.senderId, notification),
         ]);
         return { success: true };
       }),
