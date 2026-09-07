@@ -89,9 +89,9 @@ async function showBrowserNotif(title: string, body: string, icon?: string) {
 
   const options = {
     body,
-    icon: icon || '/favicon.ico',
+    icon: icon || '/superlive-icon.svg',
     image: icon || undefined,
-    badge: '/favicon.ico',
+    badge: '/superlive-icon.svg',
     dir: 'rtl' as const,
     lang: 'ar',
     renotify: true,

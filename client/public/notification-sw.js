@@ -10,9 +10,9 @@ self.addEventListener("push", (event) => {
   const notificationData = data.data || {};
   const options = {
     body: data.body || "لديك إشعار جديد من الموقع",
-    icon: data.icon || "/favicon.ico",
+    icon: data.icon || "/superlive-icon.svg",
     image: data.image || data.icon || undefined,
-    badge: data.badge || "/favicon.ico",
+    badge: data.badge || "/superlive-icon.svg",
     dir: "rtl",
     lang: "ar",
     tag: data.tag || notificationData.tag || `ton-push-${Date.now()}`,

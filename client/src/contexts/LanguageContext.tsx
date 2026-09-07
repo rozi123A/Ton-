@@ -127,7 +127,7 @@ const translations: Record<Language, Record<string, string>> = {
 
      // Notifications
      "notifications.enable_title": "فعّل الإشعارات",
-     "notifications.enable_description": "تنبيه سريع عند وصول طلب صداقة أو دخول صديق.",
+     "notifications.enable_description": "سيظهر إشعار SuperLive خارج الموقع في هاتفك، حتى عند إغلاق الصفحة.",
      "notifications.enable_button": "السماح",
      "notifications.title": "الإشعارات",
      "notifications.mark_all": "قراءة الكل",
@@ -260,7 +260,7 @@ const translations: Record<Language, Record<string, string>> = {
 
      // Notifications
      "notifications.enable_title": "Enable notifications",
-     "notifications.enable_description": "Get quick alerts for friend requests and active friends.",
+     "notifications.enable_description": "SuperLive can alert your phone even when this page is closed.",
      "notifications.enable_button": "Allow",
      "notifications.title": "Notifications",
      "notifications.mark_all": "Mark all as read",
@@ -393,7 +393,7 @@ const translations: Record<Language, Record<string, string>> = {
 
      // Notifications
      "notifications.enable_title": "Activer les notifications",
-     "notifications.enable_description": "Recevez une alerte pour les demandes et les amis actifs.",
+     "notifications.enable_description": "SuperLive peut vous alerter même lorsque la page est fermée.",
      "notifications.enable_button": "Autoriser",
      "notifications.title": "Notifications",
      "notifications.mark_all": "Tout marquer comme lu",

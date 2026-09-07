@@ -150,14 +150,14 @@ export async function sendWebPushNotification(
       const token = await createVapidToken(endpoint.origin, keys);
       const icon = notification.fromAvatar && notification.fromAvatar.length < 2048
         ? notification.fromAvatar
-        : "/favicon.ico";
+        : "/superlive-icon.svg";
       const tag = `ton-${notification.type}-${notification.fromUserId ?? userId}`;
       const body = encryptPayload(subscription, JSON.stringify({
         title: notification.title || "إشعار جديد",
         body: notification.message || (notification.fromName ? `من ${notification.fromName}` : ""),
         icon,
-        image: icon === "/favicon.ico" ? undefined : icon,
-        badge: "/favicon.ico",
+        image: icon === "/superlive-icon.svg" ? undefined : icon,
+        badge: "/superlive-icon.svg",
         tag,
         timestamp: Date.now(),
         data: {
