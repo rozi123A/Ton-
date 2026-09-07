@@ -1361,6 +1361,17 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    test: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        await sendWebPushNotification(ctx.user.id, {
+          type: "push-test",
+          title: "اختبار إشعارات الهاتف",
+          message: "إذا ظهر هذا في لوحة إشعارات الهاتف، فالإشعارات تعمل بشكل صحيح.",
+          fromName: "ConnectLive",
+        });
+        return { success: true };
+      }),
+
     unsubscribe: protectedProcedure
       .input(z.object({ endpoint: z.string().url().max(2048) }))
       .mutation(async ({ input }) => {
