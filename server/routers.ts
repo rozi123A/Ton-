@@ -616,7 +616,7 @@ export const appRouter = router({
         name: z.string().min(1, "الاسم مطلوب"),
         age: z.number().min(13).max(100),
         gender: z.enum(['male', 'female', 'other']),
-        avatar: z.string().optional(),
+        avatar: avatarSchema.optional(),
         country: z.string().length(2).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -633,6 +633,12 @@ export const appRouter = router({
         const _defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`;
         const avatarUrl = (() => {
           if (!input.avatar) return _defaultAvatar;
+          // Mobile profile photos arrive as compressed data URLs from the
+          // registration picker. Keep the selected image instead of falling
+          // back to DiceBear; the schema already limits its size and format.
+          if (/^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(input.avatar)) {
+            return input.avatar;
+          }
           try {
             const u = new URL(input.avatar);
             if (u.protocol !== 'https:') return _defaultAvatar;
@@ -653,6 +659,7 @@ export const appRouter = router({
           name: input.name,
           loginMethod: 'guest',
           lastSignedIn: new Date(),
+          avatar: avatarUrl,
           ...(country ? { country } : {}),
         });
 
