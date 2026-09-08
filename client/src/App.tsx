@@ -7,7 +7,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
-import { Sparkles } from "lucide-react";
+import { ShieldCheck, Video } from "lucide-react";
 
 // Keep the first page small. Heavy pages such as ChatRoom and Admin are loaded
 // only when the visitor actually navigates to them.
@@ -68,7 +68,7 @@ function lazyWithDeployRecovery<T extends ComponentType<any>>(
   });
 }
 
-const Home = lazyWithDeployRecovery(() => import("./pages/Home"), "home", 3000);
+const Home = lazyWithDeployRecovery(() => import("./pages/Home"), "home", 5000);
 const Login = lazyWithDeployRecovery(() => import("./pages/Login"), "login");
 const ChatRoom = lazyWithDeployRecovery(() => import("./pages/ChatRoom"), "chat");
 const Profile = lazyWithDeployRecovery(() => import("./pages/Profile"), "profile");
@@ -79,30 +79,40 @@ const NotFound = lazyWithDeployRecovery(() => import("./pages/NotFound"), "not-f
 function PageLoading() {
   return (
     <main
-      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#4b2a9b] via-[#c747ce] to-[#19b7e4] px-6 text-white"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#48239a] via-[#c13fc9] to-[#13b5dc] px-6 text-white"
       dir="rtl"
     >
-      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-fuchsia-300/25 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-cyan-200/25 blur-3xl" />
+      <div className="pointer-events-none absolute -right-32 -top-24 h-96 w-96 rounded-full bg-fuchsia-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -left-24 h-[28rem] w-[28rem] rounded-full bg-cyan-200/25 blur-3xl" />
 
-      <div className="relative flex w-full max-w-sm flex-col items-center text-center" role="status" aria-live="polite">
-        <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/30 bg-white/[0.16] shadow-2xl shadow-violet-950/30 backdrop-blur-xl">
-          <div className="absolute inset-2 rounded-[1.5rem] border border-white/25" />
-          <Sparkles className="h-9 w-9 text-fuchsia-200" strokeWidth={1.7} />
-          <span className="absolute -bottom-2 -left-2 h-5 w-5 animate-ping rounded-full bg-cyan-200/50" />
-          <span className="absolute -bottom-2 -left-2 h-5 w-5 rounded-full border-4 border-[#8240b2] bg-cyan-200" />
+      <div
+        className="relative w-full max-w-sm rounded-[2rem] border border-white/35 bg-white/[0.16] p-7 text-center shadow-2xl shadow-violet-950/30 backdrop-blur-2xl"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-xl shadow-violet-950/20">
+          <Video className="h-8 w-8 text-[#a32ac2]" strokeWidth={2.2} />
         </div>
 
-        <p className="mb-2 text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-200/80" dir="ltr">
+        <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.32em] text-white/80" dir="ltr">
           ConnectLive
         </p>
-        <h1 className="mb-3 text-2xl font-extrabold tracking-tight text-white">نجهّز تجربتك</h1>
-        <p className="mb-8 text-sm text-slate-300">لحظات قليلة ونكون معك...</p>
+        <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-white">نجهّز اتصالك</h1>
+        <p className="mb-7 text-sm leading-6 text-white/80">لحظات قليلة وتبدأ رحلتك مع أشخاص جدد</p>
 
-        <div className="mb-4 h-1.5 w-full max-w-[230px] overflow-hidden rounded-full bg-white/25">
-          <div className="h-full w-2/5 animate-[loading-bar_3s_ease-in-out_infinite] rounded-full bg-gradient-to-l from-cyan-200 via-white to-fuchsia-200" />
+        <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-white/25">
+          <div className="h-full w-0 animate-[loading-progress_5s_linear_forwards] rounded-full bg-gradient-to-l from-cyan-100 via-white to-fuchsia-100 shadow-[0_0_14px_rgba(255,255,255,0.7)]" />
         </div>
-        <span className="text-xs font-semibold text-slate-400">جاري التحميل...</span>
+
+        <div className="flex items-center justify-center gap-2 text-xs font-semibold text-white/85">
+          <ShieldCheck className="h-4 w-4" />
+          <span>جاري التحميل</span>
+          <span className="flex gap-1" aria-hidden="true">
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white [animation-delay:-0.3s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white [animation-delay:-0.15s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white" />
+          </span>
+        </div>
       </div>
     </main>
   );
