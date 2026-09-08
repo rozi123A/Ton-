@@ -19,12 +19,18 @@ import { Sparkles } from "lucide-react";
 function lazyWithDeployRecovery<T extends ComponentType<any>>(
   importer: () => Promise<{ default: T }>,
   chunkName: string,
+  minimumLoadMs = 0,
 ) {
   return lazy(async () => {
     const recoveryKey = `connectlive:chunk-recovery:${chunkName}`;
+    const startedAt = Date.now();
 
     try {
       const module = await importer();
+      const remainingMs = Math.max(0, minimumLoadMs - (Date.now() - startedAt));
+      if (remainingMs > 0) {
+        await new Promise<void>(resolve => window.setTimeout(resolve, remainingMs));
+      }
       try {
         sessionStorage.removeItem(recoveryKey);
       } catch {
@@ -62,7 +68,7 @@ function lazyWithDeployRecovery<T extends ComponentType<any>>(
   });
 }
 
-const Home = lazyWithDeployRecovery(() => import("./pages/Home"), "home");
+const Home = lazyWithDeployRecovery(() => import("./pages/Home"), "home", 3000);
 const Login = lazyWithDeployRecovery(() => import("./pages/Login"), "login");
 const ChatRoom = lazyWithDeployRecovery(() => import("./pages/ChatRoom"), "chat");
 const Profile = lazyWithDeployRecovery(() => import("./pages/Profile"), "profile");
@@ -73,18 +79,18 @@ const NotFound = lazyWithDeployRecovery(() => import("./pages/NotFound"), "not-f
 function PageLoading() {
   return (
     <main
-      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#090b18] px-6 text-white"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#4b2a9b] via-[#c747ce] to-[#19b7e4] px-6 text-white"
       dir="rtl"
     >
-      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-fuchsia-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-violet-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-fuchsia-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-cyan-200/25 blur-3xl" />
 
       <div className="relative flex w-full max-w-sm flex-col items-center text-center" role="status" aria-live="polite">
-        <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/15 bg-white/[0.08] shadow-2xl shadow-violet-950/50 backdrop-blur-xl">
-          <div className="absolute inset-2 rounded-[1.5rem] border border-fuchsia-300/20" />
+        <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/30 bg-white/[0.16] shadow-2xl shadow-violet-950/30 backdrop-blur-xl">
+          <div className="absolute inset-2 rounded-[1.5rem] border border-white/25" />
           <Sparkles className="h-9 w-9 text-fuchsia-200" strokeWidth={1.7} />
-          <span className="absolute -bottom-2 -left-2 h-5 w-5 animate-ping rounded-full bg-fuchsia-400/40" />
-          <span className="absolute -bottom-2 -left-2 h-5 w-5 rounded-full border-4 border-[#090b18] bg-fuchsia-400" />
+          <span className="absolute -bottom-2 -left-2 h-5 w-5 animate-ping rounded-full bg-cyan-200/50" />
+          <span className="absolute -bottom-2 -left-2 h-5 w-5 rounded-full border-4 border-[#8240b2] bg-cyan-200" />
         </div>
 
         <p className="mb-2 text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-200/80" dir="ltr">
@@ -93,8 +99,8 @@ function PageLoading() {
         <h1 className="mb-3 text-2xl font-extrabold tracking-tight text-white">نجهّز تجربتك</h1>
         <p className="mb-8 text-sm text-slate-300">لحظات قليلة ونكون معك...</p>
 
-        <div className="mb-4 h-1.5 w-full max-w-[230px] overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-2/5 animate-[loading-bar_1.6s_ease-in-out_infinite] rounded-full bg-gradient-to-l from-fuchsia-400 via-violet-400 to-indigo-400" />
+        <div className="mb-4 h-1.5 w-full max-w-[230px] overflow-hidden rounded-full bg-white/25">
+          <div className="h-full w-2/5 animate-[loading-bar_3s_ease-in-out_infinite] rounded-full bg-gradient-to-l from-cyan-200 via-white to-fuchsia-200" />
         </div>
         <span className="text-xs font-semibold text-slate-400">جاري التحميل...</span>
       </div>
