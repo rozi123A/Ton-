@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from "react";
 import { useAuth } from "./_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Toaster } from "@/components/ui/sonner";
@@ -7,23 +7,96 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { Sparkles } from "lucide-react";
 
 // Keep the first page small. Heavy pages such as ChatRoom and Admin are loaded
 // only when the visitor actually navigates to them.
-const Home = lazy(() => import("./pages/Home"));
-const Login = lazy(() => import("./pages/Login"));
-const ChatRoom = lazy(() => import("./pages/ChatRoom"));
-const Profile = lazy(() => import("./pages/Profile"));
-const Store = lazy(() => import("./pages/Store"));
-const Admin = lazy(() => import("@/pages/Admin"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+/**
+ * A deploy can replace an old hashed chunk while a phone still has the old
+ * entry file in its cache. Retry once with a fresh document before showing
+ * the error screen, instead of leaving the user with a broken blank page.
+ */
+function lazyWithDeployRecovery<T extends ComponentType<any>>(
+  importer: () => Promise<{ default: T }>,
+  chunkName: string,
+) {
+  return lazy(async () => {
+    const recoveryKey = `connectlive:chunk-recovery:${chunkName}`;
+
+    try {
+      const module = await importer();
+      try {
+        sessionStorage.removeItem(recoveryKey);
+      } catch {
+        // Storage can be unavailable in private or embedded browsers.
+      }
+      return module;
+    } catch (error) {
+      let alreadyRetried = false;
+      try {
+        alreadyRetried = sessionStorage.getItem(recoveryKey) === "1";
+      } catch {
+        // If storage is unavailable, the regular error screen is safer than
+        // risking an infinite reload loop.
+      }
+
+      if (!alreadyRetried) {
+        try {
+          sessionStorage.setItem(recoveryKey, "1");
+          const freshUrl = new URL(window.location.href);
+          freshUrl.searchParams.set("__connectlive_refresh", String(Date.now()));
+          window.location.replace(freshUrl.toString());
+          return new Promise<never>(() => {});
+        } catch {
+          // Fall through to the friendly error boundary.
+        }
+      }
+
+      try {
+        sessionStorage.removeItem(recoveryKey);
+      } catch {
+        // Ignore storage failures.
+      }
+      throw error;
+    }
+  });
+}
+
+const Home = lazyWithDeployRecovery(() => import("./pages/Home"), "home");
+const Login = lazyWithDeployRecovery(() => import("./pages/Login"), "login");
+const ChatRoom = lazyWithDeployRecovery(() => import("./pages/ChatRoom"), "chat");
+const Profile = lazyWithDeployRecovery(() => import("./pages/Profile"), "profile");
+const Store = lazyWithDeployRecovery(() => import("./pages/Store"), "store");
+const Admin = lazyWithDeployRecovery(() => import("@/pages/Admin"), "admin");
+const NotFound = lazyWithDeployRecovery(() => import("./pages/NotFound"), "not-found");
 
 function PageLoading() {
   return (
-    <main className="min-h-screen bg-white flex items-center justify-center" dir="rtl">
-      <div className="flex flex-col items-center gap-3 text-purple-600" role="status" aria-live="polite">
-        <div className="w-9 h-9 rounded-full border-4 border-purple-100 border-t-purple-600 animate-spin" />
-        <span className="font-semibold">جاري التحميل...</span>
+    <main
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#090b18] px-6 text-white"
+      dir="rtl"
+    >
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-fuchsia-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-violet-600/20 blur-3xl" />
+
+      <div className="relative flex w-full max-w-sm flex-col items-center text-center" role="status" aria-live="polite">
+        <div className="relative mb-7 flex h-24 w-24 items-center justify-center rounded-[2rem] border border-white/15 bg-white/[0.08] shadow-2xl shadow-violet-950/50 backdrop-blur-xl">
+          <div className="absolute inset-2 rounded-[1.5rem] border border-fuchsia-300/20" />
+          <Sparkles className="h-9 w-9 text-fuchsia-200" strokeWidth={1.7} />
+          <span className="absolute -bottom-2 -left-2 h-5 w-5 animate-ping rounded-full bg-fuchsia-400/40" />
+          <span className="absolute -bottom-2 -left-2 h-5 w-5 rounded-full border-4 border-[#090b18] bg-fuchsia-400" />
+        </div>
+
+        <p className="mb-2 text-xs font-bold uppercase tracking-[0.35em] text-fuchsia-200/80" dir="ltr">
+          ConnectLive
+        </p>
+        <h1 className="mb-3 text-2xl font-extrabold tracking-tight text-white">نجهّز تجربتك</h1>
+        <p className="mb-8 text-sm text-slate-300">لحظات قليلة ونكون معك...</p>
+
+        <div className="mb-4 h-1.5 w-full max-w-[230px] overflow-hidden rounded-full bg-white/10">
+          <div className="h-full w-2/5 animate-[loading-bar_1.6s_ease-in-out_infinite] rounded-full bg-gradient-to-l from-fuchsia-400 via-violet-400 to-indigo-400" />
+        </div>
+        <span className="text-xs font-semibold text-slate-400">جاري التحميل...</span>
       </div>
     </main>
   );

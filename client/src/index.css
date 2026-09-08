@@ -1,4 +1,16 @@
 @import "tailwindcss";
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(180%);
+  }
+  50% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-180%);
+  }
+}
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
