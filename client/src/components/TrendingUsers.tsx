@@ -185,6 +185,8 @@ export default function TrendingUsers() {
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
     retry: false,
+    // Keep the last successful list visible while a background refresh runs.
+    placeholderData: previousUsers => previousUsers,
   });
 
   // Auto-detect and save country for the current logged-in user once per session
