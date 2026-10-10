@@ -77,6 +77,8 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.pending": "طلب الصداقة بانتظار الرد",
     "profile.loading": "جاري التحميل...",
     "profile.not_found": "لم يُعثر على الملف الشخصي",
+    "profile.load_error": "تعذّر تحميل الملف الشخصي. تحقق من الاتصال وحاول مجددًا.",
+    "profile.retry": "إعادة المحاولة",
 
     // Store
     "store.title": "متجر ConnectLive",
@@ -218,6 +220,8 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.pending": "Request Pending",
     "profile.loading": "Loading...",
     "profile.not_found": "Profile Not Found",
+    "profile.load_error": "Couldn't load this profile. Check your connection and try again.",
+    "profile.retry": "Retry",
 
     // Store
     "store.title": "ConnectLive Store",
@@ -359,6 +363,8 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.pending": "Demande en attente",
     "profile.loading": "Chargement...",
     "profile.not_found": "Profil non trouvé",
+    "profile.load_error": "Impossible de charger ce profil. Vérifiez votre connexion et réessayez.",
+    "profile.retry": "Réessayer",
 
     // Store
     "store.title": "Boutique ConnectLive",
