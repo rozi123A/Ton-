@@ -438,7 +438,7 @@ export async function getRecentUsers(limit = 20) {
   const db = await getDb();
   if (!db) {
     console.warn('[Database] Cannot get recent users: database not available');
-    return [];
+    throw new Error('Database unavailable while loading recent users');
   }
 
   try {
@@ -462,7 +462,7 @@ export async function getRecentUsers(limit = 20) {
       .limit(limit);
   } catch (error) {
     console.error('[Database] Failed to get recent users:', error);
-    return [];
+    throw error;
   }
 }
 
