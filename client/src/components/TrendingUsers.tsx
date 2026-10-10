@@ -27,15 +27,6 @@ const COUNTRY_NAMES: Record<string, string> = {
   CA:'كندا', AU:'أستراليا', RU:'روسيا', CN:'الصين',
 };
 
-const MOCK_USERS = [
-  { id: -1, name: "سارة",  age: 22, online: true, isVerified: false, profileViews: 1250, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sara",     country: null },
-  { id: -2, name: "احمد",  age: 25, online: true, isVerified: false, profileViews: 980,  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ahmed",    country: null },
-  { id: -3, name: "فاطمة", age: 20, online: true, isVerified: false, profileViews: 1540, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima",   country: null },
-  { id: -4, name: "محمد",  age: 23, online: true, isVerified: false, profileViews: 1120, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mohammed", country: null },
-  { id: -5, name: "ليلى",  age: 21, online: true, isVerified: false, profileViews: 1890, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Layla",    country: null },
-  { id: -6, name: "علي",   age: 24, online: true, isVerified: false, profileViews: 2100, avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ali",      country: null },
-];
-
 type DisplayUser = {
   id: number;
   name: string;
@@ -214,12 +205,11 @@ export default function TrendingUsers() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
-  const hasRealUsers = realUsers && realUsers.length > 0;
-  // Show mock users immediately, don't block on pending state
-  const showRealUsers = hasRealUsers && !isError;
+  const hasRealUsers = Boolean(realUsers?.length);
+  const users = realUsers ?? [];
 
-  const displayUsers: DisplayUser[] = showRealUsers
-    ? realUsers.map(u => ({
+  const displayUsers: DisplayUser[] = hasRealUsers && !isError
+    ? users.map(u => ({
         id: u.id,
         name: u.name || 'مستخدم',
         age: u.age ?? 0,
@@ -230,7 +220,7 @@ export default function TrendingUsers() {
         country: u.country ?? null,
         hasStory: activeStories?.some(s => s.userId === u.id),
       }))
-    : MOCK_USERS;
+    : [];
 
   const currentStories = activeStories?.filter(s => s.userId === activeStoryUserId) || [];
 
@@ -243,12 +233,23 @@ export default function TrendingUsers() {
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
             {hasRealUsers
-              ? `${realUsers.length} ${t('home.stats_users')} — ${t('home.hero_title')}`
-              : t('home.hero_desc')}
+              ? `${users.length} ${t('home.stats_users')} — ${t('home.hero_title')}`
+              : isPending
+                ? 'جاري تحميل المستخدمين الحقيقيين...'
+                : 'لم يتم العثور على مستخدمين متصلين حالياً'}
           </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isPending && !realUsers && Array.from({ length: 6 }).map((_, index) => (
+            <div key={`user-skeleton-${index}`} className="h-[26rem] animate-pulse rounded-[2.5rem] border border-gray-100 bg-white p-6 shadow-sm">
+              <div className="mx-auto mt-3 h-24 w-24 rounded-full bg-gray-200" />
+              <div className="mx-auto mt-8 h-5 w-28 rounded-full bg-gray-200" />
+              <div className="mx-auto mt-10 h-4 w-20 rounded-full bg-gray-100" />
+              <div className="mx-auto mt-10 h-4 w-40 rounded-full bg-gray-100" />
+              <div className="mt-12 h-12 rounded-2xl bg-gray-200" />
+            </div>
+          ))}
           {displayUsers.map((user) => (
             <UserCard 
               key={user.id} 
@@ -262,7 +263,7 @@ export default function TrendingUsers() {
           ))}
         </div>
 
-        {hasRealUsers && realUsers.length >= 20 && (
+        {hasRealUsers && users.length >= 20 && (
           <div className="text-center mt-12">
             <button className="inline-block bg-white border-2 border-purple-600 text-purple-600 font-bold py-3 px-8 rounded-full hover:bg-purple-50 transition-all duration-300">
               عرض المزيد من المستخدمين

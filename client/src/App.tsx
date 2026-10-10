@@ -84,18 +84,15 @@ function PageLoading() {
       className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070b18] px-5 text-white"
       dir="rtl"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(99,102,241,0.22),transparent_32%),radial-gradient(circle_at_85%_80%,rgba(217,70,239,0.2),transparent_34%)]" />
-      <div className="pointer-events-none absolute -right-32 top-[-8rem] h-[34rem] w-[34rem] rounded-full border border-fuchsia-300/10 bg-fuchsia-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-48 -left-32 h-[32rem] w-[32rem] rounded-full border border-cyan-300/10 bg-cyan-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:42px_42px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(99,102,241,0.18),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(217,70,239,0.14),transparent_32%)]" />
 
       <div
-        className="relative w-full max-w-[23rem] overflow-hidden rounded-[2rem] border border-white/15 bg-white/[0.07] p-7 text-center shadow-[0_24px_90px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
+        className="relative w-full max-w-[23rem] overflow-hidden rounded-[2rem] border border-white/15 bg-[#101628]/95 p-7 text-center shadow-[0_18px_50px_rgba(0,0,0,0.35)]"
         role="status"
         aria-live="polite"
       >
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/80 to-transparent" />
-        <div className="mx-auto mb-6 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-[1.4rem] border border-fuchsia-300/30 bg-gradient-to-br from-fuchsia-500 to-violet-600 shadow-[0_0_35px_rgba(217,70,239,0.42)]">
+        <div className="mx-auto mb-6 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-[1.4rem] border border-fuchsia-300/30 bg-gradient-to-br from-fuchsia-500 to-violet-600 shadow-[0_0_22px_rgba(217,70,239,0.3)]">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#090d1b]">
             <Video className="h-6 w-6 text-fuchsia-300" strokeWidth={2.4} />
           </div>
@@ -108,7 +105,7 @@ function PageLoading() {
         <p className="mx-auto mb-7 max-w-[16rem] text-sm leading-6 text-slate-300">نجهّز لك اتصالاً آمناً لتلتقي بأشخاص جدد من كل مكان</p>
 
         <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-0 animate-[loading-progress_5s_linear_forwards] rounded-full bg-gradient-to-l from-cyan-300 via-white to-fuchsia-400 shadow-[0_0_16px_rgba(217,70,239,0.9)]" />
+          <div className="h-full w-0 animate-[loading-progress_1.2s_linear_forwards] rounded-full bg-gradient-to-l from-cyan-300 via-white to-fuchsia-400 shadow-[0_0_10px_rgba(217,70,239,0.65)]" />
         </div>
 
         <div className="mb-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-300">
