@@ -144,15 +144,15 @@ export default function Hero() {
             <div className="flex flex-col sm:flex-row gap-6 justify-center text-white/70 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 bg-green-400 rounded-full" />
-                <span>تحقق بالذكاء الاصطناعي</span>
+                <span>{t('home.badge_ai_verification')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 bg-green-400 rounded-full" />
-                <span>بدون تسجيل مطلوب</span>
+                <span>{t('home.badge_no_signup')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 bg-green-400 rounded-full" />
-                <span>اتصالات فورية</span>
+                <span>{t('home.badge_instant_connections')}</span>
               </div>
             </div>
           </>
