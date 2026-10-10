@@ -13,7 +13,12 @@ interface UserProfileModalProps {
 export default function UserProfileModal({ userId, onClose }: UserProfileModalProps) {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const { data: profile, isLoading } = trpc.users.getPublicProfile.useQuery(userId, {
+  const {
+    data: profile,
+    isLoading,
+    isError,
+    refetch,
+  } = trpc.users.getPublicProfile.useQuery(userId, {
     enabled: userId > 0,
   });
   const { data: stories = [] } = trpc.stories.getPublicUserStories.useQuery(
@@ -38,6 +43,29 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
         <div className="bg-gray-900 rounded-3xl p-8 flex items-center gap-3 text-white">
           <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
           {t('profile.loading')}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError && !profile) {
+    return (
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <div
+          className="bg-gray-900 rounded-3xl p-8 text-white text-center max-w-sm w-full"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <p className="text-white/70 mb-5">{t('profile.load_error')}</p>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="rounded-xl bg-purple-600 px-5 py-2.5 font-semibold hover:bg-purple-500 transition-colors"
+          >
+            {t('profile.retry')}
+          </button>
         </div>
       </div>
     );
