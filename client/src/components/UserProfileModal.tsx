@@ -8,9 +8,21 @@ import VerifiedBadge from '@/components/VerifiedBadge';
 interface UserProfileModalProps {
   userId: number;
   onClose: () => void;
+  initialProfile?: {
+    id: number;
+    name: string | null;
+    age: number | null;
+    gender: 'male' | 'female' | 'other' | null;
+    avatar: string | null;
+    bio?: string | null;
+    isPremium?: boolean;
+    isVerified: boolean;
+    isOnline: boolean;
+    lastSeen?: Date | null;
+  };
 }
 
-export default function UserProfileModal({ userId, onClose }: UserProfileModalProps) {
+export default function UserProfileModal({ userId, onClose, initialProfile }: UserProfileModalProps) {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const {
@@ -20,6 +32,11 @@ export default function UserProfileModal({ userId, onClose }: UserProfileModalPr
     refetch,
   } = trpc.users.getPublicProfile.useQuery(userId, {
     enabled: userId > 0,
+    // Draw the card data immediately and refresh missing fields in the
+    // background instead of blocking the whole modal on the DB round trip.
+    initialData: initialProfile as any,
+    initialDataUpdatedAt: 0,
+    staleTime: 30_000,
   });
   const { data: stories = [] } = trpc.stories.getPublicUserStories.useQuery(
     { userId },

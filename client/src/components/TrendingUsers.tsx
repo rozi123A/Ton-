@@ -49,13 +49,17 @@ type DisplayUser = {
 
 function UserCard({ user, onViewProfile, onOpenStory }: { 
   user: DisplayUser; 
-  onViewProfile?: (id: number) => void;
+  onViewProfile?: (id: number, user: DisplayUser) => void;
   onOpenStory?: (userId: number) => void;
 }) {
   const { t: translate } = useTranslation(); const t = (key: string) => translate(key);
   const cardRef = useRef<HTMLDivElement>(null);
   const viewedRef = useRef(false);
   const recordView = trpc.users.recordView.useMutation();
+  const utils = trpc.useUtils();
+  const prefetchProfile = () => {
+    if (user.id > 0) void utils.users.getPublicProfile.prefetch(user.id, { staleTime: 30_000 });
+  };
 
   useEffect(() => {
     if (user.id < 0) return;
@@ -93,9 +97,12 @@ function UserCard({ user, onViewProfile, onOpenStory }: {
             if (user.hasStory && onOpenStory) {
               onOpenStory(user.id);
             } else if (user.id > 0 && onViewProfile) {
-              onViewProfile(user.id);
+              onViewProfile(user.id, user);
             }
           }}
+          onMouseEnter={prefetchProfile}
+          onFocus={prefetchProfile}
+          onTouchStart={prefetchProfile}
           title={user.hasStory ? "شاهد القصة" : (user.id > 0 ? t('profile.view_profile') || "View Profile" : undefined)}
         >
           <div className={`rounded-full p-1 ${user.hasStory ? 'bg-gradient-to-tr from-purple-600 via-pink-500 to-yellow-400 animate-gradient-xy' : ''}`}>
@@ -119,7 +126,9 @@ function UserCard({ user, onViewProfile, onOpenStory }: {
 
         <h3
           className={`font-bold text-lg text-gray-900 mb-1 ${user.id > 0 ? 'cursor-pointer hover:text-purple-600 transition-colors' : ''}`}
-          onClick={() => user.id > 0 && onViewProfile?.(user.id)}
+          onClick={() => user.id > 0 && onViewProfile?.(user.id, user)}
+          onMouseEnter={prefetchProfile}
+          onFocus={prefetchProfile}
         >
           <span className="inline-flex items-center gap-1">
             {user.name}
@@ -169,6 +178,7 @@ export default function TrendingUsers() {
   const { user: currentUser } = useAuth();
   const utils = trpc.useUtils();
   const [viewProfileUserId, setViewProfileUserId] = useState<number | null>(null);
+  const [viewProfilePreview, setViewProfilePreview] = useState<DisplayUser | null>(null);
   const [activeStoryUserId, setActiveStoryUserId] = useState<number | null>(null);
 
   const { data: activeStories } = trpc.stories.getActive.useQuery(undefined, {
@@ -241,7 +251,10 @@ export default function TrendingUsers() {
             <UserCard 
               key={user.id} 
               user={user} 
-              onViewProfile={setViewProfileUserId} 
+              onViewProfile={(id, user) => {
+                setViewProfileUserId(id);
+                setViewProfilePreview(user);
+              }}
               onOpenStory={setActiveStoryUserId}
             />
           ))}
@@ -259,7 +272,19 @@ export default function TrendingUsers() {
       {viewProfileUserId && (
         <UserProfileModal
           userId={viewProfileUserId}
-          onClose={() => setViewProfileUserId(null)}
+          initialProfile={viewProfilePreview ? {
+            id: viewProfilePreview.id,
+            name: viewProfilePreview.name,
+            age: viewProfilePreview.age,
+            gender: null,
+            avatar: viewProfilePreview.avatar,
+            isVerified: viewProfilePreview.isVerified,
+            isOnline: viewProfilePreview.online,
+          } : undefined}
+          onClose={() => {
+            setViewProfileUserId(null);
+            setViewProfilePreview(null);
+          }}
         />
       )}
 
