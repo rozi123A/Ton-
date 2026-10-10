@@ -177,8 +177,9 @@ export default function TrendingUsers() {
   });
 
   const { data: realUsers, isPending, isError } = trpc.users.getRecent.useQuery(20, {
-    staleTime: 0,
-    refetchInterval: 1000,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     retry: false,
   });
