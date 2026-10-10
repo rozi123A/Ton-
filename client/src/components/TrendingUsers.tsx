@@ -1,6 +1,7 @@
 import { Heart, UserCheck, Loader2, Play } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import UserProfileModal from "@/components/UserProfileModal";
@@ -53,6 +54,7 @@ function UserCard({ user, onViewProfile, onOpenStory }: {
   onOpenStory?: (userId: number) => void;
 }) {
   const { t: translate } = useTranslation(); const t = (key: string) => translate(key);
+  const [, setLocation] = useLocation();
   const cardRef = useRef<HTMLDivElement>(null);
   const viewedRef = useRef(false);
   const recordView = trpc.users.recordView.useMutation();
@@ -162,7 +164,7 @@ function UserCard({ user, onViewProfile, onOpenStory }: {
         </div>
 
         <button
-          onClick={() => window.location.href = '/chat'}
+          onClick={() => setLocation('/chat')}
           className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-4 rounded-2xl hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-purple-200 group-hover:shadow-purple-300"
         >
           {t('nav.chat')}
@@ -182,15 +184,15 @@ export default function TrendingUsers() {
   const [activeStoryUserId, setActiveStoryUserId] = useState<number | null>(null);
 
   const { data: activeStories } = trpc.stories.getActive.useQuery(undefined, {
-    refetchInterval: 5000, // Refresh every 5s for better real-time feel
-    staleTime: 0,
+    refetchInterval: 10_000,
+    staleTime: 5_000,
   });
 
   const { data: realUsers, isPending, isError } = trpc.users.getRecent.useQuery(20, {
-    staleTime: 10_000,
-    refetchInterval: 15_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     retry: false,
   });
 

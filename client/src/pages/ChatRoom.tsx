@@ -145,13 +145,13 @@ export default function ChatRoom() {
   const [showConvertModal, setShowConvertModal] = useState(false);
   const { data: dbFriends, refetch: refetchFriends } = trpc.social.getFriends.useQuery(undefined, {
     enabled: !!user,
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: false,
   });
   const { data: incomingFriendRequests } = trpc.social.getIncomingRequests.useQuery(undefined, {
     enabled: !!user,
-    refetchInterval: 15_000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: false,
   });
   const { data: peerProfile } = trpc.users.getPublicProfile.useQuery(peerUserId ?? 0, {
     enabled: !!peerUserId,
@@ -159,7 +159,7 @@ export default function ChatRoom() {
   });
   const { data: unreadDmData, refetch: refetchUnread } = trpc.messages.getUnreadCount.useQuery(undefined, {
     enabled: !!user,
-    refetchInterval: 8000,
+    refetchInterval: 15_000,
   });
   const unreadDmCount = unreadDmData?.count ?? 0;
   const incomingFriendRequestCount = incomingFriendRequests?.length ?? 0;
@@ -251,7 +251,7 @@ export default function ChatRoom() {
 
   const bonusStatusQuery = trpc.users.getBonusStatus.useQuery(undefined, { 
     enabled: !!user,
-    refetchInterval: 30000 
+    refetchInterval: 60_000,
   });
 
   const claimBonus = trpc.users.claimDailyBonus.useMutation({
@@ -275,7 +275,7 @@ export default function ChatRoom() {
 
   const { data: notifications } = trpc.notifications.get.useQuery(undefined, { 
     enabled: !!user,
-    refetchInterval: 10000 
+    refetchInterval: 30_000,
   });
 
   useEffect(() => {

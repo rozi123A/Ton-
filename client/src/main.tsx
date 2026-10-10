@@ -35,7 +35,20 @@ import "./index.css";
 })();
 // ────────────────────────────────────────────────────────────────────────────
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Reuse recent data across route changes and component remounts.
+      staleTime: 30_000,
+      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: 1,
+      retryDelay: attempt => Math.min(500 * 2 ** attempt, 2_000),
+    },
+    mutations: { retry: false },
+  },
+});
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
