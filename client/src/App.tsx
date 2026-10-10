@@ -7,7 +7,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
-import { ShieldCheck, Video } from "lucide-react";
+import { Globe2, ShieldCheck, Sparkles, Video } from "lucide-react";
 
 // Keep the first page small. Heavy pages such as ChatRoom and Admin are loaded
 // only when the visitor actually navigates to them.
@@ -79,39 +79,49 @@ const NotFound = lazyWithDeployRecovery(() => import("./pages/NotFound"), "not-f
 function PageLoading() {
   return (
     <main
-      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-[#48239a] via-[#c13fc9] to-[#13b5dc] px-6 text-white"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070b18] px-5 text-white"
       dir="rtl"
     >
-      <div className="pointer-events-none absolute -right-32 -top-24 h-96 w-96 rounded-full bg-fuchsia-300/25 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -left-24 h-[28rem] w-[28rem] rounded-full bg-cyan-200/25 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(99,102,241,0.22),transparent_32%),radial-gradient(circle_at_85%_80%,rgba(217,70,239,0.2),transparent_34%)]" />
+      <div className="pointer-events-none absolute -right-32 top-[-8rem] h-[34rem] w-[34rem] rounded-full border border-fuchsia-300/10 bg-fuchsia-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-48 -left-32 h-[32rem] w-[32rem] rounded-full border border-cyan-300/10 bg-cyan-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.12] [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:42px_42px] [mask-image:linear-gradient(to_bottom,black,transparent_80%)]" />
 
       <div
-        className="relative w-full max-w-sm rounded-[2rem] border border-white/35 bg-white/[0.16] p-7 text-center shadow-2xl shadow-violet-950/30 backdrop-blur-2xl"
+        className="relative w-full max-w-[23rem] overflow-hidden rounded-[2rem] border border-white/15 bg-white/[0.07] p-7 text-center shadow-[0_24px_90px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
         role="status"
         aria-live="polite"
       >
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-xl shadow-violet-950/20">
-          <Video className="h-8 w-8 text-[#a32ac2]" strokeWidth={2.2} />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/80 to-transparent" />
+        <div className="mx-auto mb-6 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-[1.4rem] border border-fuchsia-300/30 bg-gradient-to-br from-fuchsia-500 to-violet-600 shadow-[0_0_35px_rgba(217,70,239,0.42)]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#090d1b]">
+            <Video className="h-6 w-6 text-fuchsia-300" strokeWidth={2.4} />
+          </div>
         </div>
 
-        <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.32em] text-white/80" dir="ltr">
+        <p className="mb-2 text-[0.7rem] font-black uppercase tracking-[0.42em] text-fuchsia-200/80" dir="ltr">
           ConnectLive
         </p>
-        <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-white">نجهّز اتصالك</h1>
-        <p className="mb-7 text-sm leading-6 text-white/80">لحظات قليلة وتبدأ رحلتك مع أشخاص جدد</p>
+        <h1 className="mb-2 text-[1.7rem] font-black tracking-tight text-white">العالم بانتظارك</h1>
+        <p className="mx-auto mb-7 max-w-[16rem] text-sm leading-6 text-slate-300">نجهّز لك اتصالاً آمناً لتلتقي بأشخاص جدد من كل مكان</p>
 
-        <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-white/25">
-          <div className="h-full w-0 animate-[loading-progress_5s_linear_forwards] rounded-full bg-gradient-to-l from-cyan-100 via-white to-fuchsia-100 shadow-[0_0_14px_rgba(255,255,255,0.7)]" />
+        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="h-full w-0 animate-[loading-progress_5s_linear_forwards] rounded-full bg-gradient-to-l from-cyan-300 via-white to-fuchsia-400 shadow-[0_0_16px_rgba(217,70,239,0.9)]" />
         </div>
 
-        <div className="flex items-center justify-center gap-2 text-xs font-semibold text-white/85">
+        <div className="mb-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-300">
           <ShieldCheck className="h-4 w-4" />
-          <span>جاري التحميل</span>
+          <span>اتصال خاص وآمن</span>
           <span className="flex gap-1" aria-hidden="true">
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white [animation-delay:-0.3s]" />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white [animation-delay:-0.15s]" />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-white" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-300 [animation-delay:-0.3s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-300 [animation-delay:-0.15s]" />
+            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-300" />
           </span>
+        </div>
+        <div className="flex items-center justify-center gap-5 border-t border-white/10 pt-4 text-[0.65rem] font-bold text-slate-400">
+          <span className="flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5 text-cyan-300" /> عالمي</span>
+          <span className="flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-fuchsia-300" /> فوري</span>
+          <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-300" /> موثوق</span>
         </div>
       </div>
     </main>
