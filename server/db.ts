@@ -848,8 +848,29 @@ export async function upgradeToPremium(userId: number): Promise<void> {
 }
 
 // ── Social System Functions ──────────────────────────────────────────────────
+type PublicProfile = {
+  id: number;
+  name: string | null;
+  age: number | null;
+  gender: 'male' | 'female' | 'other' | null;
+  avatar: string | null;
+  bio: string | null;
+  isPremium: boolean;
+  isVerified: boolean;
+  isOnline: boolean;
+  lastSeen: Date;
+};
+
+// Public profiles change infrequently. Keep a short per-process cache so
+// repeated opens do not require another database round trip.
+const publicProfileCache = new Map<number, { value: PublicProfile; expiresAt: number }>();
+const PUBLIC_PROFILE_CACHE_TTL_MS = 30_000;
 
 export async function getUserPublicProfile(userId: number) {
+  const cached = publicProfileCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  if (cached) publicProfileCache.delete(userId);
+
   const dbConn = await getDb();
   if (!dbConn) return null;
   try {
@@ -875,7 +896,7 @@ export async function getUserPublicProfile(userId: number) {
     // الملف العام يعرض بطاقة المستخدم ومحتواه فقط.
     const isPremium = profile.isPremium &&
       (!profile.premiumExpiresAt || profile.premiumExpiresAt.getTime() > Date.now());
-    return {
+    const result: PublicProfile = {
       id: profile.id,
       name: profile.name,
       age: profile.age,
@@ -887,6 +908,8 @@ export async function getUserPublicProfile(userId: number) {
       isOnline: profile.isOnline && profile.lastSeen.getTime() > Date.now() - 2 * 60 * 1000,
       lastSeen: profile.lastSeen,
     };
+    publicProfileCache.set(userId, { value: result, expiresAt: Date.now() + PUBLIC_PROFILE_CACHE_TTL_MS });
+    return result;
   } catch (err) {
     console.error('[Database] getUserPublicProfile failed:', err);
     return null;
