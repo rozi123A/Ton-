@@ -68,7 +68,9 @@ function lazyWithDeployRecovery<T extends ComponentType<any>>(
   });
 }
 
-const Home = lazyWithDeployRecovery(() => import("./pages/Home"), "home", 5000);
+// Never hold the homepage behind an artificial timer; render as soon as its
+// chunk is ready and let the page show its own lightweight loading states.
+const Home = lazyWithDeployRecovery(() => import("./pages/Home"), "home");
 const Login = lazyWithDeployRecovery(() => import("./pages/Login"), "login");
 const ChatRoom = lazyWithDeployRecovery(() => import("./pages/ChatRoom"), "chat");
 const Profile = lazyWithDeployRecovery(() => import("./pages/Profile"), "profile");

@@ -1,5 +1,6 @@
 import { Mail, Phone, MapPin, Video } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
+import { useLocation } from "wouter";
 
 /**
  * Footer Component
@@ -8,6 +9,7 @@ import { useTranslation } from "@/contexts/LanguageContext";
  */
 
 export default function Footer() {
+  const [, setLocation] = useLocation();
   const { t: translate } = useTranslation(); const t = (key: string) => translate(key);
   return (
     <footer className="bg-gradient-to-b from-gray-900 to-black text-white py-16">
@@ -61,7 +63,7 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <button onClick={() => window.location.href = '/store'} className="text-gray-400 hover:text-purple-400 transition-colors">
+                <button onClick={() => setLocation('/store')} className="text-gray-400 hover:text-purple-400 transition-colors">
                   {t('nav.store')}
                 </button>
               </li>
