@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
-@keyframes loading-progress {
+@keyframes loading-sweep {
   0% {
-    width: 0%;
+    transform: translateX(300%);
   }
   100% {
-    width: 100%;
+    transform: translateX(-300%);
   }
 }
 @import "tw-animate-css";

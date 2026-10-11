@@ -81,47 +81,87 @@ const NotFound = lazyWithDeployRecovery(() => import("./pages/NotFound"), "not-f
 function PageLoading() {
   return (
     <main
-      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070b18] px-5 text-white"
+      className="relative isolate flex min-h-screen min-h-[100svh] items-center justify-center overflow-hidden bg-[#070b18] px-5 py-7 text-white"
       dir="rtl"
+      aria-busy="true"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(99,102,241,0.18),transparent_30%),radial-gradient(circle_at_85%_80%,rgba(217,70,239,0.14),transparent_32%)]" />
-
       <div
-        className="relative w-full max-w-[23rem] overflow-hidden rounded-[2rem] border border-white/15 bg-[#101628]/95 p-7 text-center shadow-[0_18px_50px_rgba(0,0,0,0.35)]"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/80 to-transparent" />
-        <div className="mx-auto mb-6 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-[1.4rem] border border-fuchsia-300/30 bg-gradient-to-br from-fuchsia-500 to-violet-600 shadow-[0_0_22px_rgba(217,70,239,0.3)]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#090d1b]">
-            <Video className="h-6 w-6 text-fuchsia-300" strokeWidth={2.4} />
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 50% 18%, rgba(124,58,237,0.25), transparent 38%), radial-gradient(circle at 10% 78%, rgba(8,145,178,0.15), transparent 33%), radial-gradient(circle at 90% 82%, rgba(217,70,239,0.12), transparent 30%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-25"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+          backgroundSize: "42px 42px",
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-[25rem]">
+        <section
+          className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0c1224]/80 px-6 py-8 text-center shadow-[0_28px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:px-10 sm:py-10"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/70 to-transparent" />
+          <div aria-hidden="true" className="pointer-events-none absolute -top-32 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-violet-500/10 blur-3xl" />
+
+          <header className="relative mb-5 flex items-center justify-center gap-3" dir="ltr">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-violet-600 shadow-[0_8px_30px_rgba(168,85,247,0.28)]">
+              <Video className="h-6 w-6 text-white" strokeWidth={2.2} />
+            </div>
+            <div className="text-left">
+              <p className="font-display text-xl font-black tracking-tight text-white">ConnectLive</p>
+              <p className="text-[9px] font-bold tracking-[0.28em] text-cyan-100/60">MEET THE WORLD</p>
+            </div>
+          </header>
+
+          <div className="relative mx-auto mb-5 flex h-40 w-40 items-center justify-center" aria-hidden="true">
+            <div className="absolute inset-0 rounded-full border border-cyan-100/10 animate-[spin_24s_linear_infinite] motion-reduce:animate-none" />
+            <div className="absolute inset-[14px] rounded-full border border-dashed border-fuchsia-200/20 animate-[spin_32s_linear_infinite_reverse] motion-reduce:animate-none" />
+            <span className="absolute left-[15px] top-[29px] h-2.5 w-2.5 rounded-full bg-cyan-200 shadow-[0_0_18px_rgba(103,232,249,0.9)] animate-pulse motion-reduce:animate-none" />
+            <span className="absolute bottom-[30px] right-[11px] h-2 w-2 rounded-full bg-fuchsia-300 shadow-[0_0_16px_rgba(240,171,252,0.9)] animate-pulse [animation-delay:500ms] motion-reduce:animate-none" />
+            <div className="relative flex h-[6.5rem] w-[6.5rem] items-center justify-center rounded-full border border-white/15 bg-[radial-gradient(circle_at_30%_20%,rgba(103,232,249,0.25),transparent_42%),linear-gradient(135deg,#231b4f,#0a3447)] shadow-[0_0_55px_rgba(34,211,238,0.16)]">
+              <div className="absolute inset-2 rounded-full border border-white/10" />
+              <Globe2 className="h-12 w-12 text-cyan-50/90" strokeWidth={1.35} />
+              <span className="absolute left-5 right-5 top-1/2 h-px bg-gradient-to-r from-transparent via-cyan-100/45 to-transparent" />
+            </div>
+            <span className="absolute bottom-1 right-[18px] flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-[#121a31] text-fuchsia-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+              <Video className="h-5 w-5" strokeWidth={1.9} />
+            </span>
           </div>
-        </div>
 
-        <p className="mb-2 text-[0.7rem] font-black uppercase tracking-[0.42em] text-fuchsia-200/80" dir="ltr">
-          ConnectLive
-        </p>
-        <h1 className="mb-2 text-[1.7rem] font-black tracking-tight text-white">العالم بانتظارك</h1>
-        <p className="mx-auto mb-7 max-w-[16rem] text-sm leading-6 text-slate-300">نجهّز لك اتصالاً آمناً لتلتقي بأشخاص جدد من كل مكان</p>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-cyan-100/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold text-cyan-100/85">
+            <Sparkles className="h-3.5 w-3.5 text-fuchsia-300" />
+            <span>مساحة تجمع العالم</span>
+          </div>
+          <h1 className="font-display text-3xl font-black tracking-tight text-white sm:text-4xl">العالم بانتظارك</h1>
+          <p className="mx-auto mt-3 max-w-[18rem] text-sm leading-7 text-slate-300/80">
+            نجهّز لك اتصالًا آمنًا لتلتقي بأشخاص جدد من كل مكان.
+          </p>
 
-        <div className="mb-3 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-          <div className="h-full w-0 animate-[loading-progress_1.2s_linear_forwards] rounded-full bg-gradient-to-l from-cyan-300 via-white to-fuchsia-400 shadow-[0_0_10px_rgba(217,70,239,0.65)]" />
-        </div>
-
-        <div className="mb-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-300">
-          <ShieldCheck className="h-4 w-4" />
-          <span>اتصال خاص وآمن</span>
-          <span className="flex gap-1" aria-hidden="true">
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-300 [animation-delay:-0.3s]" />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-300 [animation-delay:-0.15s]" />
-            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-fuchsia-300" />
-          </span>
-        </div>
-        <div className="flex items-center justify-center gap-5 border-t border-white/10 pt-4 text-[0.65rem] font-bold text-slate-400">
-          <span className="flex items-center gap-1.5"><Globe2 className="h-3.5 w-3.5 text-cyan-300" /> عالمي</span>
-          <span className="flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-fuchsia-300" /> فوري</span>
-          <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-300" /> موثوق</span>
-        </div>
+          <div className="mx-auto mt-7 max-w-xs">
+            <div
+              className="h-1.5 overflow-hidden rounded-full bg-white/10"
+              role="progressbar"
+              aria-label="جارٍ تجهيز التجربة"
+              aria-valuetext="جارٍ التحميل"
+            >
+              <div className="h-full w-1/3 rounded-full bg-gradient-to-l from-cyan-300 via-white to-fuchsia-400 shadow-[0_0_12px_rgba(103,232,249,0.55)] animate-[loading-sweep_1.6s_ease-in-out_infinite] motion-reduce:animate-none motion-reduce:translate-x-0" />
+            </div>
+            <div className="mt-4 flex items-center justify-center gap-2 text-xs font-medium text-slate-300/70">
+              <ShieldCheck className="h-4 w-4 text-emerald-300/90" />
+              <span>خصوصيتك وتجربتك أولويتنا</span>
+            </div>
+          </div>
+        </section>
+        <p className="mt-5 text-center text-xs font-medium text-white/40">لحظات ونبدأ</p>
       </div>
     </main>
   );
