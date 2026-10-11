@@ -8,7 +8,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { ShieldCheck, Sparkles, Video } from "lucide-react";
-import EarthGlobe from "./components/EarthGlobe";
 
 // Keep the first page small. Heavy pages such as ChatRoom and Admin are loaded
 // only when the visitor actually navigates to them.
@@ -78,8 +77,16 @@ const Profile = lazyWithDeployRecovery(() => import("./pages/Profile"), "profile
 const Store = lazyWithDeployRecovery(() => import("./pages/Store"), "store");
 const Admin = lazyWithDeployRecovery(() => import("@/pages/Admin"), "admin");
 const NotFound = lazyWithDeployRecovery(() => import("./pages/NotFound"), "not-found");
+const LoadingEarthGlobe = lazy(() => import("./components/EarthGlobe"));
 
 function PageLoading() {
+  const [showInteractiveGlobe, setShowInteractiveGlobe] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowInteractiveGlobe(true), 800);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   return (
     <main
       className="relative isolate flex min-h-screen min-h-[100svh] items-center justify-center overflow-hidden bg-[#070b18] px-5 py-7 text-white"
@@ -106,12 +113,12 @@ function PageLoading() {
 
       <div className="relative z-10 w-full max-w-[25rem]">
         <section
-          className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0c1224]/80 px-6 py-8 text-center shadow-[0_28px_100px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:px-10 sm:py-10"
+          className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0c1224]/95 px-6 py-8 text-center shadow-[0_28px_80px_rgba(0,0,0,0.42)] sm:px-10 sm:py-10"
           role="status"
           aria-live="polite"
         >
           <div className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/70 to-transparent" />
-          <div aria-hidden="true" className="pointer-events-none absolute -top-32 left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-violet-500/10 blur-3xl" />
+          <div aria-hidden="true" className="pointer-events-none absolute -top-20 left-1/2 h-40 w-40 -translate-x-1/2 rounded-full bg-violet-500/[0.07]" />
 
           <header className="relative mb-5 flex items-center justify-center gap-3" dir="ltr">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-500 to-violet-600 shadow-[0_8px_30px_rgba(168,85,247,0.28)]">
@@ -132,7 +139,11 @@ function PageLoading() {
             <span className="absolute bottom-[30px] right-[11px] h-2 w-2 rounded-full bg-fuchsia-300 shadow-[0_0_16px_rgba(240,171,252,0.9)] animate-pulse [animation-delay:500ms] motion-reduce:animate-none" />
             <div className="relative flex h-[6.5rem] w-[6.5rem] items-center justify-center rounded-full border border-white/15 bg-[radial-gradient(circle_at_30%_20%,rgba(103,232,249,0.25),transparent_42%),linear-gradient(135deg,#231b4f,#0a3447)] shadow-[0_0_55px_rgba(34,211,238,0.16)] animate-[loading-globe-breathe_3s_ease-in-out_infinite] motion-reduce:animate-none">
               <div className="absolute inset-2 rounded-full border border-white/10" />
-              <EarthGlobe />
+              {showInteractiveGlobe && (
+                <Suspense fallback={null}>
+                  <LoadingEarthGlobe />
+                </Suspense>
+              )}
               <span className="absolute left-5 right-5 top-1/2 h-px bg-gradient-to-r from-transparent via-cyan-100/45 to-transparent" />
             </div>
             <span className="absolute bottom-1 right-[18px] flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-[#121a31] text-fuchsia-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)] animate-[loading-float_2.6s_ease-in-out_infinite] motion-reduce:animate-none">

@@ -19,11 +19,44 @@
     <title>ConnectLive - دردشة فيديو عشوائية حية</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet" />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&amp;family=Poppins:wght@400;500;600;700;800&amp;family=Lato:wght@400;700&amp;display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&amp;family=Poppins:wght@400;500;600;700;800&amp;family=Lato:wght@400;700&amp;display=swap" />
+    </noscript>
+    <style>
+      .boot-screen{position:fixed;inset:0;display:grid;place-items:center;overflow:hidden;padding:24px;background:radial-gradient(ellipse at 50% 18%,rgba(124,58,237,.16),transparent 42%),#070b18;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+      .boot-card{width:min(100%,400px);padding:32px 24px;text-align:center;border:1px solid rgba(255,255,255,.1);border-radius:32px;background:#0c1224;box-shadow:0 24px 72px rgba(0,0,0,.4)}
+      .boot-orb{position:relative;width:92px;height:92px;margin:0 auto 22px;border:1px solid rgba(255,255,255,.16);border-radius:50%;background:radial-gradient(circle at 32% 24%,rgba(165,243,252,.7),transparent 13%),radial-gradient(circle at 36% 30%,#2589a5,#173e69 55%,#0c1931 78%);box-shadow:0 0 32px rgba(34,211,238,.18)}
+      .boot-orb:after{position:absolute;inset:-8px;border:1px solid rgba(103,232,249,.25);border-radius:50%;content:"";animation:boot-spin 4s linear infinite}
+      .boot-orb span{position:absolute;inset:13px;border:1px solid rgba(255,255,255,.18);border-radius:50%}
+      .boot-eyebrow{display:inline-block;margin:0 0 12px;padding:6px 12px;border:1px solid rgba(103,232,249,.15);border-radius:999px;background:rgba(255,255,255,.04);color:#cffafe;font-size:12px;font-weight:700}
+      .boot-card h1{margin:0;color:#fff;font-size:28px;font-weight:900;letter-spacing:-.04em}
+      .boot-copy{max-width:290px;margin:10px auto 0;color:#cbd5e1;font-size:14px;line-height:1.9}
+      .boot-progress{height:5px;max-width:280px;margin:26px auto 0;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.1)}
+      .boot-progress span{display:block;width:36%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#67e8f9,#fff,#e879f9);animation:boot-sweep 1.5s ease-in-out infinite}
+      @keyframes boot-spin{to{transform:rotate(360deg)}}
+      @keyframes boot-sweep{0%{transform:translateX(300%)}100%{transform:translateX(-300%)}}
+      @media(prefers-reduced-motion:reduce){.boot-orb:after,.boot-progress span{animation:none}}
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="boot-screen" dir="rtl" aria-busy="true" aria-live="polite">
+        <section class="boot-card" role="status">
+          <div class="boot-orb" aria-hidden="true"><span></span></div>
+          <p class="boot-eyebrow">مساحة تجمع العالم</p>
+          <h1>العالم بانتظارك</h1>
+          <p class="boot-copy">نجهّز لك اتصالًا آمنًا لتلتقي بأشخاص جدد من كل مكان.</p>
+          <div class="boot-progress" aria-hidden="true"><span></span></div>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
     <script type="module">
       const analyticsEndpoint = "%VITE_ANALYTICS_ENDPOINT%";
