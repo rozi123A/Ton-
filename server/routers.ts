@@ -1285,9 +1285,8 @@ export const appRouter = router({
         }
 
         const existingStatus = await getFriendStatus(ctx.user.id, input.receiverId);
-        if (existingStatus === "friends" || existingStatus === "pending") {
-          return { success: true, status: existingStatus };
-        }
+        if (existingStatus === "friends") return { success: true, status: "friends" as const };
+        if (existingStatus === "pending") return { success: true, status: "pending" as const };
 
         try {
           await createFriendRequest(ctx.user.id, input.receiverId);
@@ -1307,8 +1306,16 @@ export const appRouter = router({
           title: 'طلب صداقة جديد',
           ts: Date.now(),
         } as const;
-        await createNotification(input.receiverId, notification);
-        sendUserNotification(String(input.receiverId), notification);
+        try {
+          await createNotification(input.receiverId, notification);
+        } catch (error) {
+          console.warn("[Social] Friend request saved, but notification persistence failed:", error);
+        }
+        try {
+          sendUserNotification(String(input.receiverId), notification);
+        } catch (error) {
+          console.warn("[Social] Friend request saved, but live notification failed:", error);
+        }
         void sendWebPushNotification(input.receiverId, notification).catch((error) => {
           console.warn("[Social] Web Push delivery failed:", error);
         });
@@ -1329,8 +1336,16 @@ export const appRouter = router({
           title: 'تم قبول طلب الصداقة',
           ts: Date.now(),
         } as const;
-        await createNotification(input.senderId, notification);
-        sendUserNotification(String(input.senderId), notification);
+        try {
+          await createNotification(input.senderId, notification);
+        } catch (error) {
+          console.warn("[Social] Friendship accepted, but notification persistence failed:", error);
+        }
+        try {
+          sendUserNotification(String(input.senderId), notification);
+        } catch (error) {
+          console.warn("[Social] Friendship accepted, but live notification failed:", error);
+        }
         void sendWebPushNotification(input.senderId, notification).catch((error) => {
           console.warn("[Social] Web Push delivery failed:", error);
         });
