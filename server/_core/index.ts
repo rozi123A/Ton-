@@ -334,7 +334,9 @@ function registerSignalingRoutes(app: express.Express) {
     }
 
     const keepAlive = setInterval(() => {
-      if (!res.writableEnded) res.write(": ping\n\n");
+      // EventSource ignores comment-only heartbeats, so send a data event
+      // that the client can use to reset its 45-second liveness timer.
+      if (!res.writableEnded) res.write("data: : ping\n\n");
       else clearInterval(keepAlive);
     }, 20000);
 
