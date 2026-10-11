@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import CircularIconButton from '@/components/CircularIconButton';
 import { useLocation } from 'wouter';
 import {
   PhoneOff, Mic, MicOff, Video, VideoOff, SkipForward,
@@ -1506,211 +1507,129 @@ export default function ChatRoom() {
         )}
       </div>
 
-      {/* ── Controls Bar ─────────────────────────────────────────────────────── */}
-      <div className="mt-3 bg-gray-900/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
-
-        {/* ═══════════════ Controls Panel ═══════════════ */}
-        <div className="px-2 pt-2 pb-1 space-y-1.5 md:px-3 md:pt-3 md:pb-2 md:space-y-2">
-
-          {/* ── Row 1 : دردشة · صوت · كاميرا · ميكروفون ─── */}
-          <div className="grid grid-cols-4 gap-1.5 md:gap-2">
-
-            {/* Chat */}
-            <button
+      {/* ── Circular controls ─────────────────────────────────────────────── */}
+      <div className="mt-3 overflow-hidden rounded-3xl border border-white/10 bg-gray-900/85 shadow-[0_12px_32px_rgba(0,0,0,0.24)] backdrop-blur-2xl">
+        <div className="space-y-3 px-2.5 py-3 sm:px-4 md:space-y-4 md:py-4">
+          {/* Chat and media */}
+          <div className="grid grid-cols-4 justify-items-center gap-x-1.5 gap-y-3 sm:gap-x-3">
+            <CircularIconButton
+              icon={<MessageSquare />}
+              label={t('chat.chat_btn')}
+              active={showChat}
+              pressed={showChat}
+              accent="cyan"
               onClick={() => { setShowChat(v => !v); setUnread(0); }}
-              className="relative flex flex-col items-center gap-1 pt-1 pb-1 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
-              style={{ background: showChat ? 'rgba(6,182,212,0.18)' : 'rgba(16,185,129,0.12)', border: showChat ? '1px solid rgba(6,182,212,0.5)' : '1px solid rgba(16,185,129,0.3)', boxShadow: showChat ? '0 0 14px rgba(6,182,212,0.25), inset 0 1px 0 rgba(255,255,255,0.07)' : '0 0 10px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.05)' }}
-            >
-              <div
-                className="w-9 h-9 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center relative"
-                style={{ background: showChat ? 'linear-gradient(135deg,#06b6d4,#2563eb)' : 'linear-gradient(135deg,#10b981,#059669)', boxShadow: showChat ? '0 0 20px rgba(6,182,212,0.7), 0 4px 12px rgba(6,182,212,0.4)' : '0 0 18px rgba(16,185,129,0.65), 0 4px 12px rgba(16,185,129,0.35)' }}
-              >
-                 <MessageSquare className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />
-                {unread > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5" style={{boxShadow:'0 0 8px rgba(239,68,68,0.8)'}}>
-                    {unread}
-                  </span>
-                )}
-              </div>
-               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: showChat ? '#67e8f9' : '#6ee7b7', textShadow: showChat ? '0 0 8px rgba(6,182,212,0.8)' : '0 0 8px rgba(16,185,129,0.7)'}}>{t('chat.chat_btn')}</span>
-            </button>
-
-            {/* Speaker */}
-            <button
+              badge={unread > 0 ? <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-gray-950 bg-rose-500 px-1 text-[9px] font-bold text-white">{unread}</span> : null}
+            />
+            <CircularIconButton
+              icon={isSpeakerOn ? <Volume2 /> : <VolumeX />}
+              label={isSpeakerOn ? t('chat.audio') : (t('chat.mute') || 'Mute')}
+              active={isSpeakerOn}
+              pressed={isSpeakerOn}
+              accent="cyan"
               onClick={() => setIsSpeakerOn(v => !v)}
-               className="flex flex-col items-center gap-1 pt-1 pb-1 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
-              style={{ background: isSpeakerOn ? 'rgba(20,184,166,0.18)' : 'rgba(239,68,68,0.12)', border: isSpeakerOn ? '1px solid rgba(20,184,166,0.5)' : '1px solid rgba(239,68,68,0.35)', boxShadow: isSpeakerOn ? '0 0 14px rgba(20,184,166,0.3), inset 0 1px 0 rgba(255,255,255,0.07)' : '0 0 12px rgba(239,68,68,0.2), inset 0 1px 0 rgba(255,255,255,0.04)' }}
-            >
-              <div
-                className="w-9 h-9 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
-                style={{ background: isSpeakerOn ? 'linear-gradient(135deg,#14b8a6,#0891b2)' : 'linear-gradient(135deg,#ef4444,#be123c)', boxShadow: isSpeakerOn ? '0 0 20px rgba(20,184,166,0.7), 0 4px 12px rgba(20,184,166,0.4)' : '0 0 18px rgba(239,68,68,0.65), 0 4px 12px rgba(239,68,68,0.35)' }}
-              >
-                 {isSpeakerOn ? <Volume2 className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" /> : <VolumeX className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />}
-              </div>
-               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: isSpeakerOn ? '#5eead4' : '#fca5a5', textShadow: isSpeakerOn ? '0 0 8px rgba(20,184,166,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isSpeakerOn ? t('chat.audio') : (t('chat.mute') || 'Mute')}</span>
-            </button>
-
-            {/* Camera */}
-            <button
+            />
+            <CircularIconButton
+              icon={isVideoOn ? <Video /> : <VideoOff />}
+              label={isVideoOn ? t('chat.cam') : (t('chat.off') || 'Off')}
+              active={isVideoOn}
+              pressed={isVideoOn}
+              accent="violet"
               onClick={toggleVideo}
-               className="flex flex-col items-center gap-1 pt-1 pb-1 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
-              style={{ background: isVideoOn ? 'rgba(139,92,246,0.18)' : 'rgba(239,68,68,0.12)', border: isVideoOn ? '1px solid rgba(139,92,246,0.5)' : '1px solid rgba(239,68,68,0.35)', boxShadow: isVideoOn ? '0 0 14px rgba(139,92,246,0.3), inset 0 1px 0 rgba(255,255,255,0.07)' : '0 0 12px rgba(239,68,68,0.2), inset 0 1px 0 rgba(255,255,255,0.04)' }}
-            >
-              <div
-                className="w-9 h-9 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
-                style={{ background: isVideoOn ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'linear-gradient(135deg,#ef4444,#be123c)', boxShadow: isVideoOn ? '0 0 20px rgba(139,92,246,0.75), 0 4px 12px rgba(139,92,246,0.4)' : '0 0 18px rgba(239,68,68,0.65), 0 4px 12px rgba(239,68,68,0.35)' }}
-              >
-                 {isVideoOn ? <Video className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" /> : <VideoOff className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />}
-              </div>
-               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: isVideoOn ? '#c4b5fd' : '#fca5a5', textShadow: isVideoOn ? '0 0 8px rgba(139,92,246,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isVideoOn ? t('chat.cam') : (t('chat.off') || 'Off')}</span>
-            </button>
-
-            {/* Mic */}
-            <button
+            />
+            <CircularIconButton
+              icon={isMicOn ? <Mic /> : <MicOff />}
+              label={isMicOn ? t('chat.mic') : (t('chat.muted') || 'Muted')}
+              active={isMicOn}
+              pressed={isMicOn}
+              accent="cyan"
               onClick={toggleMic}
-               className="flex flex-col items-center gap-1 pt-1 pb-1 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
-              style={{ background: isMicOn ? 'rgba(59,130,246,0.18)' : 'rgba(239,68,68,0.12)', border: isMicOn ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(239,68,68,0.35)', boxShadow: isMicOn ? '0 0 14px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.07)' : '0 0 12px rgba(239,68,68,0.2), inset 0 1px 0 rgba(255,255,255,0.04)' }}
-            >
-              <div
-                className="w-9 h-9 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
-                style={{ background: isMicOn ? 'linear-gradient(135deg,#3b82f6,#1d4ed8)' : 'linear-gradient(135deg,#ef4444,#be123c)', boxShadow: isMicOn ? '0 0 20px rgba(59,130,246,0.75), 0 4px 12px rgba(59,130,246,0.4)' : '0 0 18px rgba(239,68,68,0.65), 0 4px 12px rgba(239,68,68,0.35)' }}
-              >
-                 {isMicOn ? <Mic className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" /> : <MicOff className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />}
-              </div>
-               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: isMicOn ? '#93c5fd' : '#fca5a5', textShadow: isMicOn ? '0 0 8px rgba(59,130,246,0.8)' : '0 0 8px rgba(239,68,68,0.7)'}}>{isMicOn ? t('chat.mic') : (t('chat.muted') || 'Muted')}</span>
-            </button>
+            />
           </div>
 
-          {/* ── Row 2 : أصدقاء · المتجر · الخلفية · هدية ── */}
-          <div className="grid grid-cols-4 gap-1.5 md:gap-2">
+          <div className="mx-2 h-px bg-white/[0.08]" />
 
-            {/* Friends */}
-            <button
+          {/* Social and extra tools */}
+          <div className="grid grid-cols-4 justify-items-center gap-x-1.5 gap-y-3 sm:gap-x-3">
+            <CircularIconButton
+              icon={<Heart />}
+              label={t('chat.friends')}
+              active={showFriends}
+              pressed={showFriends}
+              accent="rose"
               onClick={() => { setShowFriends(v => !v); refetchUnread(); }}
-               className="relative flex flex-col items-center gap-1 pt-1 pb-1 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
-              style={{ background: 'rgba(244,63,94,0.13)', border: '1px solid rgba(244,63,94,0.35)', boxShadow: '0 0 12px rgba(244,63,94,0.2), inset 0 1px 0 rgba(255,255,255,0.06)' }}
-            >
-              <div
-                className="w-9 h-9 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center relative"
-                style={{ background: 'linear-gradient(135deg,#f43f5e,#e11d48)', boxShadow: '0 0 20px rgba(244,63,94,0.7), 0 4px 12px rgba(244,63,94,0.4)' }}
-              >
-                 <Heart className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />
-                {unreadDmCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-gray-900 text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5" style={{boxShadow:'0 0 8px rgba(234,179,8,0.9)'}}>
-                    {unreadDmCount > 99 ? '99+' : unreadDmCount}
-                  </span>
-                )}
-                {incomingFriendRequestCount > 0 && (
-                  <span className="absolute -bottom-1.5 -left-1.5 bg-red-500 text-white text-[9px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center font-black border-2 border-gray-900 px-0.5 animate-pulse" style={{boxShadow:'0 0 8px rgba(239,68,68,0.9)'}}>
-                    {incomingFriendRequestCount > 99 ? '99+' : incomingFriendRequestCount}
-                  </span>
-                )}
-              </div>
-               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color:'#fda4af', textShadow:'0 0 8px rgba(244,63,94,0.8)'}}>{t('chat.friends')}</span>
-            </button>
-
-            {/* Store */}
-            <button
+              badge={
+                <>
+                  {unreadDmCount > 0 && <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-gray-950 bg-amber-400 px-1 text-[9px] font-bold text-gray-950">{unreadDmCount > 99 ? '99+' : unreadDmCount}</span>}
+                  {incomingFriendRequestCount > 0 && <span className="absolute -bottom-1 -left-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-gray-950 bg-rose-500 px-1 text-[9px] font-bold text-white">{incomingFriendRequestCount > 99 ? '99+' : incomingFriendRequestCount}</span>}
+                </>
+              }
+            />
+            <CircularIconButton
+              icon={<ShoppingBag />}
+              label={t('chat.store')}
               onClick={() => { sessionStorage.setItem('chat_auto_start', 'true'); setLocation('/store?from=chat'); }}
-               className="flex flex-col items-center gap-1 pt-1 pb-1 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95 hover:scale-[1.04]"
-              style={{ background: 'rgba(217,70,239,0.13)', border: '1px solid rgba(217,70,239,0.35)', boxShadow: '0 0 12px rgba(217,70,239,0.2), inset 0 1px 0 rgba(255,255,255,0.06)' }}
-            >
-              <div
-                className="w-9 h-9 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg,#d946ef,#a21caf)', boxShadow: '0 0 20px rgba(217,70,239,0.7), 0 4px 12px rgba(217,70,239,0.4)' }}
-              >
-                 <ShoppingBag className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />
-              </div>
-               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color:'#e879f9', textShadow:'0 0 8px rgba(217,70,239,0.8)'}}>{t('chat.store')}</span>
-            </button>
-
-            {/* Camera Switch */}
+            />
             {(() => {
               const canSwitch = (user as any)?.isPremium || (user as any)?.role === 'admin';
               return (
-                <button
+                <CircularIconButton
+                  icon={<><SwitchCamera />{!canSwitch && <Lock className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full bg-gray-900 p-0.5 text-white/70" />}</>}
+                  label={canSwitch ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
                   onClick={toggleCamera}
-                   className="flex flex-col items-center gap-1 pt-1 pb-1 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95"
-                  style={{ background: canSwitch ? 'rgba(234,179,8,0.13)' : 'rgba(255,255,255,0.04)', border: canSwitch ? '1px solid rgba(234,179,8,0.4)' : '1px solid rgba(255,255,255,0.08)', boxShadow: canSwitch ? '0 0 12px rgba(234,179,8,0.22), inset 0 1px 0 rgba(255,255,255,0.07)' : 'none', opacity: canSwitch ? 1 : 0.45 }}
-                >
-                  <div
-                     className="w-9 h-9 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center relative"
-                    style={{ background: canSwitch ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#475569,#334155)', boxShadow: canSwitch ? '0 0 20px rgba(234,179,8,0.7), 0 4px 12px rgba(234,179,8,0.4)' : 'none' }}
-                  >
-                     <SwitchCamera className={`w-4 h-4 md:w-[18px] md:h-[18px] drop-shadow ${canSwitch ? 'text-gray-900' : 'text-white/50'}`} />
-                    {!canSwitch && <Lock className="w-2.5 h-2.5 text-white/60 absolute top-1 right-1" />}
-                  </div>
-                   <span className="text-[9px] md:text-[10px] font-bold tracking-wide leading-tight text-center" style={{color: canSwitch ? '#fde68a' : 'rgba(255,255,255,0.3)', textShadow: canSwitch ? '0 0 8px rgba(234,179,8,0.8)' : 'none'}}>
-                    {canSwitch ? (facingMode === 'user' ? 'خلفية' : 'أمامية') : 'تبديل 🔒'}
-                  </span>
-                </button>
+                  active={canSwitch && facingMode !== 'user'}
+                  pressed={canSwitch && facingMode !== 'user'}
+                  accent="amber"
+                />
               );
             })()}
-
-            {/* Gift */}
-            <button
+            <CircularIconButton
+              icon={<Gift />}
+              label="هدية"
               onClick={() => status === 'matched' ? setShowGifts(v => !v) : undefined}
               disabled={status !== 'matched'}
-               className="flex flex-col items-center gap-1 pt-1 pb-1 md:gap-1.5 md:pt-2.5 md:pb-2 rounded-2xl transition-all duration-200 active:scale-95"
-              style={{ background: status === 'matched' ? 'rgba(249,115,22,0.13)' : 'rgba(255,255,255,0.04)', border: status === 'matched' ? '1px solid rgba(249,115,22,0.4)' : '1px solid rgba(255,255,255,0.07)', boxShadow: status === 'matched' ? '0 0 12px rgba(249,115,22,0.22), inset 0 1px 0 rgba(255,255,255,0.07)' : 'none', opacity: status === 'matched' ? 1 : 0.4, cursor: status === 'matched' ? 'pointer' : 'not-allowed' }}
-            >
-              <div
-                 className="w-9 h-9 md:w-11 md:h-11 rounded-[14px] flex items-center justify-center"
-                style={{ background: status === 'matched' ? 'linear-gradient(135deg,#f97316,#db2777)' : 'linear-gradient(135deg,#475569,#334155)', boxShadow: status === 'matched' ? '0 0 20px rgba(249,115,22,0.7), 0 4px 12px rgba(249,115,22,0.4)' : 'none' }}
-              >
-                 <Gift className="w-4 h-4 md:w-[18px] md:h-[18px] text-white drop-shadow" />
-              </div>
-               <span className="text-[9px] md:text-[10px] font-bold tracking-wide" style={{color: status === 'matched' ? '#fdba74' : 'rgba(255,255,255,0.25)', textShadow: status === 'matched' ? '0 0 8px rgba(249,115,22,0.8)' : 'none'}}>هدية</span>
-            </button>
+              active={showGifts}
+              pressed={showGifts}
+              accent="amber"
+            />
+            <CircularIconButton
+              className="col-span-2 col-start-2 w-full"
+              icon={<WandSparkles />}
+              label="المساعد الذكي"
+              onClick={() => setShowAIStudio(true)}
+              active={showAIStudio}
+              pressed={showAIStudio}
+              accent="cyan"
+            />
           </div>
 
-          <button
-            onClick={() => setShowAIStudio(true)}
-              className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl border border-cyan-300/40 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-600/25 py-2.5 md:py-3.5 text-sm font-bold text-cyan-50 transition hover:border-cyan-200/70 hover:from-cyan-500/30 hover:to-purple-600/35 active:scale-[0.98] shadow-md shadow-cyan-500/20"
-          >
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-200 via-blue-500 to-purple-600 shadow-lg shadow-blue-500/30 transition group-hover:scale-110">
-                <WandSparkles className="h-4 w-4 text-white md:h-5 md:w-5" />
-              </span>
-             <span>المساعد الذكي</span>
-             <span className="rounded-full border border-cyan-200/25 bg-white/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-cyan-100/80">AI</span>
-          </button>
+          <div className="mx-2 h-px bg-white/[0.08]" />
 
-          {/* ── Row 3 : ابدأ مباشرة · الرادار ─────────────── */}
-          <div className="grid grid-cols-2 gap-2 pb-1">
-
-            {/* Quick start / Stop */}
+          {/* Search and call actions */}
+          <div className="grid grid-cols-4 justify-items-center gap-x-1.5 gap-y-3 sm:gap-x-3">
             {(() => {
               const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
-              const isMatched   = status === 'matched';
+              const isMatched = status === 'matched';
               return (
-                <button
+                <CircularIconButton
+                  icon={isSearching ? <Square className="fill-current" /> : <Play className="fill-current" />}
+                  label={isSearching ? 'إيقاف البحث' : isMatched ? t('chat.next_btn') : 'ابدأ مباشرة'}
                   onClick={() => {
-                    if (isMatched)        { handleNext(); }
+                    if (isMatched) { handleNext(); }
                     else if (isSearching) { stopSession(); }
-                    else                  {
+                    else {
                       // Force global matching on quick start to ensure users find each other
                       startSession('any', 'any');
                     }
                   }}
-                   className={`flex items-center justify-center gap-2.5 py-2.5 md:py-3.5 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02] ${isSearching ? 'animate-pulse' : ''}`}
-                  style={{
-                    background: isSearching ? 'linear-gradient(135deg,#ef4444,#be123c)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
-                    boxShadow: isSearching ? '0 0 24px rgba(239,68,68,0.6), 0 4px 16px rgba(239,68,68,0.4)' : '0 0 24px rgba(34,197,94,0.6), 0 4px 16px rgba(34,197,94,0.4)',
-                    border: isSearching ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(34,197,94,0.5)',
-                    color: 'white',
-                  }}
-                >
-                  {isSearching
-                    ? <Square className="w-4 h-4 fill-white text-white drop-shadow" />
-                    : <Play   className="w-4 h-4 fill-white text-white drop-shadow" />
-                  }
-                  {isSearching ? 'إيقاف البحث' : 'ابدأ مباشرة'}
-                </button>
+                  active
+                  accent={isSearching ? 'rose' : isMatched ? 'amber' : 'green'}
+                />
               );
             })()}
-
-            {/* Star Radar Button */}
-            <button
+            <CircularIconButton
+              icon={<Zap />}
+              label="الرادار"
               onClick={() => {
                 const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
                 if (isSearching) {
@@ -1720,46 +1639,25 @@ export default function ChatRoom() {
                 }
                 setStatus('setup');
               }}
-               className="flex items-center justify-center gap-2.5 py-2.5 md:py-3.5 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02]"
-              style={{
-                background: filterCountry !== 'any' || filterGender !== 'any' ? 'linear-gradient(135deg,#a855f7,#7c3aed)' : 'rgba(168,85,247,0.13)',
-                border: '1px solid rgba(168,85,247,0.45)',
-                boxShadow: filterCountry !== 'any' || filterGender !== 'any' ? '0 0 24px rgba(168,85,247,0.6), 0 4px 16px rgba(168,85,247,0.4)' : '0 0 14px rgba(168,85,247,0.25)',
-                color: '#e9d5ff',
-              }}
-            >
-              <Zap className="w-4 h-4 drop-shadow" />
-              الرادار
-            </button>
+              active={filterCountry !== 'any' || filterGender !== 'any'}
+              accent="violet"
+            />
+            <CircularIconButton
+              icon={<SkipForward />}
+              label={t('chat.next_btn')}
+              title={`${t('chat.next_btn')} — ${t('chat.another_person')}`}
+              onClick={handleNext}
+              disabled={status === 'connecting' || status === 'waiting' || status === 'confirming'}
+              accent="amber"
+            />
+            <CircularIconButton
+              icon={<PhoneOff />}
+              label={t('chat.stop_btn')}
+              onClick={handleEnd}
+              active={status === 'matched'}
+              accent="rose"
+            />
           </div>
-
-        </div>
-
-        {/* Divider before action row */}
-        <div className="h-px bg-white/8 mx-3 mb-0" />
-
-        {/* Next + End Call row */}
-        <div className="flex items-stretch gap-2 px-2 pt-1.5 pb-2 md:gap-2.5 md:px-3 md:pt-2 md:pb-3">
-          {/* Next */}
-          <button
-            onClick={handleNext}
-            disabled={status === 'connecting' || status === 'waiting' || status === 'confirming'}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 md:gap-2 md:py-3 rounded-2xl font-bold text-sm tracking-wide transition-all duration-150 active:scale-[0.97] hover:scale-[1.02] disabled:opacity-35 disabled:cursor-not-allowed"
-            style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#1c1917', boxShadow: '0 0 22px rgba(245,158,11,0.6), 0 4px 14px rgba(245,158,11,0.4)', border: '1px solid rgba(245,158,11,0.5)' }}
-          >
-            <SkipForward className="w-4 h-4 flex-shrink-0 drop-shadow" />
-            {t('chat.next_btn')} — {t('chat.another_person')}
-          </button>
-
-          {/* End Call */}
-          <button
-            onClick={handleEnd}
-            className="flex items-center justify-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3 rounded-2xl font-bold text-sm transition-all duration-150 active:scale-[0.97] hover:scale-[1.02]"
-            style={{ background: 'linear-gradient(135deg,#ef4444,#be123c)', color: 'white', boxShadow: '0 0 22px rgba(239,68,68,0.6), 0 4px 14px rgba(239,68,68,0.4)', border: '1px solid rgba(239,68,68,0.5)' }}
-          >
-            <PhoneOff className="w-4 h-4 flex-shrink-0 drop-shadow" />
-            <span className="tracking-wide">{t('chat.stop_btn')}</span>
-          </button>
         </div>
       </div>
 
