@@ -256,14 +256,18 @@ export default function ChatRoom() {
 
   const claimBonus = trpc.users.claimDailyBonus.useMutation({
     onSuccess: (data) => {
+      const rewardToastId = 'daily-bonus-success';
+      toast.dismiss(rewardToastId);
       toast.success(
         `مبروك! حصلت على ${data.starsGained} نجوم و ${data.creditsGained} نقاط 🎁`,
         {
+          id: rewardToastId,
           position: 'top-center',
-          duration: 6000,
+          duration: 3500,
           description: 'تمت إضافة المكافأة إلى حسابك بنجاح',
         },
       );
+      window.setTimeout(() => toast.dismiss(rewardToastId), 4000);
       bonusStatusQuery.refetch();
       walletQuery.refetch();
       balanceQuery.refetch();
