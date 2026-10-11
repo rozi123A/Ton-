@@ -51,8 +51,8 @@ class ErrorBoundary extends Component<Props, State> {
                 window.location.reload();
               }}
               className={cn(
-                "flex items-center gap-2 rounded-xl bg-gradient-to-l from-violet-600 to-fuchsia-600 px-5 py-3",
-                "font-bold text-white shadow-lg shadow-violet-950/30 transition hover:scale-[1.02] hover:from-violet-500 hover:to-fuchsia-500",
+                "flex items-center gap-2 rounded-full border border-blue-300/35 bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3",
+                "font-bold text-white shadow-sm shadow-indigo-950/20 transition hover:-translate-y-0.5 hover:brightness-110",
                 "cursor-pointer"
               )}
             >

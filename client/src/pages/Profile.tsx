@@ -223,7 +223,7 @@ export default function Profile() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white p-4">
         <p className="text-xl font-bold mb-4">المستخدم غير موجود</p>
-        <button onClick={() => setLocation("/")} className="bg-purple-600 px-6 py-2 rounded-full">العودة للرئيسية</button>
+        <button onClick={() => setLocation("/")} className="rounded-full bg-violet-700 px-6 py-2 text-white shadow-sm shadow-violet-950/20 transition hover:bg-violet-600">العودة للرئيسية</button>
       </div>
     );
   }
@@ -242,7 +242,7 @@ export default function Profile() {
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0b1020]/80 shadow-lg shadow-black/20 backdrop-blur-xl">
         <div className="container mx-auto flex max-w-lg items-center gap-2 px-4 py-3.5">
-          <button onClick={() => setLocation("/")} className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-white/70 transition hover:border-purple-300/40 hover:bg-purple-500/15 hover:text-white">
+          <button onClick={() => setLocation("/")} aria-label="العودة للرئيسية" className="rounded-full border border-violet-300/35 bg-violet-500/15 p-2.5 text-white transition hover:border-violet-200/60 hover:bg-violet-500/25">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h1 className="flex-1 text-lg font-black tracking-wide text-white md:text-xl">
@@ -263,8 +263,9 @@ export default function Profile() {
           )}
           <button
             onClick={() => setLocation("/chat")}
-            className="rounded-full border border-fuchsia-300/30 bg-gradient-to-l from-purple-600 to-fuchsia-500 px-3.5 py-2 text-xs font-black text-white shadow-lg shadow-purple-950/30 transition hover:brightness-110"
+            className="flex items-center gap-1.5 rounded-full border border-emerald-300/40 bg-gradient-to-l from-emerald-600 to-green-700 px-3.5 py-2 text-xs font-black text-white shadow-md shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:brightness-110"
           >
+            <MessageCircle className="h-3.5 w-3.5" />
             دردشة
           </button>
         </div>
@@ -278,7 +279,7 @@ export default function Profile() {
             <div className="bg-slate-800 w-full max-w-md rounded-3xl border border-slate-700 overflow-hidden shadow-2xl">
               <div className="p-4 border-b border-slate-700 flex justify-between items-center">
                 <h3 className="text-white font-bold">إضافة قصة جديدة</h3>
-                <button onClick={() => { setShowStoryUpload(false); clearStoryMedia(); }} className="text-white/50 hover:text-white">
+                <button onClick={() => { setShowStoryUpload(false); clearStoryMedia(); }} aria-label="إغلاق" className="rounded-full bg-red-500/10 p-2 text-red-300 transition hover:bg-red-500/20 hover:text-white">
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -323,7 +324,7 @@ export default function Profile() {
                     <button
                       onClick={() => void publishStory()}
                       disabled={createStory.isPending || uploadStoryVideo.isPending}
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl shadow-lg disabled:opacity-50"
+                      className="w-full rounded-full bg-gradient-to-r from-emerald-600 to-green-700 py-3 font-bold text-white shadow-md shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-50"
                     >
                       {createStory.isPending ? "جاري النشر..." : "نشر القصة الآن"}
                     </button>
@@ -361,7 +362,7 @@ export default function Profile() {
                   {isOwnProfile && (
                     <button
                       onClick={() => fileRef.current?.click()}
-                      className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                      className="absolute inset-0 flex items-center justify-center bg-violet-700/75 text-white opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       <Camera className="w-6 h-6 text-white" />
                     </button>
@@ -372,7 +373,7 @@ export default function Profile() {
                     onClick={() => setShowStoryUpload(true)}
                     aria-label="إضافة قصة أو فيديو"
                     title="إضافة قصة أو فيديو"
-                    className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-2xl border-2 border-[#141e32] bg-gradient-to-br from-fuchsia-500 to-purple-600 shadow-lg shadow-purple-950/40 transition-transform hover:scale-110"
+                    className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#141e32] bg-gradient-to-br from-pink-500 to-fuchsia-600 text-white shadow-md shadow-pink-950/25 transition-transform hover:scale-105"
                   >
                     <Video className="w-5 h-5 text-white" />
                   </button>
@@ -474,7 +475,7 @@ export default function Profile() {
                                   deleteStory.mutate({ storyId: story.id });
                                 }
                               }}
-                              className="rounded-xl border border-red-200/20 bg-red-500/80 p-1.5 text-white transition-colors hover:bg-red-600"
+                              className="rounded-full border border-red-200/25 bg-red-500/85 p-1.5 text-white transition-colors hover:bg-red-600"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
@@ -595,7 +596,7 @@ export default function Profile() {
                       className={`flex-1 rounded-2xl border py-2.5 text-sm font-bold transition-all ${
                         gender === v
                           ? "border-fuchsia-300/70 bg-gradient-to-l from-fuchsia-500 to-purple-600 text-white shadow-lg shadow-purple-900/40 ring-2 ring-fuchsia-300/10"
-                          : "border-white/10 bg-slate-950/35 text-white/55 hover:border-purple-400/40 hover:bg-white/[0.08] hover:text-white"
+                          : "border border-violet-300/25 bg-violet-500/10 text-violet-100 hover:border-violet-300/50 hover:bg-violet-500/20"
                       }`}
                     >
                       {l}
@@ -620,7 +621,7 @@ export default function Profile() {
                   saveProfile.mutate({ name, age, gender, bio, avatar: avatar || undefined });
                 }}
                 disabled={saveProfile.isPending}
-                className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-l from-fuchsia-500 via-purple-600 to-violet-600 py-3.5 font-bold text-white shadow-lg shadow-purple-900/30 transition hover:brightness-110 disabled:opacity-60"
+                className="relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-gradient-to-l from-emerald-600 to-green-700 py-3.5 font-bold text-white shadow-md shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-60"
               >
                 <span className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-white/10 blur-xl" />
                 {saved ? (
@@ -691,7 +692,7 @@ export default function Profile() {
             </div>
 
             <button onClick={() => setShowBuy(v => !v)}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-purple-400/40 bg-gradient-to-l from-purple-600/20 to-fuchsia-500/20 py-3.5 font-bold text-purple-100 transition hover:border-purple-300/70 hover:from-purple-600/30 hover:to-fuchsia-500/30"
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-amber-300/45 bg-gradient-to-l from-amber-500 to-orange-500 py-3.5 font-bold text-amber-950 shadow-sm shadow-amber-950/10 transition hover:-translate-y-0.5 hover:brightness-105"
             >
               <ShoppingCart className="h-4 w-4" />
               {showBuy ? "إخفاء الباقات" : "شراء المزيد من النجوم"}

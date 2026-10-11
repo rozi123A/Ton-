@@ -102,7 +102,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
           <button
             type="button"
             onClick={() => void refetch()}
-            className="rounded-xl bg-purple-600 px-5 py-2.5 font-semibold hover:bg-purple-500 transition-colors"
+            className="rounded-full bg-blue-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-blue-600"
           >
             {t('profile.retry')}
           </button>
@@ -135,7 +135,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
         <div className="h-28 bg-gradient-to-br from-purple-600 via-pink-600 to-rose-600 relative">
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 transition-colors z-10"
+            className="absolute top-3 right-3 z-10 rounded-full bg-red-500/20 p-1.5 text-white transition-colors hover:bg-red-500/40"
           >
             <X className="w-4 h-4" />
           </button>
@@ -244,7 +244,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
             <button
               type="button"
               onClick={() => { onClose(); setLocation('/login'); }}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm shadow-lg hover:brightness-110 transition-all"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-violet-600 py-3 text-sm font-bold text-white shadow-sm shadow-indigo-950/20 transition-all hover:-translate-y-0.5 hover:brightness-110"
             >
               <UserPlus className="w-4 h-4" /> {t('profile.login_to_send_friend')}
             </button>
@@ -263,7 +263,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
               type="button"
               onClick={() => sendRequestMutation.mutate({ receiverId: userId })}
               disabled={sendRequestMutation.isPending}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-red-600 py-3 text-sm font-bold text-white shadow-sm shadow-red-950/20 transition-all hover:-translate-y-0.5 hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
             >
               {sendRequestMutation.isPending ? (
                 <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />

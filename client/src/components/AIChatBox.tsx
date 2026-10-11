@@ -213,7 +213,7 @@ export function AIChatBox({
                       key={index}
                       onClick={() => onSendMessage(prompt)}
                       disabled={isLoading}
-                      className="rounded-lg border border-border bg-card px-4 py-2 text-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-full border border-blue-300/40 bg-gradient-to-r from-blue-50 to-violet-50 px-4 py-2 text-sm text-blue-800 transition hover:border-blue-400/60 hover:from-blue-100 hover:to-violet-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-700/50 dark:from-blue-950/40 dark:to-violet-950/40 dark:text-blue-100"
                     >
                       {prompt}
                     </button>
@@ -318,6 +318,7 @@ export function AIChatBox({
           rows={1}
         />
         <Button
+          variant="ai"
           type="submit"
           size="icon"
           disabled={!input.trim() || isLoading}

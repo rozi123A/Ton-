@@ -95,7 +95,7 @@ export default function TranslationPanel({
             <Globe className="w-5 h-5 text-blue-400" />
             ترجمة فورية
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white">
+          <button onClick={onClose} aria-label="إغلاق الترجمة" className="rounded-full bg-red-500/10 p-1.5 text-red-300 transition hover:bg-red-500/20 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -109,7 +109,7 @@ export default function TranslationPanel({
           <button
             onClick={() => setIsAutoMode(v => !v)}
             className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${
-              isAutoMode ? 'bg-blue-500' : 'bg-white/20'
+              isAutoMode ? 'bg-blue-600' : 'bg-blue-500/25'
             }`}
           >
             <span
@@ -170,14 +170,14 @@ export default function TranslationPanel({
           <button
             onClick={() => handleTranslate()}
             disabled={loading || !text?.trim()}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold py-2.5 rounded-lg hover:opacity-90 disabled:opacity-40 transition-all"
+            className="flex-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 py-2.5 font-bold text-white shadow-sm shadow-blue-950/20 transition-all hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-40"
           >
             {loading ? 'جاري الترجمة...' : 'ترجم الآن'}
           </button>
           {translatedText && (
             <button
               onClick={handleCopy}
-              className="px-4 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-all flex items-center gap-2"
+              className="flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-500/15 px-4 text-cyan-100 transition-all hover:bg-cyan-500/25"
             >
               {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
             </button>

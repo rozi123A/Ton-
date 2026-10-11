@@ -62,10 +62,10 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-8">
-           <button type="button" onClick={() => navigateToSection("features")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.features')}</button>
-          <button onClick={() => setLocation('/store')} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.store')}</button>
-           <button type="button" onClick={() => navigateToSection("faq")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.faq')}</button>
-           <button type="button" onClick={() => navigateToSection("security")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.security')}</button>
+           <button type="button" onClick={() => navigateToSection("features")} className="font-medium text-violet-700 transition-colors hover:text-violet-500 dark:text-violet-200">{t('nav.features')}</button>
+          <button onClick={() => setLocation('/store')} className="font-medium text-pink-600 transition-colors hover:text-pink-500 dark:text-pink-300">{t('nav.store')}</button>
+           <button type="button" onClick={() => navigateToSection("faq")} className="font-medium text-cyan-700 transition-colors hover:text-cyan-500 dark:text-cyan-300">{t('nav.faq')}</button>
+           <button type="button" onClick={() => navigateToSection("security")} className="font-medium text-blue-700 transition-colors hover:text-blue-500 dark:text-blue-300">{t('nav.security')}</button>
         </nav>
 
         {/* CTA — desktop */}
@@ -76,7 +76,7 @@ export default function Header() {
             title={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
             aria-label={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
             aria-pressed={isDark}
-            className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-blue-300 bg-blue-50 text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200 dark:hover:bg-blue-900"
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
@@ -93,7 +93,7 @@ export default function Header() {
                   onClick={() => setLocation("/admin")}
                   title="لوحة الإدارة"
                   aria-label="لوحة الإدارة"
-                  className="w-9 h-9 rounded-full border-2 border-red-300 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-red-300 bg-red-50 text-red-600 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-900/60"
                 >
                   <Shield className="w-4 h-4" />
                 </button>
@@ -123,21 +123,21 @@ export default function Header() {
               </button>
 
               <button onClick={handleStartChat}
-                className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-2 px-5 rounded-full hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
+                className="flex items-center gap-2 rounded-full border border-emerald-300/50 bg-gradient-to-r from-emerald-600 to-green-700 px-5 py-2 font-semibold text-white shadow-sm shadow-emerald-900/15 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md"
               >
                 <Video className="w-4 h-4" />
                 {t('nav.chat')}
               </button>
 
               {/* Language Switcher Desktop */}
-               <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-full border border-gray-200 dark:border-gray-700">
-                <button onClick={() => setLanguage('ar')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'ar' ? 'bg-white dark:bg-gray-700 shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="العربية">🇸🇦</button>
-                <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'en' ? 'bg-white dark:bg-gray-700 shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="English">🇺🇸</button>
-                <button onClick={() => setLanguage('fr')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'fr' ? 'bg-white dark:bg-gray-700 shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="Français">🇫🇷</button>
+               <div className="flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 p-1 dark:border-blue-800 dark:bg-blue-950/40">
+                <button onClick={() => setLanguage('ar')} className={`rounded-full px-2 py-1 text-base transition-all ${language === 'ar' ? 'bg-gradient-to-r from-blue-600 to-violet-600 shadow-sm ring-1 ring-blue-300/60' : 'opacity-80 hover:bg-blue-100 hover:opacity-100 dark:hover:bg-blue-900/50'}`} title="العربية">🇸🇦</button>
+                <button onClick={() => setLanguage('en')} className={`rounded-full px-2 py-1 text-base transition-all ${language === 'en' ? 'bg-gradient-to-r from-blue-600 to-violet-600 shadow-sm ring-1 ring-blue-300/60' : 'opacity-80 hover:bg-blue-100 hover:opacity-100 dark:hover:bg-blue-900/50'}`} title="English">🇺🇸</button>
+                <button onClick={() => setLanguage('fr')} className={`rounded-full px-2 py-1 text-base transition-all ${language === 'fr' ? 'bg-gradient-to-r from-blue-600 to-violet-600 shadow-sm ring-1 ring-blue-300/60' : 'opacity-80 hover:bg-blue-100 hover:opacity-100 dark:hover:bg-blue-900/50'}`} title="Français">🇫🇷</button>
               </div>
 
               <button onClick={handleLogout} title="تسجيل الخروج"
-                className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
+                className="rounded-full border border-red-300/40 bg-red-50 p-2 text-red-600 transition-colors hover:bg-red-100 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-900/50"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -145,16 +145,16 @@ export default function Header() {
           ) : (
             <>
               {/* Language Switcher Desktop (Unauthed) */}
-              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200 mr-2">
-                <button onClick={() => setLanguage('ar')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'ar' ? 'bg-white shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="العربية">🇸🇦</button>
-                <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'en' ? 'bg-white shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="English">🇺🇸</button>
-                <button onClick={() => setLanguage('fr')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'fr' ? 'bg-white shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="Français">🇫🇷</button>
+              <div className="mr-2 flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 p-1 dark:border-blue-800 dark:bg-blue-950/40">
+                <button onClick={() => setLanguage('ar')} className={`rounded-full px-2 py-1 text-base transition-all ${language === 'ar' ? 'bg-gradient-to-r from-blue-600 to-violet-600 shadow-sm ring-1 ring-blue-300/60' : 'opacity-80 hover:bg-blue-100 hover:opacity-100 dark:hover:bg-blue-900/50'}`} title="العربية">🇸🇦</button>
+                <button onClick={() => setLanguage('en')} className={`rounded-full px-2 py-1 text-base transition-all ${language === 'en' ? 'bg-gradient-to-r from-blue-600 to-violet-600 shadow-sm ring-1 ring-blue-300/60' : 'opacity-80 hover:bg-blue-100 hover:opacity-100 dark:hover:bg-blue-900/50'}`} title="English">🇺🇸</button>
+                <button onClick={() => setLanguage('fr')} className={`rounded-full px-2 py-1 text-base transition-all ${language === 'fr' ? 'bg-gradient-to-r from-blue-600 to-violet-600 shadow-sm ring-1 ring-blue-300/60' : 'opacity-80 hover:bg-blue-100 hover:opacity-100 dark:hover:bg-blue-900/50'}`} title="Français">🇫🇷</button>
               </div>
               <button onClick={handleLogin} className="text-purple-600 font-semibold hover:text-purple-700 transition-colors">
                 {t('nav.login')}
               </button>
               <button onClick={handleLogin}
-                className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-2 px-6 rounded-full hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-md hover:shadow-lg"
+                className="rounded-full border border-emerald-300/45 bg-gradient-to-r from-emerald-600 to-green-700 px-6 py-2 font-semibold text-white shadow-sm shadow-emerald-950/15 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
               >
                 {t('nav.start')}
               </button>
@@ -163,12 +163,12 @@ export default function Header() {
         </div>
 
         {/* Hamburger — with notification badge */}
-        <button className="md:hidden relative p-1" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+        <button className="relative rounded-full bg-violet-500/10 p-2 text-violet-700 transition-colors hover:bg-violet-500/15 dark:text-violet-200 md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label={isMenuOpen ? "إغلاق القائمة" : "فتح القائمة"}>
           {isMenuOpen ? (
-            <X className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+            <X className="w-6 h-6 text-red-500" />
           ) : (
             <>
-              <Menu className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+              <Menu className="w-6 h-6 text-violet-600 dark:text-violet-200" />
               {unreadNotifCount > 0 && !isMenuOpen && (
                 <>
                   {/* Ping animation ring */}
@@ -187,18 +187,18 @@ export default function Header() {
       {/* Mobile menu */}
       {isMenuOpen && (
          <div className="md:hidden bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 py-4 px-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-           <button type="button" onClick={() => navigateToSection("features")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.features')}</button>
-           <button onClick={() => { setIsMenuOpen(false); setLocation('/store'); }} className={`block ${language === 'ar' ? 'text-right' : 'text-left'} w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2`}>{t('nav.store')}</button>
-           <button type="button" onClick={() => navigateToSection("faq")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.faq')}</button>
-           <button type="button" onClick={() => navigateToSection("security")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.security')}</button>
+           <button type="button" onClick={() => navigateToSection("features")} className="block w-full py-2 text-right font-medium text-violet-700 hover:text-violet-500 dark:text-violet-200">{t('nav.features')}</button>
+           <button onClick={() => { setIsMenuOpen(false); setLocation('/store'); }} className={`block ${language === 'ar' ? 'text-right' : 'text-left'} w-full py-2 font-medium text-pink-600 hover:text-pink-500 dark:text-pink-300`}>{t('nav.store')}</button>
+           <button type="button" onClick={() => navigateToSection("faq")} className="block w-full py-2 text-right font-medium text-cyan-700 hover:text-cyan-500 dark:text-cyan-300">{t('nav.faq')}</button>
+           <button type="button" onClick={() => navigateToSection("security")} className="block w-full py-2 text-right font-medium text-blue-700 hover:text-blue-500 dark:text-blue-300">{t('nav.security')}</button>
 
           {/* Language Switcher Mobile */}
            <div className="flex items-center gap-2 pt-2">
-             <Languages className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+             <Languages className="w-4 h-4 text-blue-500 dark:text-blue-300" />
             <div className="flex gap-3">
-              <button onClick={() => setLanguage('ar')} className={`text-2xl transition-all ${language === 'ar' ? 'scale-125' : 'grayscale opacity-50'}`}>🇸🇦</button>
-              <button onClick={() => setLanguage('en')} className={`text-2xl transition-all ${language === 'en' ? 'scale-125' : 'grayscale opacity-50'}`}>🇺🇸</button>
-              <button onClick={() => setLanguage('fr')} className={`text-2xl transition-all ${language === 'fr' ? 'scale-125' : 'grayscale opacity-50'}`}>🇫🇷</button>
+              <button onClick={() => setLanguage('ar')} className={`rounded-full px-1 text-2xl transition-all ${language === 'ar' ? 'scale-110 bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/60' : 'opacity-85 hover:bg-blue-50 dark:hover:bg-blue-900/40'}`}>🇸🇦</button>
+              <button onClick={() => setLanguage('en')} className={`rounded-full px-1 text-2xl transition-all ${language === 'en' ? 'scale-110 bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/60' : 'opacity-85 hover:bg-blue-50 dark:hover:bg-blue-900/40'}`}>🇺🇸</button>
+              <button onClick={() => setLanguage('fr')} className={`rounded-full px-1 text-2xl transition-all ${language === 'fr' ? 'scale-110 bg-blue-100 ring-1 ring-blue-300 dark:bg-blue-900/60' : 'opacity-85 hover:bg-blue-50 dark:hover:bg-blue-900/40'}`}>🇫🇷</button>
             </div>
           </div>
 
@@ -222,7 +222,7 @@ export default function Header() {
                onCheckedChange={() => toggleTheme?.()}
                 aria-label={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
                aria-checked={isDark}
-                className="h-6 w-11 border-purple-300 bg-gray-300 data-[state=checked]:bg-purple-600 dark:border-purple-700 dark:bg-gray-700"
+                className="h-6 w-11 border-amber-300 bg-amber-400/70 data-[state=checked]:bg-violet-600 dark:border-amber-800 dark:bg-amber-700/50 dark:data-[state=checked]:bg-violet-500"
              />
            </div>
 
@@ -260,26 +260,26 @@ export default function Header() {
                   )}
                 </div>
                 <button onClick={() => { setIsMenuOpen(false); handleProfile(); }}
-                   className="border-2 border-purple-300 text-purple-600 font-bold py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                   className="flex items-center justify-center gap-2 rounded-full border border-blue-300 bg-gradient-to-r from-blue-50 to-violet-50 px-6 py-2.5 font-bold text-blue-700 transition-colors hover:from-blue-100 hover:to-violet-100 dark:border-blue-800 dark:from-blue-950/50 dark:to-violet-950/50 dark:text-blue-200"
                 >
                   <UserCircle className="w-4 h-4 flex-shrink-0" /> {t('nav.profile')}
                 </button>
                 {(user as any).role === "admin" && (
                   <button
                     onClick={() => { setIsMenuOpen(false); setLocation("/admin"); }}
-                    className="border-2 border-red-300 text-red-600 font-bold py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
+                    className="flex items-center justify-center gap-2 rounded-full border border-red-300/50 bg-red-500/10 px-6 py-2.5 font-bold text-red-700 transition-colors hover:bg-red-500/15 dark:border-red-800 dark:text-red-200"
                   >
                     <Shield className="w-4 h-4 flex-shrink-0" /> لوحة الإدارة
                   </button>
                 )}
                 <button onClick={() => { setIsMenuOpen(false); handleStartChat(); }}
-                  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-6 rounded-2xl text-center flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                  className="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-green-700 px-6 py-3 text-center font-bold text-white shadow-md shadow-emerald-950/15 transition-all hover:-translate-y-0.5 hover:brightness-110"
                 >
                   <Video className="w-4 h-4 flex-shrink-0" />
                   {t('nav.chat')}
                 </button>
                 <button onClick={() => { setIsMenuOpen(false); handleLogout(); }}
-                  className="text-red-500 font-semibold py-2 text-center flex items-center justify-center gap-2 hover:text-red-700 transition-colors"
+                  className="flex items-center justify-center gap-2 rounded-full border border-red-300/40 bg-red-500/10 py-2.5 text-center font-semibold text-red-700 transition-colors hover:bg-red-500/15 dark:border-red-800 dark:text-red-200"
                 >
                   <LogOut className="w-4 h-4 flex-shrink-0" />
                   {t('nav.logout')}
@@ -288,13 +288,13 @@ export default function Header() {
             ) : (
               <>
                 <button onClick={() => { setIsMenuOpen(false); handleLogin(); }}
-                  className="text-purple-600 font-bold py-2.5 text-center border-2 border-purple-200 rounded-2xl hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
+                  className="flex items-center justify-center gap-2 rounded-full border border-blue-300 bg-blue-50 py-2.5 text-center font-bold text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200"
                 >
                   <UserCircle className="w-4 h-4" />
                   تسجيل الدخول
                 </button>
                 <button onClick={() => { setIsMenuOpen(false); handleLogin(); }}
-                  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                  className="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-600 to-green-700 px-6 py-3 font-bold text-white shadow-md shadow-emerald-950/15 transition-all hover:-translate-y-0.5 hover:brightness-110"
                 >
                   <Video className="w-4 h-4" />
                   ابدأ الآن

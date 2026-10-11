@@ -55,7 +55,7 @@ export default function Hero() {
             >
               {/* Outer glowing ring */}
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-pink-400 via-purple-500 to-cyan-400 blur-xl opacity-40 group-hover:opacity-80 transition-opacity duration-500 scale-125 animate-pulse" />
+                <div className="absolute inset-0 scale-125 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 opacity-20 blur-xl transition-opacity duration-300 group-hover:opacity-35" />
                 {/* Avatar circle */}
                 <div className="relative w-40 h-40 rounded-full border-4 border-white/80 shadow-2xl overflow-hidden bg-white/20 group-hover:scale-105 transition-transform duration-500">
                   <img
@@ -87,7 +87,7 @@ export default function Hero() {
 
               {/* Enter chat button */}
               <div className="flex flex-col items-center gap-1.5 text-white transition-transform duration-200 group-hover:-translate-y-0.5">
-                <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full border border-rose-200/45 bg-rose-400/15 text-rose-50 shadow-[0_3px_12px_rgba(244,63,94,0.18)]">
+                <span className="flex h-[60px] w-[60px] items-center justify-center rounded-full border border-emerald-200/55 bg-gradient-to-br from-emerald-500 to-green-700 text-white shadow-[0_4px_14px_rgba(16,185,129,0.2)]">
                   <MessageCircle className="h-[22px] w-[22px] stroke-[1.8]" />
                 </span>
                 <span className="text-[11px] font-semibold leading-4">{t('nav.chat')}</span>
@@ -100,11 +100,13 @@ export default function Hero() {
               <CircularIconButton
                 icon={<LogOut />}
                 label={t('nav.logout')}
+                intent="logout"
                 onClick={() => logout()}
               />
               <CircularIconButton
                 icon={<UserPlus />}
                 label={t('nav.add_account') || 'Add Account'}
+                intent="addAccount"
                 onClick={async () => { await logout(); setLocation("/login"); }}
               />
             </div>
@@ -122,12 +124,13 @@ export default function Hero() {
                 icon={<MessageCircle />}
                 label={t('home.start_now')}
                 active
-                accent="rose"
+                intent="start"
                 onClick={() => setLocation("/login")}
               />
               <CircularIconButton
                 icon={<Play className="fill-current" />}
                 label={t('home.how_it_works') || 'How it works'}
+                intent="info"
                 onClick={() =>
                   document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })
                 }

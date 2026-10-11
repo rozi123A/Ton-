@@ -217,17 +217,17 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="relative w-20 h-20 rounded-full overflow-hidden border-[3px] border-white/60 shadow-lg focus:outline-none active:scale-95 transition-transform"
+                className="relative h-20 w-20 overflow-hidden rounded-full border-[3px] border-blue-200/80 bg-gradient-to-br from-blue-600 to-violet-600 shadow-md shadow-indigo-950/20 transition-transform focus:outline-none active:scale-[0.97]"
               >
                 {photo ? (
                   <img src={photo} alt="صورتك" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-white/20 flex flex-col items-center justify-center gap-1">
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-gradient-to-br from-blue-600 to-violet-600">
                     <Camera className="w-6 h-6 text-white" />
                   </div>
                 )}
                 {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center bg-blue-700/35 opacity-0 transition-opacity hover:opacity-100">
                   <Camera className="w-5 h-5 text-white" />
                 </div>
               </button>
@@ -278,9 +278,10 @@ export default function Login() {
             </div>
 
             <Button
+              variant="start"
               type="submit"
                disabled={isLoading}
-              className="w-full bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white font-bold py-3 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 mt-2"
+              className="mt-2 w-full py-3 font-bold text-white shadow-md shadow-emerald-950/15 hover:scale-[1.01] disabled:opacity-50"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">

@@ -1019,8 +1019,8 @@ export default function ChatRoom() {
                     onClick={() => setFilterGender(val as any)}
                     className={`flex flex-col items-center gap-1.5 py-3.5 rounded-2xl font-bold text-sm transition-all duration-200 border-2 ${
                       filterGender === val
-                        ? 'bg-gradient-to-br from-purple-500 to-pink-500 border-transparent text-white shadow-xl scale-105'
-                        : 'bg-white/10 border-white/20 text-white/70 hover:bg-white/20 hover:border-white/40 hover:text-white'
+                          ? 'border-violet-300/40 bg-gradient-to-br from-violet-600 to-purple-700 text-white shadow-md shadow-violet-950/20'
+                        : 'border-violet-300/25 bg-violet-500/10 text-violet-100 hover:border-violet-300/45 hover:bg-violet-500/20'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -1116,7 +1116,7 @@ export default function ChatRoom() {
             )}
             <button
               onClick={() => startSession(filterGender, filterCountry)}
-              className="w-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-500 hover:from-purple-700 hover:via-fuchsia-700 hover:to-pink-600 text-white font-bold py-4 rounded-2xl shadow-2xl shadow-purple-900/50 transform hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 text-lg tracking-wide"
+              className={`flex w-full items-center justify-center gap-3 rounded-full py-4 text-lg font-bold tracking-wide text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 active:scale-[0.98] ${filterGender !== 'any' || (filterCountry !== 'any' && filterCountry !== myCountry) ? 'border border-violet-300/35 bg-gradient-to-r from-violet-700 to-purple-600 shadow-violet-950/20' : 'border border-emerald-300/35 bg-gradient-to-r from-emerald-600 to-green-700 shadow-emerald-950/20'}`}
             >
               <Video className="w-5 h-5" />
               {(filterGender === 'any' && (filterCountry === 'any' || filterCountry === myCountry)) ? 'ابدأ البحث الآن' : 'تفعيل رادار النقاط 🚀'}
@@ -1124,7 +1124,7 @@ export default function ChatRoom() {
 
             <button
               onClick={() => setStatus('idle')}
-              className="w-full flex items-center justify-center gap-2 text-white/50 hover:text-white/90 text-sm transition-colors py-2"
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-violet-300/20 bg-violet-500/10 py-2 text-sm text-violet-200 transition-colors hover:bg-violet-500/20 hover:text-white"
             >
               <ChevronLeft className="w-4 h-4" />
               العودة للرئيسية
@@ -1173,7 +1173,7 @@ export default function ChatRoom() {
               🔔 <span className="font-bold">{notif.partnerName}</span> يبحث الآن!
             </p>
           </div>
-          <button onClick={() => setNotif(null)} className="text-white/60 hover:text-white flex-shrink-0">
+          <button onClick={() => setNotif(null)} aria-label="إغلاق التنبيه" className="flex-shrink-0 rounded-full bg-red-500/15 p-1 text-red-200 transition hover:bg-red-500/25 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -1201,14 +1201,14 @@ export default function ChatRoom() {
             <div className="flex gap-4 w-full">
               <button
                 onClick={handleRejectMatch}
-                className="flex-1 flex flex-col items-center gap-1.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-red-900/40"
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-2xl bg-red-600 py-3.5 font-bold text-white shadow-md shadow-red-950/20 transition-all hover:bg-red-700 active:scale-[0.98]"
               >
                 <PhoneOff className="w-6 h-6" />
                 رفض
               </button>
               <button
                 onClick={handleAcceptMatch}
-                className="flex-1 flex flex-col items-center gap-1.5 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold py-3.5 rounded-2xl transition-all shadow-lg shadow-green-900/40"
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-2xl bg-emerald-700 py-3.5 font-bold text-white shadow-md shadow-emerald-950/20 transition-all hover:bg-emerald-800 active:scale-[0.98]"
               >
                 <Video className="w-6 h-6" />
                 قبول
@@ -1224,7 +1224,7 @@ export default function ChatRoom() {
         <div className="flex items-flex-start justify-between gap-3">
           {/* Left: Profile */}
           <button onClick={() => setLocation('/profile')}
-            className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors flex-shrink-0">
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-blue-300/25 bg-blue-500/10 px-2 py-1 text-blue-100 transition-colors hover:border-blue-300/45 hover:bg-blue-500/20">
             <div className="relative flex-shrink-0">
               <img src={myAvatar} alt={myName} className="w-8 h-8 rounded-full border-2 border-white/30 object-cover bg-white shadow-lg" />
               {(user as any)?.isPremium && (
@@ -1267,7 +1267,7 @@ export default function ChatRoom() {
                   }
                   setShowConvertModal(true);
                 }}
-                className="flex items-center gap-1 bg-purple-500/20 border border-purple-500/30 px-2 py-1 rounded-full shadow-sm hover:bg-purple-500/30 transition-colors"
+                className="flex items-center gap-1 rounded-full border border-amber-300/35 bg-amber-500/15 px-2 py-1 shadow-sm transition-colors hover:bg-amber-500/25"
               >
                 <Star className="w-3 h-3 text-purple-400 fill-purple-400" />
                 <span className="text-purple-300 text-[11px] font-black">{walletQuery.data?.wallet || 0}</span>
@@ -1277,7 +1277,7 @@ export default function ChatRoom() {
               {/* Credits */}
               <button
                 onClick={() => setLocation('/store')}
-                className="flex items-center gap-1 bg-yellow-500/20 border border-yellow-500/30 px-2 py-1 rounded-full shadow-sm hover:bg-yellow-500/30 transition-colors"
+                className="flex items-center gap-1 rounded-full border border-orange-300/35 bg-orange-500/15 px-2 py-1 shadow-sm transition-colors hover:bg-orange-500/25"
               >
                 <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                 <span className="text-yellow-300 text-[11px] font-black">{credits}</span>
@@ -1292,7 +1292,7 @@ export default function ChatRoom() {
                 className={`relative flex items-center gap-2 px-3 py-0 h-[42px] w-[115px] rounded-2xl
                            backdrop-blur-md border transition-all duration-150 overflow-hidden flex-shrink-0
                            ${bonusDisabled
-                             ? 'bg-gray-500/30 border-white/10 opacity-80 cursor-not-allowed' 
+                             ? 'border-amber-300/15 bg-amber-500/10 opacity-60 cursor-not-allowed'
                              : 'bg-gradient-to-r from-orange-500/80 to-amber-400/80 border-orange-300/25 shadow-sm shadow-orange-900/20 active:scale-[0.97] hover:brightness-110'
                            }`}
               >
@@ -1301,8 +1301,8 @@ export default function ChatRoom() {
 
                 {/* Gift icon with glow */}
                 <span
-                  className={`text-[20px] leading-none flex-shrink-0 relative z-10 ${bonusCountdown ? 'grayscale opacity-50' : ''}`}
-                  style={{ filter: bonusDisabled ? 'grayscale(1)' : 'drop-shadow(0 0 5px rgba(255,200,50,0.7))' }}
+                  className={`text-[20px] leading-none flex-shrink-0 relative z-10 ${bonusCountdown ? 'opacity-60' : ''}`}
+                  style={{ filter: bonusDisabled ? 'none' : 'drop-shadow(0 0 3px rgba(255,200,50,0.4))' }}
                 >🎁</span>
 
                 {/* Text */}
@@ -1476,7 +1476,7 @@ export default function ChatRoom() {
                 >
                   <Globe className="w-4 h-4" />
                 </button>
-                <button onClick={() => setShowChat(false)} className="text-white/50 hover:text-white"><X className="w-4 h-4" /></button>
+              <button onClick={() => setShowChat(false)} aria-label="إغلاق الدردشة" className="rounded-full bg-red-500/10 p-1.5 text-red-300 transition hover:bg-red-500/20 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0">
@@ -1499,7 +1499,7 @@ export default function ChatRoom() {
                 placeholder={t('chat.type_msg') || 'Type a message...'} dir={isRTL ? 'rtl' : 'ltr'}
                 className="flex-1 bg-white/10 border border-white/20 text-white placeholder:text-white/30 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-400"
               />
-              <button onClick={sendText} className="bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl px-3 hover:opacity-90">
+              <button onClick={sendText} aria-label="إرسال الرسالة" className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 active:scale-[0.96]">
                 <Send className="w-4 h-4" />
               </button>
             </div>
@@ -1517,7 +1517,7 @@ export default function ChatRoom() {
               label={t('chat.chat_btn')}
               active={showChat}
               pressed={showChat}
-              accent="cyan"
+              intent="chat"
               onClick={() => { setShowChat(v => !v); setUnread(0); }}
               badge={unread > 0 ? <span className="absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-gray-950 bg-rose-500 px-1 text-[9px] font-bold text-white">{unread}</span> : null}
             />
@@ -1526,7 +1526,7 @@ export default function ChatRoom() {
               label={isSpeakerOn ? t('chat.audio') : (t('chat.mute') || 'Mute')}
               active={isSpeakerOn}
               pressed={isSpeakerOn}
-              accent="cyan"
+              intent="audio"
               onClick={() => setIsSpeakerOn(v => !v)}
             />
             <CircularIconButton
@@ -1534,7 +1534,7 @@ export default function ChatRoom() {
               label={isVideoOn ? t('chat.cam') : (t('chat.off') || 'Off')}
               active={isVideoOn}
               pressed={isVideoOn}
-              accent="violet"
+              intent="camera"
               onClick={toggleVideo}
             />
             <CircularIconButton
@@ -1542,7 +1542,7 @@ export default function ChatRoom() {
               label={isMicOn ? t('chat.mic') : (t('chat.muted') || 'Muted')}
               active={isMicOn}
               pressed={isMicOn}
-              accent="cyan"
+              intent="mic"
               onClick={toggleMic}
             />
           </div>
@@ -1556,7 +1556,7 @@ export default function ChatRoom() {
               label={t('chat.friends')}
               active={showFriends}
               pressed={showFriends}
-              accent="rose"
+              intent="friends"
               onClick={() => { setShowFriends(v => !v); refetchUnread(); }}
               badge={
                 <>
@@ -1568,6 +1568,7 @@ export default function ChatRoom() {
             <CircularIconButton
               icon={<ShoppingBag />}
               label={t('chat.store')}
+              intent="store"
               onClick={() => { sessionStorage.setItem('chat_auto_start', 'true'); setLocation('/store?from=chat'); }}
             />
             {(() => {
@@ -1579,7 +1580,7 @@ export default function ChatRoom() {
                   onClick={toggleCamera}
                   active={canSwitch && facingMode !== 'user'}
                   pressed={canSwitch && facingMode !== 'user'}
-                  accent="amber"
+                  intent="background"
                 />
               );
             })()}
@@ -1590,7 +1591,7 @@ export default function ChatRoom() {
               disabled={status !== 'matched'}
               active={showGifts}
               pressed={showGifts}
-              accent="amber"
+              intent="gift"
             />
             <CircularIconButton
               className="col-span-2 col-start-2 w-full"
@@ -1599,7 +1600,7 @@ export default function ChatRoom() {
               onClick={() => setShowAIStudio(true)}
               active={showAIStudio}
               pressed={showAIStudio}
-              accent="cyan"
+              intent="ai"
             />
           </div>
 
@@ -1623,7 +1624,7 @@ export default function ChatRoom() {
                     }
                   }}
                   active
-                  accent={isSearching ? 'rose' : isMatched ? 'amber' : 'green'}
+                  intent={isSearching ? 'end' : isMatched ? 'next' : 'start'}
                 />
               );
             })()}
@@ -1640,7 +1641,7 @@ export default function ChatRoom() {
                 setStatus('setup');
               }}
               active={filterCountry !== 'any' || filterGender !== 'any'}
-              accent="violet"
+              intent="radar"
             />
             <CircularIconButton
               icon={<SkipForward />}
@@ -1648,14 +1649,14 @@ export default function ChatRoom() {
               title={`${t('chat.next_btn')} — ${t('chat.another_person')}`}
               onClick={handleNext}
               disabled={status === 'connecting' || status === 'waiting' || status === 'confirming'}
-              accent="amber"
+              intent="next"
             />
             <CircularIconButton
               icon={<PhoneOff />}
               label={t('chat.stop_btn')}
               onClick={handleEnd}
               active={status === 'matched'}
-              accent="rose"
+              intent="end"
             />
           </div>
         </div>
@@ -1713,14 +1714,14 @@ export default function ChatRoom() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowConvertModal(false)}
-                  className="flex-1 py-3 rounded-2xl bg-white/8 hover:bg-white/12 text-white/70 font-bold text-sm transition-all active:scale-95"
+                  className="flex-1 rounded-full border border-violet-300/25 bg-violet-500/10 py-3 text-sm font-bold text-violet-100 transition-all hover:bg-violet-500/20 active:scale-[0.98]"
                 >
                   إلغاء
                 </button>
                 <button
                   onClick={() => { convertStars.mutate({ amount: stars }); setShowConvertModal(false); }}
                   disabled={stars < 2 || convertStars.isPending}
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm shadow-lg shadow-purple-900/40 disabled:opacity-40 transition-all active:scale-95 hover:brightness-110"
+                  className="flex-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 py-3 text-sm font-bold text-amber-950 shadow-sm shadow-amber-950/15 transition-all hover:-translate-y-0.5 hover:brightness-105 active:scale-[0.98] disabled:opacity-40"
                 >
                   {convertStars.isPending ? '...' : 'تحويل الآن ✓'}
                 </button>
@@ -1819,10 +1820,10 @@ export default function ChatRoom() {
               }
               toast.success('تم قبول الطلب!');
               setFriendReqBanner(null);
-            }} className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition-colors">
+            }} className="rounded-full bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-emerald-800">
               قبول
             </button>
-            <button onClick={() => setFriendReqBanner(null)} className="text-white/40 hover:text-white transition-colors">
+            <button onClick={() => setFriendReqBanner(null)} aria-label="إغلاق طلب الصداقة" className="rounded-full bg-red-500/10 p-1.5 text-red-300 transition-colors hover:bg-red-500/20 hover:text-white">
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
@@ -1838,7 +1839,7 @@ export default function ChatRoom() {
                 <Flag className="w-5 h-5 text-rose-400" />
                 الإبلاغ عن مستخدم
               </div>
-              <button onClick={() => setShowReport(false)} className="text-white/50 hover:text-white">
+              <button onClick={() => setShowReport(false)} aria-label="إغلاق نافذة الإبلاغ" className="rounded-full bg-red-500/10 p-1.5 text-red-300 transition-colors hover:bg-red-500/20 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1852,7 +1853,7 @@ export default function ChatRoom() {
                 <p className="text-white/50 text-sm text-center">شكراً لك. سنراجع البلاغ في أقرب وقت.</p>
                 <button
                   onClick={() => { setShowReport(false); handleNext(); }}
-                  className="mt-2 w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl transition-all"
+                  className="mt-2 w-full rounded-full bg-orange-600 py-2.5 font-bold text-white transition-all hover:bg-orange-700"
                 >
                   الانتقال للشخص التالي
                 </button>
@@ -1868,7 +1869,7 @@ export default function ChatRoom() {
                       className={`w-full text-right px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
                         reportReason === reason
                           ? 'bg-rose-600/30 border-rose-500/60 text-rose-300'
-                          : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                          : 'border-violet-300/20 bg-violet-500/10 text-violet-100 hover:border-violet-300/40 hover:bg-violet-500/20'
                       }`}
                     >
                       {reason}
