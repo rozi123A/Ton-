@@ -123,16 +123,18 @@ function PageLoading() {
           </header>
 
           <div className="relative mx-auto mb-5 flex h-40 w-40 items-center justify-center" aria-hidden="true">
-            <div className="absolute inset-0 rounded-full border border-cyan-100/10 animate-[spin_24s_linear_infinite] motion-reduce:animate-none" />
-            <div className="absolute inset-[14px] rounded-full border border-dashed border-fuchsia-200/20 animate-[spin_32s_linear_infinite_reverse] motion-reduce:animate-none" />
+            <div className="absolute inset-0 rounded-full border border-cyan-100/10 animate-[loading-orbit_14s_linear_infinite] motion-reduce:animate-none" />
+            <div className="absolute inset-[14px] rounded-full border border-dashed border-fuchsia-200/20 animate-[loading-orbit_22s_linear_infinite_reverse] motion-reduce:animate-none" />
+            <span className="absolute h-24 w-24 rounded-full border border-cyan-200/20 animate-[loading-pulse-ring_2.2s_ease-out_infinite] motion-reduce:animate-none" />
+            <span className="absolute h-24 w-24 rounded-full border border-fuchsia-200/15 animate-[loading-pulse-ring_2.2s_ease-out_infinite] [animation-delay:1.1s] motion-reduce:animate-none" />
             <span className="absolute left-[15px] top-[29px] h-2.5 w-2.5 rounded-full bg-cyan-200 shadow-[0_0_18px_rgba(103,232,249,0.9)] animate-pulse motion-reduce:animate-none" />
             <span className="absolute bottom-[30px] right-[11px] h-2 w-2 rounded-full bg-fuchsia-300 shadow-[0_0_16px_rgba(240,171,252,0.9)] animate-pulse [animation-delay:500ms] motion-reduce:animate-none" />
-            <div className="relative flex h-[6.5rem] w-[6.5rem] items-center justify-center rounded-full border border-white/15 bg-[radial-gradient(circle_at_30%_20%,rgba(103,232,249,0.25),transparent_42%),linear-gradient(135deg,#231b4f,#0a3447)] shadow-[0_0_55px_rgba(34,211,238,0.16)]">
+            <div className="relative flex h-[6.5rem] w-[6.5rem] items-center justify-center rounded-full border border-white/15 bg-[radial-gradient(circle_at_30%_20%,rgba(103,232,249,0.25),transparent_42%),linear-gradient(135deg,#231b4f,#0a3447)] shadow-[0_0_55px_rgba(34,211,238,0.16)] animate-[loading-globe-breathe_3s_ease-in-out_infinite] motion-reduce:animate-none">
               <div className="absolute inset-2 rounded-full border border-white/10" />
-              <Globe2 className="h-12 w-12 text-cyan-50/90" strokeWidth={1.35} />
+              <Globe2 className="h-12 w-12 text-cyan-50/90 animate-[loading-globe-rotate_8s_linear_infinite] motion-reduce:animate-none" strokeWidth={1.35} />
               <span className="absolute left-5 right-5 top-1/2 h-px bg-gradient-to-r from-transparent via-cyan-100/45 to-transparent" />
             </div>
-            <span className="absolute bottom-1 right-[18px] flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-[#121a31] text-fuchsia-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+            <span className="absolute bottom-1 right-[18px] flex h-10 w-10 items-center justify-center rounded-2xl border border-white/15 bg-[#121a31] text-fuchsia-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)] animate-[loading-float_2.6s_ease-in-out_infinite] motion-reduce:animate-none">
               <Video className="h-5 w-5" strokeWidth={1.9} />
             </span>
           </div>
