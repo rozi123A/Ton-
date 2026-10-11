@@ -15,17 +15,23 @@ const notifyClients = new Map<string, Response>();
 const pendingNotifs = new Map<string, NotifPayload[]>();
 const MAX_PENDING = 30;
 
-function sseEvent(res: Response, data: object) {
-  if (!res.writableEnded) {
+function sseEvent(res: Response, data: object): boolean {
+  if (res.writableEnded || res.destroyed) return false;
+  try {
     res.write(`data: ${JSON.stringify(data)}\n\n`);
+    return true;
+  } catch {
+    // A disconnected SSE client must never break the operation that created
+    // the notification. The caller can retain the payload for reconnection.
+    return false;
   }
 }
 
 export function sendUserNotification(userId: string, notif: NotifPayload) {
   const client = notifyClients.get(userId);
-  if (client && !client.writableEnded) {
-    sseEvent(client, notif);
-    return;
+  if (client) {
+    if (sseEvent(client, notif)) return;
+    if (notifyClients.get(userId) === client) notifyClients.delete(userId);
   }
 
   const queue = pendingNotifs.get(userId) || [];
@@ -38,9 +44,13 @@ export function registerUserNotificationClient(userId: string, res: Response) {
   notifyClients.set(userId, res);
 
   const pending = pendingNotifs.get(userId) || [];
-  pending.forEach((notification) => sseEvent(res, notification));
-  pendingNotifs.delete(userId);
-  sseEvent(res, { type: "connected", ts: Date.now() });
+  const undelivered = pending.filter((notification) => !sseEvent(res, notification));
+  if (undelivered.length > 0) pendingNotifs.set(userId, undelivered);
+  else pendingNotifs.delete(userId);
+
+  if (!sseEvent(res, { type: "connected", ts: Date.now() }) && notifyClients.get(userId) === res) {
+    notifyClients.delete(userId);
+  }
 
   return () => {
     if (notifyClients.get(userId) === res) notifyClients.delete(userId);

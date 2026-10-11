@@ -1277,10 +1277,27 @@ export const appRouter = router({
 
   social: router({
     sendRequest: protectedProcedure
-      .input(z.object({ receiverId: z.number() }))
+      .input(z.object({ receiverId: z.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.id <= 0) throw new Error("يجب تسجيل الدخول لإضافة أصدقاء");
-        await createFriendRequest(ctx.user.id, input.receiverId);
+        if (ctx.user.id === input.receiverId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكنك إرسال طلب صداقة إلى نفسك" });
+        }
+
+        const existingStatus = await getFriendStatus(ctx.user.id, input.receiverId);
+        if (existingStatus === "friends" || existingStatus === "pending") {
+          return { success: true, status: existingStatus };
+        }
+
+        try {
+          await createFriendRequest(ctx.user.id, input.receiverId);
+        } catch (error) {
+          console.error("[Social] Failed to persist friend request:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "تعذر حفظ طلب الصداقة. يرجى المحاولة مرة أخرى.",
+          });
+        }
         const notification = {
           type: 'friend-request',
           fromName: ctx.user.name || 'مستخدم',
@@ -1290,12 +1307,12 @@ export const appRouter = router({
           title: 'طلب صداقة جديد',
           ts: Date.now(),
         } as const;
+        await createNotification(input.receiverId, notification);
         sendUserNotification(String(input.receiverId), notification);
-        await Promise.all([
-          createNotification(input.receiverId, notification),
-          sendWebPushNotification(input.receiverId, notification),
-        ]);
-        return { success: true };
+        void sendWebPushNotification(input.receiverId, notification).catch((error) => {
+          console.warn("[Social] Web Push delivery failed:", error);
+        });
+        return { success: true, status: "pending" };
       }),
 
     acceptRequest: protectedProcedure
@@ -1312,11 +1329,11 @@ export const appRouter = router({
           title: 'تم قبول طلب الصداقة',
           ts: Date.now(),
         } as const;
+        await createNotification(input.senderId, notification);
         sendUserNotification(String(input.senderId), notification);
-        await Promise.all([
-          createNotification(input.senderId, notification),
-          sendWebPushNotification(input.senderId, notification),
-        ]);
+        void sendWebPushNotification(input.senderId, notification).catch((error) => {
+          console.warn("[Social] Web Push delivery failed:", error);
+        });
         return { success: true };
       }),
 
@@ -1382,4 +1399,3 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
-
