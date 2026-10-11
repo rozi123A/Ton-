@@ -142,12 +142,12 @@ export default function StoryViewer({
                   deleteStory.mutate({ storyId: story.id });
                 }
               }}
-              className="text-red-400 p-2 hover:bg-red-500/20 rounded-full"
+              className="rounded-full bg-red-500/15 p-2 text-red-300 transition hover:bg-red-500/25"
             >
               <Trash2 className="w-5 h-5" />
             </button>
           )}
-          <button onClick={onClose} className="text-white p-2 hover:bg-white/10 rounded-full">
+          <button onClick={onClose} aria-label="إغلاق القصة" className="rounded-full bg-red-500/15 p-2 text-red-200 transition hover:bg-red-500/25 hover:text-white">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -176,7 +176,7 @@ export default function StoryViewer({
           <div className="flex justify-center gap-4">
             <button 
               onClick={() => setShowComments(true)}
-              className="flex items-center gap-2 text-white bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full backdrop-blur-sm"
+              className="flex items-center gap-2 rounded-full border border-emerald-300/30 bg-emerald-600/80 px-4 py-2 text-white shadow-sm backdrop-blur-sm transition hover:bg-emerald-600"
             >
               <MessageCircle className="w-5 h-5" />
               <span>{comments.length} تعليق</span>
@@ -184,7 +184,7 @@ export default function StoryViewer({
             {isOwner && (
               <button 
                 onClick={() => setShowViewers(true)}
-                className="flex items-center gap-2 text-white bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full backdrop-blur-sm"
+                className="flex items-center gap-2 rounded-full border border-blue-300/30 bg-blue-600/75 px-4 py-2 text-white shadow-sm backdrop-blur-sm transition hover:bg-blue-600"
               >
                 <Eye className="w-5 h-5" />
                 <span>{viewers.length} مشاهدة</span>
@@ -199,7 +199,7 @@ export default function StoryViewer({
         <div className="absolute inset-x-0 bottom-0 top-1/2 bg-white rounded-t-3xl z-20 flex flex-col animate-in slide-in-from-bottom duration-300">
           <div className="p-4 border-b flex items-center justify-between">
             <h3 className="font-bold text-lg">التعليقات ({comments.length})</h3>
-            <button onClick={() => setShowComments(false)} className="p-2 hover:bg-gray-100 rounded-full">
+            <button onClick={() => setShowComments(false)} aria-label="إغلاق التعليقات" className="rounded-full bg-red-50 p-2 text-red-600 transition hover:bg-red-100">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -266,7 +266,8 @@ export default function StoryViewer({
                 type="submit" 
                 size="icon" 
                 disabled={!commentText.trim() || addComment.isPending}
-                className="rounded-full w-11 h-11 bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 flex-shrink-0"
+                variant="chat"
+                className="h-11 w-11 shrink-0"
               >
                 <Send className="w-5 h-5 text-white" />
               </Button>
@@ -288,7 +289,7 @@ export default function StoryViewer({
         <div className="absolute inset-x-0 bottom-0 top-1/2 bg-white rounded-t-3xl z-20 flex flex-col animate-in slide-in-from-bottom duration-300">
           <div className="p-4 border-b flex items-center justify-between">
             <h3 className="font-bold text-lg">المشاهدات ({viewers.length})</h3>
-            <button onClick={() => setShowViewers(false)} className="p-2 hover:bg-gray-100 rounded-full">
+            <button onClick={() => setShowViewers(false)} aria-label="إغلاق المشاهدات" className="rounded-full bg-red-50 p-2 text-red-600 transition hover:bg-red-100">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -323,13 +324,13 @@ export default function StoryViewer({
         <>
           <button 
             onClick={prev}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white"
+            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-violet-300/30 bg-violet-600/25 p-2 text-white transition hover:bg-violet-600/45"
           >
             <ChevronLeft className="w-10 h-10" />
           </button>
           <button 
             onClick={next}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white"
+            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-violet-300/30 bg-violet-600/25 p-2 text-white transition hover:bg-violet-600/45"
           >
             <ChevronRight className="w-10 h-10" />
           </button>

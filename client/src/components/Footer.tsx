@@ -63,7 +63,7 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <button onClick={() => setLocation('/store')} className="text-gray-400 hover:text-purple-400 transition-colors">
+                <button onClick={() => setLocation('/store')} className="rounded-full px-2 py-1 text-pink-300 transition-colors hover:bg-pink-500/10 hover:text-pink-200">
                   {t('nav.store')}
                 </button>
               </li>

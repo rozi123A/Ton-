@@ -259,7 +259,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
             </h2>
             <p className="mt-1 text-xs text-white/50">حلول ذكية للإبداع والتواصل، مصممة لتسهّل تجربتك.</p>
           </div>
-          <button onClick={onClose} className="rounded-xl p-2 text-white/60 hover:bg-white/10 hover:text-white" aria-label="إغلاق">
+          <button onClick={onClose} className="rounded-full bg-red-500/10 p-2 text-red-300 transition hover:bg-red-500/20 hover:text-white" aria-label="إغلاق">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -272,7 +272,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-bold transition ${
-                  activeTab === tab.id ? "bg-cyan-500/20 text-cyan-200" : "text-white/55 hover:bg-white/10 hover:text-white"
+                  activeTab === tab.id ? "bg-gradient-to-r from-blue-600/35 to-violet-600/35 text-blue-100 ring-1 ring-blue-300/20" : "text-blue-100/70 hover:bg-blue-500/10 hover:text-blue-50"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -299,8 +299,8 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                     onClick={() => selectConversation(conversation.id)}
                     className={`max-w-[180px] shrink-0 truncate rounded-xl px-3 py-2 text-xs font-semibold transition ${
                       conversation.id === conversationId
-                        ? "bg-white/15 text-white"
-                        : "bg-white/5 text-white/55 hover:bg-white/10 hover:text-white"
+                        ? "bg-gradient-to-r from-blue-600/30 to-violet-600/30 text-blue-50 ring-1 ring-blue-300/25"
+                        : "bg-blue-500/10 text-blue-100/75 hover:bg-blue-500/20 hover:text-white"
                     }`}
                     title={conversation.title}
                   >
@@ -348,7 +348,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                   placeholder="اكتب رسالتك..."
                   className="min-h-12 flex-1 resize-none rounded-2xl border border-white/15 bg-white/10 px-3 py-3 text-sm outline-none placeholder:text-white/35 focus:border-cyan-400"
                 />
-                <button onClick={sendChat} disabled={!prompt.trim() || chatMutation.isPending} className="rounded-2xl bg-cyan-500 px-4 text-slate-950 disabled:opacity-40">
+                <button onClick={sendChat} disabled={!prompt.trim() || chatMutation.isPending} aria-label="إرسال إلى المساعد" className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-sm shadow-indigo-950/20 transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-40">
                   <Send className="h-5 w-5" />
                 </button>
               </div>
@@ -363,9 +363,9 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                   value={imagePrompt}
                   onChange={event => setImagePrompt(event.target.value)}
                   placeholder="مثال: منظر طبيعي هادئ عند الغروب بأسلوب واقعي"
-                  className="min-h-28 w-full resize-none rounded-xl border border-white/15 bg-white/10 p-3 text-sm outline-none placeholder:text-white/35 focus:border-pink-400"
+                  className="min-h-28 w-full resize-none rounded-xl border border-white/15 bg-white/10 p-3 text-sm outline-none placeholder:text-white/35 focus:border-blue-400"
                 />
-                <button onClick={generateImage} disabled={!imagePrompt.trim() || imageMutation.isPending} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 py-3 font-bold disabled:opacity-40">
+                <button onClick={generateImage} disabled={!imagePrompt.trim() || imageMutation.isPending} className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-violet-600 py-3 font-bold text-white shadow-sm shadow-indigo-950/20 transition hover:-translate-y-0.5 hover:brightness-110 disabled:opacity-40">
                   {imageMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
                   إنشاء الصورة
                 </button>
@@ -377,7 +377,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                     type="button"
                     onClick={() => downloadImage(imageId)}
                     disabled={!imageId || downloadImageMutation.isPending}
-                    className="flex w-full items-center justify-center gap-2 border-t border-white/10 p-3 text-center text-sm font-bold text-pink-200 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-2 border-t border-white/10 p-3 text-center text-sm font-bold text-blue-200 transition hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Download className="h-4 w-4" />
                     {downloadImageMutation.isPending ? "جارٍ تجهيز التنزيل..." : "تنزيل الصورة"}
@@ -397,7 +397,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                     {imagesQuery.data.map(image => (
                       <div
                         key={image.id}
-                        className="group overflow-hidden rounded-2xl border border-white/10 bg-black/20 text-right transition hover:border-pink-300/50 hover:shadow-lg hover:shadow-pink-500/10"
+                        className="group overflow-hidden rounded-2xl border border-white/10 bg-black/20 text-right transition hover:border-blue-300/50 hover:shadow-md hover:shadow-blue-500/10"
                       >
                         <button
                           onClick={() => {
@@ -413,7 +413,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                         <button
                           type="button"
                           onClick={() => downloadImage(image.id)}
-                          className="flex items-center justify-center gap-1.5 border-t border-white/10 px-2 py-2 text-[11px] font-bold text-pink-200 transition hover:bg-pink-500/10"
+                          className="flex items-center justify-center gap-1.5 border-t border-white/10 px-2 py-2 text-[11px] font-bold text-blue-200 transition hover:bg-blue-500/10"
                           aria-label={`تنزيل صورة: ${image.prompt}`}
                         >
                           <Download className="h-3.5 w-3.5" />
@@ -438,7 +438,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={voiceMutation.isPending}
                 className={`mb-4 flex h-20 w-20 items-center justify-center rounded-full transition ${
-                  isRecording ? "bg-red-500 shadow-lg shadow-red-500/30" : "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/30"
+                  isRecording ? "bg-red-600 shadow-sm shadow-red-950/20" : "bg-blue-600 text-white shadow-sm shadow-blue-950/20"
                 } disabled:opacity-40`}
                 aria-label={isRecording ? "إيقاف التسجيل" : "بدء التسجيل"}
               >
@@ -464,7 +464,7 @@ export default function AIStudio({ onClose }: { onClose: () => void }) {
                   placeholder="اكتب عنواناً أو مدينة..."
                   className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/10 px-3 py-3 text-sm outline-none placeholder:text-white/35 focus:border-cyan-400"
                 />
-                <button onClick={searchMap} disabled={!mapAddress.trim() || mapQuery.isFetching} className="rounded-xl bg-cyan-500 px-4 text-slate-950 disabled:opacity-40">
+                <button onClick={searchMap} disabled={!mapAddress.trim() || mapQuery.isFetching} className="rounded-full bg-cyan-700 px-4 text-white transition hover:bg-cyan-800 disabled:opacity-40">
                   {mapQuery.isFetching ? <Loader2 className="h-5 w-5 animate-spin" /> : <Search className="h-5 w-5" />}
                 </button>
               </div>

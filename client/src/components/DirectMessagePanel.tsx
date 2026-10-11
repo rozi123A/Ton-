@@ -77,7 +77,7 @@ export default function DirectMessagePanel({ friendId, friendName, friendAvatar,
               <p className="text-white/40 text-[10px]">دردشة خاصة</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/50 hover:text-white transition-colors">
+          <button onClick={onClose} aria-label="إغلاق الرسائل" className="rounded-full bg-red-500/10 p-1.5 text-red-300 transition-colors hover:bg-red-500/20 hover:text-white">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -128,7 +128,8 @@ export default function DirectMessagePanel({ friendId, friendName, friendAvatar,
           <button
             onClick={handleSend}
             disabled={!text.trim() || sendMutation.isPending}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 disabled:opacity-40 text-white p-2.5 rounded-xl transition-all active:scale-95"
+            aria-label="إرسال الرسالة"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-700 p-2.5 text-white shadow-sm shadow-emerald-950/20 transition-all hover:-translate-y-0.5 hover:bg-emerald-800 active:scale-[0.96] disabled:opacity-40"
           >
             <Send className="w-4 h-4" />
           </button>

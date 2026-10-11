@@ -62,7 +62,7 @@ function CallWatcher({
           <p style={{ margin: 0, color: 'white', fontWeight: 700 }}>مراقبة المكالمة</p>
           <p style={{ margin: '4px 0 0', color: '#9ca3af', fontSize: '12px' }}>{call.name1} &amp; {call.name2}</p>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>
+        <button onClick={onClose} aria-label="إغلاق" style={{ backgroundColor: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#fca5a5', cursor: 'pointer', borderRadius: '999px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
           <X style={{ width: '18px' }} />
         </button>
       </div>
@@ -186,7 +186,7 @@ function PasswordGate({ onVerified }: { onVerified: () => void }) {
                 position: 'absolute', left: '12px', top: '50%',
                 transform: 'translateY(-50%)',
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: '#9ca3af', padding: 0,
+                color: '#93c5fd', padding: '7px', borderRadius: '999px', backgroundColor: 'rgba(59,130,246,0.12)', transition: 'all 0.2s',
               }}
             >
               {showPw
@@ -199,8 +199,8 @@ function PasswordGate({ onVerified }: { onVerified: () => void }) {
             onClick={handleSubmit}
             disabled={verifyMutation.isPending}
             style={{
-              backgroundColor: '#7c3aed', color: 'white', border: 'none',
-              borderRadius: '12px', padding: '12px 20px',
+              background: 'linear-gradient(110deg, #2563eb, #7c3aed)', color: 'white', border: '1px solid rgba(147,197,253,0.35)',
+              borderRadius: '999px', padding: '12px 20px', boxShadow: '0 4px 12px rgba(30,64,175,0.2)', transition: 'all 0.2s',
               fontWeight: 700, fontSize: '14px', cursor: 'pointer',
               opacity: verifyMutation.isPending ? 0.6 : 1,
               flexShrink: 0,
@@ -276,7 +276,7 @@ function PaymentsTab() {
                 onClick={() => handleAction(pay.id, 'approved')}
                 disabled={handleMutation.isPending}
                 style={{
-                  flex: 1, backgroundColor: '#059669', color: 'white', border: 'none', borderRadius: '10px',
+                  flex: 1, backgroundColor: '#059669', color: 'white', border: '1px solid rgba(110,231,183,0.35)', borderRadius: '999px', boxShadow: '0 3px 10px rgba(6,78,59,0.18)', transition: 'all 0.2s',
                   padding: '10px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -286,7 +286,7 @@ function PaymentsTab() {
                 onClick={() => handleAction(pay.id, 'rejected')}
                 disabled={handleMutation.isPending}
                 style={{
-                  flex: 1, backgroundColor: '#dc2626', color: 'white', border: 'none', borderRadius: '10px',
+                  flex: 1, backgroundColor: '#dc2626', color: 'white', border: '1px solid rgba(252,165,165,0.35)', borderRadius: '999px', boxShadow: '0 3px 10px rgba(127,29,29,0.18)', transition: 'all 0.2s',
                   padding: '10px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
@@ -324,7 +324,7 @@ export default function Admin() {
           <Shield style={{ width: '20px', height: '20px', color: '#7c3aed' }} />
           <span style={{ fontWeight: 900, fontSize: '18px', letterSpacing: '-0.5px' }}>لوحة الإدارة</span>
         </div>
-        <button onClick={() => setLocation('/')} style={{ background: 'none', border: 'none', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>
+        <button onClick={() => setLocation('/')} style={{ backgroundColor: 'rgba(59,130,246,0.12)', border: '1px solid rgba(96,165,250,0.3)', color: '#bfdbfe', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, borderRadius: '999px', padding: '8px 12px', transition: 'all 0.2s' }}>
           الموقع <ArrowRight style={{ width: '14px', height: '14px', rotate: '180deg' }} />
         </button>
       </div>
@@ -344,9 +344,9 @@ export default function Admin() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px', border: 'none',
-                backgroundColor: activeTab === tab.id ? '#7c3aed' : '#1f2937',
-                color: activeTab === tab.id ? 'white' : '#9ca3af',
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '999px', border: activeTab === tab.id ? '1px solid rgba(196,181,253,0.4)' : '1px solid rgba(96,165,250,0.16)',
+                background: activeTab === tab.id ? 'linear-gradient(110deg, #2563eb, #7c3aed)' : 'rgba(37,99,235,0.08)',
+                color: activeTab === tab.id ? 'white' : '#bfdbfe',
                 fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap'
               }}
             >
@@ -386,8 +386,8 @@ function ResetVipsButton() {
       onClick={() => confirm("هل أنت متأكد من سحب VIP من جميع المستخدمين؟ (لن يتم المساس بالأدمن)") && resetMutation.mutate()}
       disabled={resetMutation.isPending}
       style={{
-        backgroundColor: '#451a1a', color: '#fca5a5', border: '1px solid #991b1b',
-        borderRadius: '8px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer'
+        backgroundColor: '#7f1d1d', color: '#fee2e2', border: '1px solid rgba(252,165,165,0.35)',
+        borderRadius: '999px', padding: '5px 12px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 8px rgba(127,29,29,0.15)', transition: 'all 0.2s'
       }}
     >
       {resetMutation.isPending ? "جاري السحب..." : "سحب VIP من الكل"}
@@ -406,7 +406,7 @@ function RevokeUserVipButton({ userId }: { userId: number }) {
       onClick={(e) => { e.stopPropagation(); revokeMutation.mutate({ userId }); }}
       disabled={revokeMutation.isPending}
       title="سحب VIP"
-      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0 }}
+      style={{ backgroundColor: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.24)', color: '#f87171', cursor: 'pointer', padding: '5px', borderRadius: '999px', display: 'flex', transition: 'all 0.2s' }}
     >
       <X style={{ width: '12px', height: '12px' }} />
     </button>
@@ -478,7 +478,7 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
         <div style={{ backgroundColor: '#1f0a0a', border: '1px solid #7f1d1d', borderRadius: '12px', padding: '12px 14px' }}>
           <p style={{ color: '#ef4444', fontWeight: 700, fontSize: '13px', margin: '0 0 5px' }}>⚠️ قاعدة البيانات غير متصلة</p>
           <p style={{ color: '#fca5a5', fontSize: '12px', margin: '0 0 9px' }}>{dbStatus?.reason || 'تعذر الاتصال بقاعدة البيانات'}</p>
-          <button onClick={refetchAll} disabled={isFetching} style={{ backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '7px', padding: '7px 12px', cursor: 'pointer', fontWeight: 700, opacity: isFetching ? 0.6 : 1 }}>
+          <button onClick={refetchAll} disabled={isFetching} style={{ background: 'linear-gradient(110deg, #2563eb, #7c3aed)', color: 'white', border: '1px solid rgba(147,197,253,0.3)', borderRadius: '999px', padding: '8px 14px', cursor: 'pointer', fontWeight: 700, opacity: isFetching ? 0.6 : 1, transition: 'all 0.2s' }}>
             {isFetching ? 'جارِ المحاولة...' : 'إعادة المحاولة'}
           </button>
         </div>
@@ -491,7 +491,7 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
         </p>
         <div style={{ display: 'flex', gap: '10px' }}>
           <ResetVipsButton />
-          <button onClick={() => refetchDbStatus()} disabled={isFetching} style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer', opacity: isFetching ? 0.5 : 1 }}>
+          <button onClick={() => refetchDbStatus()} disabled={isFetching} aria-label="تحديث حالة قاعدة البيانات" style={{ backgroundColor: 'rgba(59,130,246,0.12)', border: '1px solid rgba(96,165,250,0.22)', color: '#93c5fd', cursor: 'pointer', opacity: isFetching ? 0.5 : 1, borderRadius: '999px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
             <RefreshCw style={{ width: '16px' }} />
           </button>
         </div>
@@ -639,7 +639,7 @@ function CallsTab({ token }: { token: string }) {
             <p style={{ margin: '0 0 12px', fontSize: '13px', fontWeight: 700 }}>{c.name1} & {c.name2}</p>
             <button
               onClick={() => setWatching(c)}
-              style={{ width: '100%', backgroundColor: '#7c3aed', color: 'white', border: 'none', borderRadius: '10px', padding: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              style={{ width: '100%', background: 'linear-gradient(110deg, #2563eb, #7c3aed)', color: 'white', border: '1px solid rgba(147,197,253,0.3)', borderRadius: '999px', padding: '9px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 3px 10px rgba(30,64,175,0.15)', transition: 'all 0.2s' }}
             >
               <Radio style={{ width: '14px' }} /> مراقبة
             </button>
@@ -680,12 +680,12 @@ function RecordingsTab({ token }: { token: string }) {
           <div style={{ display: 'flex', gap: '6px' }}>
              <button
                onClick={() => void downloadRecording(token, r.sessionId).catch(() => toast.error('تعذر تنزيل التسجيل'))}
-               style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+               style={{ backgroundColor: 'rgba(59,130,246,0.12)', border: '1px solid rgba(96,165,250,0.2)', color: '#93c5fd', cursor: 'pointer', borderRadius: '999px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
                aria-label="تنزيل التسجيل"
              >
                <Download style={{ width: '18px' }} />
              </button>
-            <button onClick={() => setPlaying(r)} style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer' }}><Play style={{ width: '18px' }} /></button>
+            <button onClick={() => setPlaying(r)} aria-label="تشغيل التسجيل" style={{ backgroundColor: 'rgba(16,185,129,0.14)', border: '1px solid rgba(110,231,183,0.25)', color: '#6ee7b7', cursor: 'pointer', borderRadius: '999px', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}><Play style={{ width: '18px' }} /></button>
           </div>
         </div>
       ))}
@@ -727,8 +727,8 @@ function SearchTab({ adminToken }: { adminToken: string }) {
         <button
           type="submit"
           style={{
-            backgroundColor: '#7c3aed', color: 'white', border: 'none',
-            borderRadius: '12px', padding: '12px 20px', fontWeight: 700,
+            background: 'linear-gradient(110deg, #2563eb, #7c3aed)', color: 'white', border: '1px solid rgba(147,197,253,0.3)',
+            borderRadius: '999px', padding: '12px 20px', fontWeight: 700,
             cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px',
           }}
         >
@@ -799,8 +799,8 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
       <button
         onClick={onBack}
         style={{
-          alignSelf: 'flex-start', backgroundColor: '#1f2937', color: 'white',
-          border: '1px solid #374151', borderRadius: '12px', padding: '10px 16px',
+          alignSelf: 'flex-start', backgroundColor: '#1d4ed8', color: 'white',
+          border: '1px solid rgba(147,197,253,0.35)', borderRadius: '999px', padding: '10px 16px',
           fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
         }}
       >
@@ -885,10 +885,10 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
               disabled={setVerifiedMutation.isPending}
               style={{
                 flex: 1,
-                backgroundColor: user.isVerified ? '#334155' : '#0369a1',
+                backgroundColor: user.isVerified ? '#b91c1c' : '#0369a1',
                 color: 'white',
                 border: 'none',
-                borderRadius: '12px',
+                borderRadius: '999px',
                 padding: '12px',
                 fontWeight: 700,
                 fontSize: '14px',
@@ -908,8 +908,8 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
             <button
               onClick={() => alert(`معرف المستخدم: ${user.id}\nالاسم: ${user.name}\nالإيميل: ${(user as { email?: string | null }).email || 'غير متوفر'}`)}
               style={{
-                flex: 1, backgroundColor: '#7c3aed', color: 'white', border: 'none',
-                borderRadius: '12px', padding: '12px', fontWeight: 700, fontSize: '14px', cursor: 'pointer'
+                flex: 1, background: 'linear-gradient(110deg, #2563eb, #7c3aed)', color: 'white', border: '1px solid rgba(147,197,253,0.3)',
+                borderRadius: '999px', padding: '12px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s'
               }}
             >
               عرض التفاصيل الكاملة
@@ -986,9 +986,9 @@ function BroadcastTab({ adminToken }: { adminToken: string }) {
             type="submit"
             disabled={broadcastMutation.isPending || !title.trim() || !message.trim()}
             style={{
-              backgroundColor: broadcastMutation.isPending ? '#374151' : '#f59e0b',
-              color: broadcastMutation.isPending ? '#6b7280' : 'black',
-              border: 'none', borderRadius: '12px', padding: '14px',
+              backgroundColor: '#f59e0b',
+              color: '#422006',
+              border: '1px solid rgba(253,230,138,0.35)', borderRadius: '999px', padding: '14px',
               fontWeight: 800, fontSize: '15px', cursor: broadcastMutation.isPending ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
             }}

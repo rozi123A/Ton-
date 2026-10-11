@@ -156,7 +156,7 @@ function UserCard({ user, onViewProfile, onOpenStory }: {
 
         <button
           onClick={() => setLocation('/chat')}
-          className="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-4 rounded-2xl hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-lg shadow-purple-200 group-hover:shadow-purple-300"
+          className="w-full rounded-full border border-emerald-300/40 bg-gradient-to-r from-emerald-600 to-green-700 px-4 py-3 font-bold text-white shadow-sm shadow-emerald-950/15 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110"
         >
           {t('nav.chat')}
         </button>
@@ -267,7 +267,7 @@ export default function TrendingUsers() {
 
         {hasRealUsers && users.length >= 20 && (
           <div className="text-center mt-12">
-            <button className="inline-block bg-white border-2 border-purple-600 text-purple-600 font-bold py-3 px-8 rounded-full hover:bg-purple-50 transition-all duration-300">
+            <button className="inline-block rounded-full border border-blue-300 bg-gradient-to-r from-blue-50 to-violet-50 px-8 py-3 font-bold text-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-400 hover:from-blue-100 hover:to-violet-100 dark:border-blue-800 dark:from-blue-950/50 dark:to-violet-950/50 dark:text-blue-200">
               عرض المزيد من المستخدمين
             </button>
           </div>

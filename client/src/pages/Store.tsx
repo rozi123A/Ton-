@@ -196,19 +196,19 @@ export default function Store() {
 
               {!isPremium && (
                 <>
-                  <div className="flex gap-2 mb-5 p-1 bg-gray-100 rounded-2xl">
+                  <div className="mb-5 flex gap-2 rounded-full border border-blue-200 bg-blue-50 p-1 dark:border-blue-900 dark:bg-blue-950/30">
                     <button
                       onClick={() => setPayMethod('money')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        payMethod === 'money' ? 'bg-white shadow text-purple-700' : 'text-gray-400 hover:text-gray-600'
+                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-bold transition-all ${
+                        payMethod === 'money' ? 'bg-blue-600 text-white shadow-sm shadow-blue-950/15' : 'text-blue-700 hover:bg-blue-100 dark:text-blue-200 dark:hover:bg-blue-900/50'
                       }`}
                     >
                       {t('store.digital_pay')}
                     </button>
                     <button
                       onClick={() => setPayMethod('credits')}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        payMethod === 'credits' ? 'bg-white shadow text-yellow-700' : 'text-gray-400 hover:text-gray-600'
+                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-bold transition-all ${
+                        payMethod === 'credits' ? 'bg-amber-500 text-amber-950 shadow-sm shadow-amber-950/10' : 'text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-900/30'
                       }`}
                     >
                       <Zap className="w-3.5 h-3.5" /> {t('store.my_points')}
@@ -227,8 +227,8 @@ export default function Store() {
                             onClick={() => handlePayClick({ type: 'vip', amount: 0, price: plan.price })}
                             className={`relative flex flex-col items-center gap-1 py-3 px-2 rounded-2xl border-2 transition-all hover:scale-[1.03] active:scale-95 ${
                               plan.popular
-                                ? 'border-purple-500 bg-purple-50 shadow-md shadow-purple-200'
-                                : 'border-gray-200 bg-white hover:border-purple-300'
+                                ? 'border-violet-500 bg-gradient-to-br from-violet-100 to-fuchsia-50 shadow-sm shadow-violet-200'
+                                : 'border-blue-200 bg-blue-50/80 hover:border-blue-400 hover:bg-blue-100/80'
                             }`}
                           >
                             {plan.popular && (
@@ -274,7 +274,7 @@ export default function Store() {
                         onClick={() => upgradeWithCreditsMutation.mutate()}
                         disabled={!canAfford || upgradeWithCreditsMutation.isPending}
                         className={`w-full font-black py-6 text-base rounded-2xl shadow-lg transition-all gap-2 ${
-                          canAfford ? 'bg-gradient-to-r from-yellow-400 to-orange-500 hover:brightness-110 text-gray-900 shadow-orange-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          canAfford ? 'bg-gradient-to-r from-amber-400 to-orange-500 hover:brightness-105 text-amber-950 shadow-amber-200' : 'bg-amber-100 text-amber-700 cursor-not-allowed'
                         }`}
                       >
                         {upgradeWithCreditsMutation.isPending ? t('store.deducting') : canAfford ? t('store.points_btn') : `${t('store.insufficient_balance')} (${userCredits}/${PREMIUM_COST})`}
@@ -319,8 +319,9 @@ export default function Store() {
                 </CardContent>
                 <CardFooter>
                   <Button
+                    variant="gift"
                     onClick={() => handlePayClick({ type: 'stars', amount: pkg.amount, price: pkg.price })}
-                    className="w-full bg-gray-900 hover:bg-black text-white rounded-xl font-bold"
+                    className="w-full font-bold"
                   >
                     {t('store.buy_now')}
                   </Button>
@@ -362,16 +363,16 @@ export default function Store() {
             <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
               <button
                 onClick={() => setCryptoMethod('usdt_trc20')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  cryptoMethod === 'usdt_trc20' ? 'bg-white text-gray-900 shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-full py-2.5 text-xs font-bold transition-all ${
+                  cryptoMethod === 'usdt_trc20' ? 'bg-emerald-700 text-white shadow-sm' : 'bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20'
                 }`}
               >
                 USDT (TRC20) <span className="w-5 h-5 bg-green-500 text-white rounded-full flex items-center justify-center text-[10px]">T</span>
               </button>
               <button
                 onClick={() => setCryptoMethod('binance_pay')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  cryptoMethod === 'binance_pay' ? 'bg-white text-gray-900 shadow-xl scale-[1.02]' : 'text-white/40 hover:text-white/60'
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-full py-2.5 text-xs font-bold transition-all ${
+                  cryptoMethod === 'binance_pay' ? 'bg-amber-500 text-amber-950 shadow-sm' : 'bg-amber-500/10 text-amber-100 hover:bg-amber-500/20'
                 }`}
               >
                 Binance Pay <span className="w-5 h-5 bg-yellow-500 text-white rounded-full flex items-center justify-center text-[10px]">B</span>
@@ -399,7 +400,7 @@ export default function Store() {
                   {cryptoMethod !== 'binance_pay' && (
                     <button
                       onClick={() => copyToClipboard(payConfig?.usdtTrc20Address || 'Txxxxxxxxxxxxxxxxxxxxxxxxx')}
-                      className="p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors"
+                      className="rounded-full bg-blue-500/15 p-2.5 text-blue-100 transition-colors hover:bg-blue-500/25"
                     >
                       {copied ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                     </button>
@@ -430,9 +431,10 @@ export default function Store() {
 
           <DialogFooter className="p-4 pt-0">
             <Button
+              variant="chat"
               onClick={handleSubmitPayment}
               disabled={submitPaymentMutation.isPending}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:brightness-110 text-white font-black py-4 text-base rounded-2xl shadow-2xl shadow-purple-900/40 transition-all border-t border-white/20"
+              className="w-full py-4 text-base font-black shadow-sm"
             >
               {submitPaymentMutation.isPending
                 ? (isRTL ? '⏳ جاري الإرسال...' : '⏳ Submitting...')

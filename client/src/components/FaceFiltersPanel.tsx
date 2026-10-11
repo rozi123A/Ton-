@@ -47,7 +47,7 @@ export default function FaceFiltersPanel({ onClose, isPremium, onSelectFilter }:
           <Sparkles className="w-5 h-5 text-purple-400" />
           فلاتر الوجه
         </div>
-        <button onClick={onClose} className="text-white/50 hover:text-white">
+        <button onClick={onClose} aria-label="إغلاق الفلاتر" className="rounded-full bg-red-500/10 p-1.5 text-red-300 transition hover:bg-red-500/20 hover:text-white">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -60,8 +60,8 @@ export default function FaceFiltersPanel({ onClose, isPremium, onSelectFilter }:
             onClick={() => handleSelectFilter(filter.id)}
             className={`flex flex-col items-center py-3 px-2 rounded-xl border-2 transition-all duration-200 ${
               selectedFilter === filter.id
-                ? 'border-purple-500 bg-purple-500/20'
-                : 'border-white/10 hover:border-white/30'
+                ? 'border-violet-300/55 bg-gradient-to-br from-violet-600/35 to-purple-600/25 shadow-sm shadow-violet-950/15'
+                : 'border-violet-300/20 bg-violet-500/5 hover:border-violet-300/45 hover:bg-violet-500/15'
             } ${filter.isPremium && !isPremium ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             disabled={filter.isPremium && !isPremium}
           >

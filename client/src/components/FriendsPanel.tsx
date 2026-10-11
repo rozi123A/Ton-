@@ -109,12 +109,12 @@ export default function FriendsPanel({
             <button
               onClick={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending}
-              className="text-white/50 hover:text-green-400 transition-colors p-1"
+              className="rounded-full bg-emerald-500/10 p-1.5 text-emerald-300 transition-colors hover:bg-emerald-500/20"
               title="تحديد الكل كمقروء"
             >
               <CheckCheck className="w-5 h-5" />
             </button>
-            <button onClick={onClose} className="text-white/50 hover:text-white transition-colors">
+            <button onClick={onClose} aria-label="إغلاق لوحة الأصدقاء" className="rounded-full bg-red-500/10 p-1.5 text-red-300 transition-colors hover:bg-red-500/20 hover:text-white">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -126,8 +126,8 @@ export default function FriendsPanel({
             onClick={() => setActiveTab('friends')}
             className={`flex-1 py-2.5 text-sm font-bold transition-colors ${
               activeTab === 'friends'
-                ? 'text-white border-b-2 border-purple-500'
-                : 'text-white/40 hover:text-white/70'
+                ? 'border-b-2 border-rose-400 text-rose-200'
+                : 'text-rose-100/70 hover:text-rose-100'
             }`}
           >
             قائمة الأصدقاء ({friends.length})
@@ -136,8 +136,8 @@ export default function FriendsPanel({
             onClick={() => setActiveTab('requests')}
             className={`relative flex-1 py-2.5 text-sm font-bold transition-colors ${
               activeTab === 'requests'
-                ? 'text-white border-b-2 border-purple-500'
-                : 'text-white/40 hover:text-white/70'
+                ? 'border-b-2 border-rose-400 text-rose-200'
+                : 'text-rose-100/70 hover:text-rose-100'
             }`}
           >
             طلبات واردة ({pendingCount})
@@ -150,8 +150,8 @@ export default function FriendsPanel({
               onClick={() => setActiveTab('add')}
               className={`flex-1 py-2.5 text-sm font-bold transition-colors ${
                 activeTab === 'add'
-                  ? 'text-white border-b-2 border-pink-500'
-                  : 'text-white/40 hover:text-white/70'
+                  ? 'border-b-2 border-blue-400 text-blue-200'
+                  : 'text-blue-100/70 hover:text-blue-100'
               }`}
             >
               إضافة صديق
@@ -185,7 +185,7 @@ export default function FriendsPanel({
             ) : (
               <button
                 onClick={handleSendRequest}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 active:scale-95 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-lg"
+                className="flex items-center gap-2 rounded-full bg-red-600 px-6 py-3 font-bold text-white shadow-sm shadow-red-950/15 transition-all hover:-translate-y-0.5 hover:bg-red-700 active:scale-[0.98]"
               >
                 <UserPlus className="w-5 h-5" />
                 إرسال طلب صداقة
@@ -222,7 +222,7 @@ export default function FriendsPanel({
                       <button
                         onClick={() => acceptRequestMutation.mutate({ senderId: req.senderId })}
                         disabled={acceptRequestMutation.isPending}
-                        className="flex items-center gap-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+                        className="flex items-center gap-1 rounded-full bg-emerald-700 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-emerald-800 disabled:opacity-50"
                       >
                         <Check className="w-3.5 h-3.5" />
                         قبول
@@ -267,7 +267,7 @@ export default function FriendsPanel({
                           {friend.userId && onViewProfile && (
                             <button
                               onClick={() => onViewProfile(friend.userId!)}
-                              className="p-1.5 bg-white/10 hover:bg-purple-600 rounded-lg text-white/60 hover:text-white transition-colors"
+                              className="rounded-full border border-blue-300/30 bg-blue-500/15 p-1.5 text-blue-100 transition-colors hover:bg-blue-600"
                               title="عرض الملف الشخصي"
                             >
                               <Eye className="w-4 h-4" />
@@ -275,7 +275,7 @@ export default function FriendsPanel({
                           )}
                           <button
                             onClick={() => onStartChat(friend)}
-                            className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
+                            className="rounded-full bg-emerald-700 p-1.5 text-white transition-colors hover:bg-emerald-800"
                           >
                             <MessageCircle className="w-4 h-4" />
                           </button>
@@ -295,7 +295,7 @@ export default function FriendsPanel({
                 </div>
                 <div className="divide-y divide-white/5">
                   {offlineFriends.map(friend => (
-                    <div key={friend.id} className="p-3 hover:bg-white/5 transition-colors opacity-60">
+                    <div key={friend.id} className="p-3 transition-colors hover:bg-white/5">
                       <div className="flex items-center gap-3">
                         <div className="relative cursor-pointer" onClick={() => friend.userId && onViewProfile?.(friend.userId)}>
                           <img
@@ -319,7 +319,7 @@ export default function FriendsPanel({
                           {friend.userId && onViewProfile && (
                             <button
                               onClick={() => onViewProfile(friend.userId!)}
-                              className="p-1.5 bg-white/10 hover:bg-purple-600 rounded-lg text-white/60 hover:text-white transition-colors"
+                              className="rounded-full border border-blue-300/30 bg-blue-500/15 p-1.5 text-blue-100 transition-colors hover:bg-blue-600"
                               title="عرض الملف الشخصي"
                             >
                               <Eye className="w-4 h-4" />
@@ -327,7 +327,7 @@ export default function FriendsPanel({
                           )}
                           <button
                             onClick={() => onStartChat(friend)}
-                            className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-colors"
+                            className="rounded-full bg-emerald-700 p-1.5 text-white transition-colors hover:bg-emerald-800"
                           >
                             <MessageCircle className="w-4 h-4" />
                           </button>
@@ -350,7 +350,7 @@ export default function FriendsPanel({
                 {currentPeerId && (
                   <button
                     onClick={() => setActiveTab('add')}
-                    className="mt-4 flex items-center gap-2 bg-purple-600/30 border border-purple-500/40 hover:bg-purple-600/50 text-purple-300 font-bold px-4 py-2 rounded-xl transition-all text-sm"
+                    className="mt-4 flex items-center gap-2 rounded-full border border-blue-300/35 bg-gradient-to-r from-blue-600/25 to-violet-600/25 px-4 py-2 text-sm font-bold text-blue-100 transition-all hover:from-blue-600/40 hover:to-violet-600/40"
                   >
                     <UserPlus className="w-4 h-4" />
                     أضف الشخص الحالي

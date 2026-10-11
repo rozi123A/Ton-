@@ -536,7 +536,7 @@ export default function NotificationBell() {
               <button
                 type="button"
                 onClick={() => void activatePhoneNotifications()}
-                className="mt-2 rounded-lg bg-purple-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-purple-700"
+                className="mt-2 rounded-full bg-blue-700 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-blue-800"
               >
                 {t('notifications.enable_button')}
               </button>
@@ -558,11 +558,11 @@ export default function NotificationBell() {
         className={
           unread > 0
             ? "relative p-2 rounded-full transition-all duration-200 bg-red-50 hover:bg-red-100 ring-2 ring-red-200 shadow-sm shadow-red-100"
-            : "relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+            : "relative rounded-full bg-blue-500/10 p-2 transition-colors hover:bg-blue-500/15"
         }
         title="الإشعارات"
       >
-        <Bell className={unread > 0 ? "w-5 h-5 text-red-500" : "w-5 h-5 text-gray-600"} />
+        <Bell className={unread > 0 ? "w-5 h-5 text-red-500" : "w-5 h-5 text-blue-700"} />
         {unread > 0 && (
           <>
             {/* Ping ring for attention */}
@@ -602,7 +602,7 @@ export default function NotificationBell() {
                     void activatePhoneNotifications();
                   }}
                   disabled={pushTestMutation.isPending || testStatus === 'sending' || pushRegistrationStatus === 'registering'}
-                  className="rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-bold text-purple-700 hover:bg-purple-200 disabled:opacity-50"
+                  className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
                 >
                   {pushRegistrationStatus === 'registering'
                     ? t('notifications.activate_push_registering')
@@ -613,13 +613,13 @@ export default function NotificationBell() {
                   type="button"
                   onClick={() => void testPhoneNotification()}
                   disabled={pushTestMutation.isPending || testStatus === 'sending'}
-                  className="rounded-lg bg-purple-100 px-2 py-1 text-[10px] font-bold text-purple-700 hover:bg-purple-200 disabled:opacity-50"
+                  className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:opacity-50"
                 >
                   {testStatus === 'sending' ? '...' : t('notifications.test_push')}
                 </button>
               )}
               {notifs.length > 0 && (
-                <button onClick={markAllRead} className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1">
+                <button onClick={markAllRead} className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100">
                   <Check className="w-3 h-3" />
                   {t('notifications.mark_all')}
                 </button>
@@ -699,7 +699,7 @@ export default function NotificationBell() {
                   </div>
 
                   {/* Delete */}
-                  <button onClick={() => removeNotif(n.id)} className="flex-shrink-0 text-gray-300 hover:text-red-400 transition-colors mt-0.5">
+                  <button onClick={() => removeNotif(n.id)} aria-label="حذف الإشعار" className="mt-0.5 flex-shrink-0 rounded-full bg-red-50 p-1.5 text-red-500 transition-colors hover:bg-red-100">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
