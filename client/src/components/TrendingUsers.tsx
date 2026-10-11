@@ -227,7 +227,7 @@ export default function TrendingUsers() {
   const currentStories = activeStories?.filter(s => s.userId === activeStoryUserId) || [];
 
   return (
-    <section id="trending-users" className="scroll-mt-20 py-20 bg-gradient-to-b from-white to-gray-50">
+    <section className="py-20 bg-gradient-to-b from-white to-gray-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="font-display text-4xl md:text-5xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">
