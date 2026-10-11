@@ -1,18 +1,4 @@
-import {
-  Menu,
-  X,
-  LogOut,
-  Video,
-  UserCircle,
-  Star,
-  Languages,
-  Shield,
-  Moon,
-  Sun,
-  ChevronDown,
-  Check,
-  ShoppingBag,
-} from "lucide-react";
+import { Menu, X, LogOut, Video, UserCircle, Star, Languages, Shield, Moon, Sun } from "lucide-react";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -21,70 +7,6 @@ import { trpc } from "@/lib/trpc";
 import NotificationBell from "@/components/NotificationBell";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/contexts/ThemeContext";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-type SupportedLanguage = "ar" | "en" | "fr";
-
-function PreferencesMenu({
-  language,
-  setLanguage,
-  isDark,
-  toggleTheme,
-  themeLabel,
-}: {
-  language: SupportedLanguage;
-  setLanguage: (language: SupportedLanguage) => void;
-  isDark: boolean;
-  toggleTheme: () => void;
-  themeLabel: string;
-}) {
-  const languages: { value: SupportedLanguage; flag: string; label: string }[] = [
-    { value: "ar", flag: "🇸🇦", label: "العربية" },
-    { value: "en", flag: "🇺🇸", label: "English" },
-    { value: "fr", flag: "🇫🇷", label: "Français" },
-  ];
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label="اللغة والمظهر"
-          title="اللغة والمظهر"
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
-        >
-          <Languages className="h-4.5 w-4.5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52 border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-        <DropdownMenuLabel className="text-xs text-gray-500 dark:text-gray-400">اللغة</DropdownMenuLabel>
-        {languages.map(item => (
-          <DropdownMenuItem
-            key={item.value}
-            onSelect={() => setLanguage(item.value)}
-            className="min-h-10 text-gray-800 dark:text-gray-100"
-          >
-            <span aria-hidden="true" className="text-base">{item.flag}</span>
-            <span>{item.label}</span>
-            {language === item.value && <Check className="mr-auto h-4 w-4 text-purple-600" />}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
-        <DropdownMenuItem onSelect={toggleTheme} className="min-h-10 text-gray-800 dark:text-gray-100">
-          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          <span>{themeLabel}</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -102,15 +24,12 @@ export default function Header() {
   const unreadNotifCount = notifData ? notifData.filter(n => !n.isRead).length : 0;
 
   const handleStartChat = () => setLocation("/chat");
-  const handleLogin = () => setLocation("/login");
-  const handleProfile = () => setLocation("/profile");
-  const handleLogout = async () => {
-    await logout();
-    setLocation("/");
-  };
-
+  const handleLogin    = () => setLocation("/login");
+  const handleProfile  = () => setLocation("/profile");
+  const handleLogout   = async () => { await logout(); setLocation("/"); };
   const navigateToSection = (sectionId: string) => {
     setIsMenuOpen(false);
+
     const scrollToSection = () => {
       const section = document.getElementById(sectionId);
       if (section) {
@@ -124,225 +43,264 @@ export default function Header() {
       window.setTimeout(scrollToSection, 150);
       return;
     }
+
     scrollToSection();
   };
 
-  const preferences = (
-    <PreferencesMenu
-      language={language as SupportedLanguage}
-      setLanguage={setLanguage as (language: SupportedLanguage) => void}
-      isDark={isDark}
-      toggleTheme={() => toggleTheme?.()}
-      themeLabel={isDark ? t("theme.switch_to_light") : t("theme.switch_to_dark")}
-    />
-  );
-
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur-xl transition-colors dark:border-gray-800 dark:bg-gray-950/95">
-      <div className="container mx-auto flex items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
-        <button
-          type="button"
-          onClick={() => setLocation("/")}
-          aria-label="ConnectLive — الرئيسية"
-          className="flex shrink-0 items-center gap-2 rounded-xl text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 shadow-md shadow-purple-500/20 sm:h-10 sm:w-10">
-            <Video className="h-5 w-5 text-white" />
-          </span>
-          <span className="font-display text-lg font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 sm:text-xl">
+    <header className="sticky top-0 z-50 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shadow-sm transition-all duration-300">
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setLocation('/')}>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-200">
+            <Video className="w-6 h-6 text-white" />
+          </div>
+          <span className="font-display text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500">
             ConnectLive
           </span>
-        </button>
+        </div>
 
-        <nav aria-label="التنقل الرئيسي" className="hidden items-center gap-5 xl:flex">
-          <button type="button" onClick={() => navigateToSection("features")} className="rounded-lg px-2 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-purple-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:text-gray-200">{t("nav.features")}</button>
-          <button type="button" onClick={() => setLocation("/store")} className="rounded-lg px-2 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-purple-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:text-gray-200">{t("nav.store")}</button>
-          <button type="button" onClick={() => navigateToSection("faq")} className="rounded-lg px-2 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-purple-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:text-gray-200">{t("nav.faq")}</button>
-          <button type="button" onClick={() => navigateToSection("security")} className="rounded-lg px-2 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-purple-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:text-gray-200">{t("nav.security")}</button>
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-8">
+           <button type="button" onClick={() => navigateToSection("features")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.features')}</button>
+          <button onClick={() => setLocation('/store')} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.store')}</button>
+           <button type="button" onClick={() => navigateToSection("faq")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.faq')}</button>
+           <button type="button" onClick={() => navigateToSection("security")} className="text-gray-700 hover:text-purple-600 font-medium transition-colors">{t('nav.security')}</button>
         </nav>
 
-        <div className="hidden items-center gap-2 xl:flex">
-          {preferences}
+        {/* CTA — desktop */}
+        <div className="hidden md:flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => toggleTheme?.()}
+            title={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
+            aria-label={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
+            aria-pressed={isDark}
+            className="w-9 h-9 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
           {loading ? (
-            <div className="h-9 w-9 animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" aria-label="جارٍ تحميل الحساب" />
+            <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
           ) : isAuthenticated && user ? (
             <>
+              {/* Notification Bell */}
               <NotificationBell />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={`${t("nav.profile")}: ${(user as any).name || "المستخدم"}`}
-                    className="flex h-10 items-center gap-2 rounded-full border border-gray-200 bg-white py-1 pl-2 pr-1 transition hover:border-purple-300 hover:bg-purple-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800"
-                  >
-                    <img
-                      src={(user as any).avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent((user as any).name || "user")}`}
-                      alt=""
-                      className="h-8 w-8 rounded-full border border-purple-300 object-cover"
-                    />
-                    <span className="hidden max-w-28 truncate text-sm font-semibold text-gray-800 dark:text-gray-100 2xl:inline">
-                      {(user as any).name || "المستخدم"}
-                    </span>
-                    {(user as { isPremium?: boolean }).isPremium && <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />}
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52 border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-                  <DropdownMenuLabel className="max-w-48 truncate text-gray-700 dark:text-gray-200">{(user as any).name || "المستخدم"}</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
-                  <DropdownMenuItem onSelect={handleProfile} className="min-h-10 text-gray-800 dark:text-gray-100">
-                    <UserCircle className="h-4 w-4" /> {t("nav.profile")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setLocation("/store")} className="min-h-10 text-gray-800 dark:text-gray-100">
-                    <ShoppingBag className="h-4 w-4" /> {t("nav.store")}
-                  </DropdownMenuItem>
-                  {(user as any).role === "admin" && (
-                    <DropdownMenuItem onSelect={() => setLocation("/admin")} className="min-h-10 text-gray-800 dark:text-gray-100">
-                      <Shield className="h-4 w-4 text-red-500" /> لوحة الإدارة
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator className="bg-gray-200 dark:bg-gray-700" />
-                  <DropdownMenuItem onSelect={() => void handleLogout()} variant="destructive" className="min-h-10">
-                    <LogOut className="h-4 w-4" /> {t("nav.logout")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <button
-                type="button"
-                onClick={handleStartChat}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-4 text-sm font-bold text-white shadow-md shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
+
+              {/* Admin dashboard — visible only to admin accounts */}
+              {(user as any).role === "admin" && (
+                <button
+                  onClick={() => setLocation("/admin")}
+                  title="لوحة الإدارة"
+                  aria-label="لوحة الإدارة"
+                  className="w-9 h-9 rounded-full border-2 border-red-300 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center"
+                >
+                  <Shield className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Avatar → profile */}
+              <button onClick={handleProfile} title="الملف الشخصي"
+                className="relative group"
               >
-                <Video className="h-4 w-4" /> {t("nav.chat")}
+                <img
+                  src={(user as any).avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent((user as any).name || "user")}`}
+                  alt={(user as any).name || "المستخدم"}
+                  className="w-9 h-9 rounded-full border-2 border-purple-400 object-cover group-hover:border-purple-600 transition-colors"
+                />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-md" />
+              </button>
+
+              {/* Name + profile link */}
+              <button onClick={handleProfile}
+                className="text-gray-800 dark:text-gray-100 font-semibold text-sm hover:text-purple-600 transition-colors flex items-center gap-1"
+              >
+                {(user as any).name || "المستخدم"}
+                {(user as { isPremium?: boolean }).isPremium && (
+                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                )}
+                <UserCircle className="w-3.5 h-3.5 text-purple-400" />
+              </button>
+
+              <button onClick={handleStartChat}
+                className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-2 px-5 rounded-full hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
+              >
+                <Video className="w-4 h-4" />
+                {t('nav.chat')}
+              </button>
+
+              {/* Language Switcher Desktop */}
+               <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-full border border-gray-200 dark:border-gray-700">
+                <button onClick={() => setLanguage('ar')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'ar' ? 'bg-white dark:bg-gray-700 shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="العربية">🇸🇦</button>
+                <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'en' ? 'bg-white dark:bg-gray-700 shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="English">🇺🇸</button>
+                <button onClick={() => setLanguage('fr')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'fr' ? 'bg-white dark:bg-gray-700 shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="Français">🇫🇷</button>
+              </div>
+
+              <button onClick={handleLogout} title="تسجيل الخروج"
+                className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50"
+              >
+                <LogOut className="w-4 h-4" />
               </button>
             </>
           ) : (
             <>
-              <button type="button" onClick={handleLogin} className="min-h-10 rounded-full px-3 text-sm font-semibold text-purple-700 transition hover:bg-purple-50 dark:text-purple-300 dark:hover:bg-purple-950/50">
-                {t("nav.login")}
+              {/* Language Switcher Desktop (Unauthed) */}
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-full border border-gray-200 mr-2">
+                <button onClick={() => setLanguage('ar')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'ar' ? 'bg-white shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="العربية">🇸🇦</button>
+                <button onClick={() => setLanguage('en')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'en' ? 'bg-white shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="English">🇺🇸</button>
+                <button onClick={() => setLanguage('fr')} className={`px-2 py-1 rounded-full text-base transition-all ${language === 'fr' ? 'bg-white shadow-sm scale-110' : 'grayscale opacity-50 hover:grayscale-0 hover:opacity-100'}`} title="Français">🇫🇷</button>
+              </div>
+              <button onClick={handleLogin} className="text-purple-600 font-semibold hover:text-purple-700 transition-colors">
+                {t('nav.login')}
               </button>
-              <button type="button" onClick={handleStartChat} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-4 text-sm font-bold text-white shadow-md shadow-purple-500/20 transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2">
-                <Video className="h-4 w-4" /> {t("nav.start")}
+              <button onClick={handleLogin}
+                className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold py-2 px-6 rounded-full hover:from-purple-700 hover:to-pink-600 transition-all duration-300 shadow-md hover:shadow-lg"
+              >
+                {t('nav.start')}
               </button>
             </>
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 xl:hidden">
-          <button
-            type="button"
-            onClick={handleStartChat}
-            className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-3 text-xs font-bold text-white shadow-md shadow-purple-500/20 transition hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 sm:px-4 sm:text-sm"
-          >
-            <Video className="h-4 w-4" />
-            <span>{isAuthenticated ? t("nav.chat") : t("nav.start")}</span>
-          </button>
-          <button
-            type="button"
-            aria-label={isMenuOpen ? "إغلاق القائمة" : "فتح القائمة"}
-            aria-expanded={isMenuOpen}
-            aria-controls="site-mobile-menu"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl text-gray-800 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 dark:text-gray-100 dark:hover:bg-gray-800"
-            onClick={() => setIsMenuOpen(value => !value)}
-          >
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            {!isMenuOpen && unreadNotifCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[9px] font-black text-white dark:border-gray-950">
-                {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
-              </span>
-            )}
-          </button>
-        </div>
+        {/* Hamburger — with notification badge */}
+        <button className="md:hidden relative p-1" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          {isMenuOpen ? (
+            <X className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+          ) : (
+            <>
+              <Menu className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+              {unreadNotifCount > 0 && !isMenuOpen && (
+                <>
+                  {/* Ping animation ring */}
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 opacity-75 animate-ping" />
+                  {/* Solid badge with count */}
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-gray-950 shadow-lg">
+                    {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                  </span>
+                </>
+              )}
+            </>
+          )}
+        </button>
       </div>
 
+      {/* Mobile menu */}
       {isMenuOpen && (
-        <div id="site-mobile-menu" className="xl:hidden border-t border-gray-200 bg-white px-4 pb-5 pt-3 shadow-lg dark:border-gray-800 dark:bg-gray-950">
-          <nav aria-label="التنقل" className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => navigateToSection("features")} className="rounded-xl px-3 py-3 text-right text-sm font-semibold text-gray-700 transition hover:bg-purple-50 hover:text-purple-700 dark:text-gray-200 dark:hover:bg-gray-900">{t("nav.features")}</button>
-            <button type="button" onClick={() => { setIsMenuOpen(false); setLocation("/store"); }} className="rounded-xl px-3 py-3 text-right text-sm font-semibold text-gray-700 transition hover:bg-purple-50 hover:text-purple-700 dark:text-gray-200 dark:hover:bg-gray-900">{t("nav.store")}</button>
-            <button type="button" onClick={() => navigateToSection("faq")} className="rounded-xl px-3 py-3 text-right text-sm font-semibold text-gray-700 transition hover:bg-purple-50 hover:text-purple-700 dark:text-gray-200 dark:hover:bg-gray-900">{t("nav.faq")}</button>
-            <button type="button" onClick={() => navigateToSection("security")} className="rounded-xl px-3 py-3 text-right text-sm font-semibold text-gray-700 transition hover:bg-purple-50 hover:text-purple-700 dark:text-gray-200 dark:hover:bg-gray-900">{t("nav.security")}</button>
-          </nav>
+         <div className="md:hidden bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 py-4 px-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+           <button type="button" onClick={() => navigateToSection("features")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.features')}</button>
+           <button onClick={() => { setIsMenuOpen(false); setLocation('/store'); }} className={`block ${language === 'ar' ? 'text-right' : 'text-left'} w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2`}>{t('nav.store')}</button>
+           <button type="button" onClick={() => navigateToSection("faq")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.faq')}</button>
+           <button type="button" onClick={() => navigateToSection("security")} className="block text-right w-full text-gray-700 dark:text-gray-200 hover:text-purple-600 font-medium py-2">{t('nav.security')}</button>
 
-          <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-800">
+          {/* Language Switcher Mobile */}
+           <div className="flex items-center gap-2 pt-2">
+             <Languages className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            <div className="flex gap-3">
+              <button onClick={() => setLanguage('ar')} className={`text-2xl transition-all ${language === 'ar' ? 'scale-125' : 'grayscale opacity-50'}`}>🇸🇦</button>
+              <button onClick={() => setLanguage('en')} className={`text-2xl transition-all ${language === 'en' ? 'scale-125' : 'grayscale opacity-50'}`}>🇺🇸</button>
+              <button onClick={() => setLanguage('fr')} className={`text-2xl transition-all ${language === 'fr' ? 'scale-125' : 'grayscale opacity-50'}`}>🇫🇷</button>
+            </div>
+          </div>
+
+           {/* Theme switcher */}
+           <div className="flex items-center justify-between gap-3 rounded-2xl border border-purple-200/80 dark:border-purple-800/70 bg-gradient-to-l from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-gray-900 px-3.5 py-3 shadow-sm">
+             <div className="flex min-w-0 items-center gap-3">
+               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${isDark ? "bg-purple-600 text-white" : "bg-white text-amber-500"}`}>
+                 {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+               </div>
+               <div className="min-w-0">
+                 <p className="text-sm font-bold text-gray-900 dark:text-white">
+                   {isDark ? t('theme.dark_mode') : t('theme.light_mode')}
+                 </p>
+                 <p className="mt-0.5 truncate text-[11px] font-medium text-purple-700 dark:text-purple-300">
+                   {isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
+                 </p>
+               </div>
+             </div>
+             <Switch
+               checked={isDark}
+               onCheckedChange={() => toggleTheme?.()}
+                aria-label={isDark ? t('theme.switch_to_light') : t('theme.switch_to_dark')}
+               aria-checked={isDark}
+                className="h-6 w-11 border-purple-300 bg-gray-300 data-[state=checked]:bg-purple-600 dark:border-purple-700 dark:bg-gray-700"
+             />
+           </div>
+
+          <div className="flex flex-col gap-2.5 pt-4 border-t border-gray-100">
             {isAuthenticated && user ? (
               <>
-                <div className="flex items-center gap-3 rounded-2xl bg-purple-50 px-3 py-3 dark:bg-purple-950/40">
+                 <div className="flex items-center gap-3 py-2 bg-purple-50 dark:bg-purple-950/40 rounded-2xl px-3">
                   <img
                     src={(user as any).avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent((user as any).name || "user")}`}
-                    alt=""
-                    className="h-11 w-11 shrink-0 rounded-full border-2 border-purple-400 object-cover"
+                    alt={(user as any).name || "المستخدم"}
+                    className="w-11 h-11 rounded-full border-2 border-purple-400 object-cover flex-shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1 truncate font-bold text-gray-800 dark:text-gray-100">
+                     <p className="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1 truncate">
                       {(user as any).name || "المستخدم"}
-                      {(user as { isPremium?: boolean }).isPremium && <Star className="h-3.5 w-3.5 shrink-0 fill-yellow-500 text-yellow-500" />}
+                      {(user as { isPremium?: boolean }).isPremium && (
+                        <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                      )}
                     </p>
-                    <p className="mt-0.5 text-xs font-medium text-purple-600 dark:text-purple-300">
-                      {(user as any).isPremium ? `⭐ ${t("nav.vip_member")}` : t("nav.logged_in")}
+                    <p className="text-xs text-purple-500 font-medium">
+                      {(user as any).isPremium ? `⭐ ${t('nav.vip_member')}` : t('nav.logged_in')}
                     </p>
                   </div>
+                  {/* Notification bell in mobile menu too */}
                   <NotificationBell />
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); handleProfile(); }} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-purple-200 px-3 text-sm font-bold text-purple-700 transition hover:bg-purple-50 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-950/40">
-                    <UserCircle className="h-4 w-4" /> {t("nav.profile")}
-                  </button>
                   {(user as any).role === "admin" && (
-                    <button type="button" onClick={() => { setIsMenuOpen(false); setLocation("/admin"); }} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-200 px-3 text-sm font-bold text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950/30">
-                      <Shield className="h-4 w-4" /> لوحة الإدارة
+                    <button
+                      onClick={() => { setIsMenuOpen(false); setLocation("/admin"); }}
+                      title="لوحة الإدارة"
+                      aria-label="لوحة الإدارة"
+                      className="w-9 h-9 rounded-full border-2 border-red-300 text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center flex-shrink-0"
+                    >
+                      <Shield className="w-4 h-4" />
                     </button>
                   )}
-                  <button type="button" onClick={() => { setIsMenuOpen(false); void handleLogout(); }} className="col-span-2 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-50 px-3 text-sm font-bold text-red-600 transition hover:bg-red-100 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50">
-                    <LogOut className="h-4 w-4" /> {t("nav.logout")}
-                  </button>
                 </div>
+                <button onClick={() => { setIsMenuOpen(false); handleProfile(); }}
+                   className="border-2 border-purple-300 text-purple-600 font-bold py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                >
+                  <UserCircle className="w-4 h-4 flex-shrink-0" /> {t('nav.profile')}
+                </button>
+                {(user as any).role === "admin" && (
+                  <button
+                    onClick={() => { setIsMenuOpen(false); setLocation("/admin"); }}
+                    className="border-2 border-red-300 text-red-600 font-bold py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
+                  >
+                    <Shield className="w-4 h-4 flex-shrink-0" /> لوحة الإدارة
+                  </button>
+                )}
+                <button onClick={() => { setIsMenuOpen(false); handleStartChat(); }}
+                  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-6 rounded-2xl text-center flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                >
+                  <Video className="w-4 h-4 flex-shrink-0" />
+                  {t('nav.chat')}
+                </button>
+                <button onClick={() => { setIsMenuOpen(false); handleLogout(); }}
+                  className="text-red-500 font-semibold py-2 text-center flex items-center justify-center gap-2 hover:text-red-700 transition-colors"
+                >
+                  <LogOut className="w-4 h-4 flex-shrink-0" />
+                  {t('nav.logout')}
+                </button>
               </>
             ) : (
-              <button type="button" onClick={() => { setIsMenuOpen(false); handleLogin(); }} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-purple-200 px-3 text-sm font-bold text-purple-700 transition hover:bg-purple-50 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-950/40">
-                <UserCircle className="h-4 w-4" /> {t("nav.login")}
-              </button>
-            )}
-          </div>
-
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-purple-200/80 bg-gradient-to-l from-purple-50 to-pink-50 px-3.5 py-3 shadow-sm dark:border-purple-800/70 dark:from-purple-950/50 dark:to-gray-900">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${isDark ? "bg-purple-600 text-white" : "bg-white text-amber-500"}`}>
-                {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{isDark ? t("theme.dark_mode") : t("theme.light_mode")}</p>
-                <p className="mt-0.5 truncate text-[11px] font-medium text-purple-700 dark:text-purple-300">{isDark ? t("theme.switch_to_light") : t("theme.switch_to_dark")}</p>
-              </div>
-            </div>
-            <Switch
-              checked={isDark}
-              onCheckedChange={() => toggleTheme?.()}
-              aria-label={isDark ? t("theme.switch_to_light") : t("theme.switch_to_dark")}
-              aria-checked={isDark}
-              className="h-6 w-11 border-purple-300 bg-gray-300 data-[state=checked]:bg-purple-600 dark:border-purple-700 dark:bg-gray-700"
-            />
-          </div>
-
-          <div className="mt-3 flex items-center justify-between gap-3 px-1">
-            <span className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400"><Languages className="h-4 w-4" /> اللغة</span>
-            <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900" role="group" aria-label="اختيار اللغة">
-              {([
-                ["ar", "🇸🇦", "العربية"],
-                ["en", "🇺🇸", "English"],
-                ["fr", "🇫🇷", "Français"],
-              ] as const).map(([value, flag, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setLanguage(value)}
-                  aria-label={label}
-                  aria-pressed={language === value}
-                  className={`flex h-9 w-10 items-center justify-center rounded-full text-lg transition ${language === value ? "bg-white shadow-sm dark:bg-gray-700" : "opacity-60 hover:opacity-100"}`}
+              <>
+                <button onClick={() => { setIsMenuOpen(false); handleLogin(); }}
+                  className="text-purple-600 font-bold py-2.5 text-center border-2 border-purple-200 rounded-2xl hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
                 >
-                  {flag}
+                  <UserCircle className="w-4 h-4" />
+                  تسجيل الدخول
                 </button>
-              ))}
-            </div>
+                <button onClick={() => { setIsMenuOpen(false); handleLogin(); }}
+                  className="bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-purple-200"
+                >
+                  <Video className="w-4 h-4" />
+                  ابدأ الآن
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

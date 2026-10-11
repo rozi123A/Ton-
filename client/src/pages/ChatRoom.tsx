@@ -1512,80 +1512,6 @@ export default function ChatRoom() {
         {/* ═══════════════ Controls Panel ═══════════════ */}
         <div className="px-2 pt-2 pb-1 space-y-1.5 md:px-3 md:pt-3 md:pb-2 md:space-y-2">
 
-          {/* Primary call actions — first in the panel, with one context-aware start/stop/next button. */}
-          <div className="mb-2 grid grid-cols-[minmax(0,1fr)_4.75rem_4.75rem] gap-1.5 rounded-2xl border border-white/10 bg-white/[0.035] p-1.5 sm:grid-cols-[minmax(0,1fr)_5.5rem_5.5rem] sm:gap-2">
-            {(() => {
-              const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
-              const isMatched = status === 'matched';
-              const label = isMatched
-                ? `${t('chat.next_btn')} — ${t('chat.another_person')}`
-                : isSearching ? 'إيقاف البحث' : 'ابدأ مباشرة';
-              return (
-                <button
-                  type="button"
-                  aria-label={label}
-                  onClick={() => {
-                    if (isMatched) handleNext();
-                    else if (isSearching) stopSession();
-                    else startSession('any', 'any');
-                  }}
-                  className="flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 text-center text-xs font-extrabold text-white shadow-lg transition active:scale-[0.98] sm:gap-2 sm:text-sm"
-                  style={{
-                    background: isMatched
-                      ? 'linear-gradient(135deg,#f59e0b,#d97706)'
-                      : isSearching
-                        ? 'linear-gradient(135deg,#ef4444,#be123c)'
-                        : 'linear-gradient(135deg,#22c55e,#16a34a)',
-                    boxShadow: isMatched
-                      ? '0 4px 14px rgba(245,158,11,0.28)'
-                      : isSearching
-                        ? '0 4px 14px rgba(239,68,68,0.28)'
-                        : '0 4px 14px rgba(34,197,94,0.28)',
-                  }}
-                >
-                  {isMatched
-                    ? <SkipForward className="h-4 w-4 shrink-0" />
-                    : isSearching
-                      ? <Square className="h-4 w-4 shrink-0 fill-current" />
-                      : <Play className="h-4 w-4 shrink-0 fill-current" />}
-                  <span className="truncate">{label}</span>
-                </button>
-              );
-            })()}
-
-            <button
-              type="button"
-              aria-label="فتح رادار البحث والفلاتر"
-              aria-pressed={filterCountry !== 'any' || filterGender !== 'any'}
-              onClick={() => {
-                const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
-                if (isSearching) {
-                  stopSession();
-                  toast.info('تم إيقاف البحث. اضغط على الرادار مرة أخرى لضبط الفلاتر.');
-                  return;
-                }
-                setStatus('setup');
-              }}
-              className="flex min-h-12 items-center justify-center gap-1 rounded-xl border border-purple-300/35 px-1.5 text-[10px] font-bold text-purple-100 transition hover:bg-purple-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-300 sm:gap-1.5 sm:px-2 sm:text-xs"
-              style={{
-                background: filterCountry !== 'any' || filterGender !== 'any' ? 'rgba(124,58,237,0.38)' : 'rgba(168,85,247,0.10)',
-              }}
-            >
-              <Search className="h-4 w-4 shrink-0" />
-              <span>الرادار</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleEnd}
-              aria-label={status === 'idle' ? 'العودة إلى الرئيسية' : 'إنهاء المكالمة والعودة إلى الرئيسية'}
-              className="flex min-h-12 items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/[0.06] px-1.5 text-[10px] font-bold text-white/80 transition hover:border-red-400/40 hover:bg-red-500/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 sm:gap-1.5 sm:px-2 sm:text-xs"
-            >
-              <PhoneOff className="h-4 w-4 shrink-0" />
-              <span>{status === 'idle' ? 'الرئيسية' : 'إنهاء'}</span>
-            </button>
-          </div>
-
           {/* ── Row 1 : دردشة · صوت · كاميرا · ميكروفون ─── */}
           <div className="grid grid-cols-4 gap-1.5 md:gap-2">
 
@@ -1749,6 +1675,91 @@ export default function ChatRoom() {
              <span className="rounded-full border border-cyan-200/25 bg-white/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-cyan-100/80">AI</span>
           </button>
 
+          {/* ── Row 3 : ابدأ مباشرة · الرادار ─────────────── */}
+          <div className="grid grid-cols-2 gap-2 pb-1">
+
+            {/* Quick start / Stop */}
+            {(() => {
+              const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
+              const isMatched   = status === 'matched';
+              return (
+                <button
+                  onClick={() => {
+                    if (isMatched)        { handleNext(); }
+                    else if (isSearching) { stopSession(); }
+                    else                  {
+                      // Force global matching on quick start to ensure users find each other
+                      startSession('any', 'any');
+                    }
+                  }}
+                   className={`flex items-center justify-center gap-2.5 py-2.5 md:py-3.5 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02] ${isSearching ? 'animate-pulse' : ''}`}
+                  style={{
+                    background: isSearching ? 'linear-gradient(135deg,#ef4444,#be123c)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
+                    boxShadow: isSearching ? '0 0 24px rgba(239,68,68,0.6), 0 4px 16px rgba(239,68,68,0.4)' : '0 0 24px rgba(34,197,94,0.6), 0 4px 16px rgba(34,197,94,0.4)',
+                    border: isSearching ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(34,197,94,0.5)',
+                    color: 'white',
+                  }}
+                >
+                  {isSearching
+                    ? <Square className="w-4 h-4 fill-white text-white drop-shadow" />
+                    : <Play   className="w-4 h-4 fill-white text-white drop-shadow" />
+                  }
+                  {isSearching ? 'إيقاف البحث' : 'ابدأ مباشرة'}
+                </button>
+              );
+            })()}
+
+            {/* Star Radar Button */}
+            <button
+              onClick={() => {
+                const isSearching = status === 'connecting' || status === 'waiting' || status === 'confirming';
+                if (isSearching) {
+                  stopSession();
+                  toast.info("تم إيقاف البحث. اضغط على الرادار مرة أخرى لضبط الفلاتر.");
+                  return;
+                }
+                setStatus('setup');
+              }}
+               className="flex items-center justify-center gap-2.5 py-2.5 md:py-3.5 rounded-2xl font-bold text-[13px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-[1.02]"
+              style={{
+                background: filterCountry !== 'any' || filterGender !== 'any' ? 'linear-gradient(135deg,#a855f7,#7c3aed)' : 'rgba(168,85,247,0.13)',
+                border: '1px solid rgba(168,85,247,0.45)',
+                boxShadow: filterCountry !== 'any' || filterGender !== 'any' ? '0 0 24px rgba(168,85,247,0.6), 0 4px 16px rgba(168,85,247,0.4)' : '0 0 14px rgba(168,85,247,0.25)',
+                color: '#e9d5ff',
+              }}
+            >
+              <Zap className="w-4 h-4 drop-shadow" />
+              الرادار
+            </button>
+          </div>
+
+        </div>
+
+        {/* Divider before action row */}
+        <div className="h-px bg-white/8 mx-3 mb-0" />
+
+        {/* Next + End Call row */}
+        <div className="flex items-stretch gap-2 px-2 pt-1.5 pb-2 md:gap-2.5 md:px-3 md:pt-2 md:pb-3">
+          {/* Next */}
+          <button
+            onClick={handleNext}
+            disabled={status === 'connecting' || status === 'waiting' || status === 'confirming'}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 md:gap-2 md:py-3 rounded-2xl font-bold text-sm tracking-wide transition-all duration-150 active:scale-[0.97] hover:scale-[1.02] disabled:opacity-35 disabled:cursor-not-allowed"
+            style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)', color: '#1c1917', boxShadow: '0 0 22px rgba(245,158,11,0.6), 0 4px 14px rgba(245,158,11,0.4)', border: '1px solid rgba(245,158,11,0.5)' }}
+          >
+            <SkipForward className="w-4 h-4 flex-shrink-0 drop-shadow" />
+            {t('chat.next_btn')} — {t('chat.another_person')}
+          </button>
+
+          {/* End Call */}
+          <button
+            onClick={handleEnd}
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 md:px-4 md:py-3 rounded-2xl font-bold text-sm transition-all duration-150 active:scale-[0.97] hover:scale-[1.02]"
+            style={{ background: 'linear-gradient(135deg,#ef4444,#be123c)', color: 'white', boxShadow: '0 0 22px rgba(239,68,68,0.6), 0 4px 14px rgba(239,68,68,0.4)', border: '1px solid rgba(239,68,68,0.5)' }}
+          >
+            <PhoneOff className="w-4 h-4 flex-shrink-0 drop-shadow" />
+            <span className="tracking-wide">{t('chat.stop_btn')}</span>
+          </button>
         </div>
       </div>
 
