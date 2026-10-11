@@ -35,14 +35,6 @@
     box-shadow: 0 0 56px rgba(34, 211, 238, 0.29);
   }
 }
-@keyframes loading-globe-rotate {
-  from {
-    transform: perspective(180px) rotateY(0deg);
-  }
-  to {
-    transform: perspective(180px) rotateY(360deg);
-  }
-}
 @keyframes loading-float {
   0%,
   100% {

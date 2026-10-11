@@ -1,0 +1,4 @@
+Earth texture: NASA Blue Marble (2002), true-color global imagery at 1 km resolution.
+Source: https://science.nasa.gov/earth/earth-observatory/the-blue-marble-true-color-global-imagery-at-1km-resolution/
+Credits: NASA Goddard Space Flight Center; image by Reto Stöckli (land surface, shallow water, clouds), enhancements by Robert Simmon.
+The 2:1 texture and sphere fallback are local optimized WebP derivatives of NASA imagery. NASA material is generally not subject to U.S. copyright; NASA does not endorse commercial products. See NASA media usage guidelines before reuse beyond this project.
