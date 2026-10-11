@@ -91,6 +91,24 @@ describe("social.sendRequest", () => {
     resolvePush({ sent: 0, failed: 0 });
   });
 
+  it("keeps the request successful when notification storage fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    socialMocks.createNotification.mockRejectedValue(new Error("notification table unavailable"));
+
+    try {
+      await expect(createCaller().social.sendRequest({ receiverId: 202 })).resolves.toMatchObject({
+        success: true,
+        status: "pending",
+      });
+      expect(socialMocks.createFriendRequest).toHaveBeenCalledWith(101, 202);
+      expect(socialMocks.sendUserNotification).toHaveBeenCalledWith("202", expect.objectContaining({
+        type: "friend-request",
+      }));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("rejects self-directed friend requests", async () => {
     await expect(createCaller().social.sendRequest({ receiverId: 101 })).rejects.toMatchObject({
       code: "BAD_REQUEST",

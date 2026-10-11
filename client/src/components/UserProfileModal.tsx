@@ -1,5 +1,6 @@
 import { X, UserPlus, Check, Clock, Play } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { useAuth } from "@/_core/hooks/useAuth";
 import { useTranslation } from "@/contexts/LanguageContext";
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
@@ -24,6 +25,8 @@ interface UserProfileModalProps {
 
 export default function UserProfileModal({ userId, onClose, initialProfile }: UserProfileModalProps) {
   const { t } = useTranslation();
+  const { user: currentUser, isAuthenticated, loading: authLoading } = useAuth();
+  const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
   const {
     data: profile,
@@ -43,15 +46,35 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
     { enabled: userId > 0 },
   );
   const { data: friendStatus, refetch: refetchStatus } = trpc.social.getFriendStatus.useQuery(userId, {
-    enabled: userId > 0,
+    enabled: userId > 0 && isAuthenticated,
   });
 
   const sendRequestMutation = trpc.social.sendRequest.useMutation({
-    onSuccess: () => {
+    // The server makes pending requests idempotent, so retry one dropped
+    // network response without creating duplicate requests.
+    retry: (failureCount, error) => failureCount < 1 && !error.data?.code,
+    retryDelay: 1_000,
+    onSuccess: (result) => {
       toast.success('تم إرسال طلب الصداقة ✅');
-      refetchStatus();
+      const status: 'friends' | 'pending' = result.status === 'friends' ? 'friends' : 'pending';
+      utils.social.getFriendStatus.setData(userId, { status });
+      void Promise.allSettled([
+        refetchStatus(),
+        utils.social.getIncomingRequests.invalidate(),
+        utils.notifications.get.invalidate(),
+      ]);
     },
-    onError: (e) => toast.error(e.message || 'حدث خطأ'),
+    onError: (error) => {
+      if (error.data?.code === "UNAUTHORIZED") {
+        toast.error(t("profile.login_required"));
+        return;
+      }
+      if (!error.data) {
+        toast.error(t("profile.network_error"));
+        return;
+      }
+      toast.error(error.message || t("profile.request_failed"));
+    },
   });
 
   if (isLoading) {
@@ -213,7 +236,21 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
           </div>
 
           {/* Friend request button */}
-          {status === 'friends' ? (
+          {authLoading ? (
+            <div className="py-3 text-center text-sm text-white/60" aria-live="polite">
+              {t('common.loading')}
+            </div>
+          ) : !isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => { onClose(); setLocation('/login'); }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm shadow-lg hover:brightness-110 transition-all"
+            >
+              <UserPlus className="w-4 h-4" /> {t('profile.login_to_send_friend')}
+            </button>
+          ) : currentUser?.id === userId ? (
+            <div className="py-3 text-center text-sm text-white/60">{t('profile.self_request')}</div>
+          ) : status === 'friends' ? (
             <div className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-500/15 border border-green-500/30 text-green-400 font-bold text-sm">
               <Check className="w-4 h-4" /> {t('profile.is_friend')}
             </div>
@@ -223,6 +260,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
             </div>
           ) : (
             <button
+              type="button"
               onClick={() => sendRequestMutation.mutate({ receiverId: userId })}
               disabled={sendRequestMutation.isPending}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm shadow-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
