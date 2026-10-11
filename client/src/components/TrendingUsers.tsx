@@ -179,13 +179,13 @@ export default function TrendingUsers() {
     staleTime: 5_000,
   });
 
-  const { data: realUsers, isPending, isError } = trpc.users.getRecent.useQuery(20, {
+  const { data: realUsers, isPending } = trpc.users.getRecent.useQuery(20, {
     staleTime: 30_000,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
     retry: false,
-    // Keep the last successful list visible while a background refresh runs.
+    // Keep the last successful list visible even if a background refresh fails.
     placeholderData: previousUsers => previousUsers,
   });
 
@@ -210,7 +210,7 @@ export default function TrendingUsers() {
   const hasRealUsers = Boolean(realUsers?.length);
   const users = realUsers ?? [];
 
-  const displayUsers: DisplayUser[] = hasRealUsers && !isError
+  const displayUsers: DisplayUser[] = hasRealUsers
     ? users.map(u => ({
         id: u.id,
         name: u.name || 'مستخدم',
