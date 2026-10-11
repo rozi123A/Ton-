@@ -1,1 +1,7 @@
-/*    /index.html   200
+# Forward backend requests to the production Render service before the SPA fallback.
+/api/* https://connectlive-jce9.onrender.com/api/:splat 200!
+/manus-storage/* https://connectlive-jce9.onrender.com/manus-storage/:splat 200!
+/ping https://connectlive-jce9.onrender.com/ping 200!
+
+# Keep the SPA fallback last so it cannot shadow backend routes.
+/* /index.html 200
