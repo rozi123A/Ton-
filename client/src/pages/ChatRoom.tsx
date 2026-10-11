@@ -95,6 +95,7 @@ export default function ChatRoom() {
   const t = (key: string) => translate(key);
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
+  const { mutateAsync: createStreamToken } = trpc.auth.createStreamToken.useMutation();
 
   const myName    = (user as any)?.name    || (isRTL ? 'أنت' : 'You');
   const myAvatar  = (user as any)?.avatar  || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName)}`;
@@ -733,10 +734,25 @@ export default function ChatRoom() {
       Notification.requestPermission().catch(() => {});
     }
 
-    const connect = () => {
+    const connect = async () => {
       if (destroyedRef.current) return;
       console.log(`[SSE] Connecting to /api/signal/connect with params: ${params.toString()}`);
-      const es = new EventSource(`/api/signal/connect?${params}`);
+      let es: EventSource;
+      try {
+        const { token } = await createStreamToken();
+        if (destroyedRef.current) return;
+        const streamUrl = new URL(
+          `${import.meta.env.VITE_REALTIME_API_URL || ""}/api/signal/connect`,
+          window.location.origin,
+        );
+        params.set("streamToken", token);
+        streamUrl.search = params.toString();
+        es = new EventSource(streamUrl.toString());
+      } catch (error) {
+        console.error("[SSE] Could not authorize a realtime connection", error);
+        if (!destroyedRef.current) window.setTimeout(() => void connect(), 3000);
+        return;
+      }
       esRef.current = es;
       
       let pingTimeout: ReturnType<typeof setTimeout>;
@@ -769,7 +785,7 @@ export default function ChatRoom() {
       resetPingTimeout();
     };
     connect();
-  }, [myId, myName, myAvatar, myGender, myCountry, handleEvent, user, balanceQuery, deductRadarCredits, setLocation]);
+  }, [myId, myName, myAvatar, myGender, myCountry, handleEvent, user, balanceQuery, deductRadarCredits, setLocation, createStreamToken]);
 
   // ── cleanup on unmount ─────────────────────────────────────────────────────
   useEffect(() => {

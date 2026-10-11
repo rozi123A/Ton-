@@ -15,9 +15,12 @@ import { serveStatic, setupVite } from "./vite";
 import { ensureSchema } from "../db";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { validateEnv } from "./env";
+import { ENV, validateEnv } from "./env";
+import { isAllowedCorsOrigin } from "./corsOrigins";
 import { sql } from "drizzle-orm";
 import { sdk } from "./sdk";
+import type { AuthenticatedUser } from "./sdk";
+import { verifyStreamToken } from "./streamToken";
 import {
   registerUserNotificationClient,
   type NotifPayload,
@@ -39,6 +42,14 @@ interface PeerInfo {
 
 const peers = new Map<string, PeerInfo>();
 const waitingQueue: string[] = [];
+
+async function authenticateStreamRequest(req: Request): Promise<AuthenticatedUser | null> {
+  const streamUserId = verifyStreamToken(req.query.streamToken, ENV.cookieSecret);
+  if (streamUserId) {
+    return { id: streamUserId, name: "", isCron: false } as AuthenticatedUser;
+  }
+  return sdk.authenticateRequest(req).catch(() => null);
+}
 
 interface LastPartner { partnerName: string; partnerAvatar: string; ts: number; }
 const lastPeers = new Map<string, LastPartner>();
@@ -243,7 +254,7 @@ function registerSignalingRoutes(app: express.Express) {
   });
 
   app.get("/api/signal/connect", signalLimiter, async (req: Request, res: Response) => {
-    const authenticatedUser = await sdk.authenticateRequest(req).catch(() => null);
+    const authenticatedUser = await authenticateStreamRequest(req);
     if (!authenticatedUser || authenticatedUser.isCron || authenticatedUser.id <= 0) {
       res.status(401).json({ error: "authentication required" });
       return;
@@ -763,7 +774,7 @@ function registerAdminMonitorRoutes(app: express.Express) {
 
 function registerNotifyRoutes(app: express.Express) {
   app.get("/api/notify/stream", async (req: Request, res: Response) => {
-    const user = await sdk.authenticateRequest(req).catch(() => null);
+    const user = await authenticateStreamRequest(req);
     if (!user) {
       res.status(401).json({ error: "authentication required" });
       return;
@@ -893,16 +904,13 @@ async function startServer() {
   app.use('/api/trpc/admin.verifyAdmin', authLimiter);
   app.use('/api/trpc', generalLimiter);
 
-  // 🔒 CORS — cross-origin access is opt-in via an exact origin allowlist.
+  // 🔒 CORS — only explicit origins, the production site, and its own previews.
   const corsOrigins = new Set(
-    (process.env.CORS_ORIGINS ?? '')
-      .split(',')
-      .map(origin => origin.trim())
-      .filter(Boolean),
+    (process.env.CORS_ORIGINS ?? "").split(",").map(origin => origin.trim()).filter(Boolean),
   );
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    const isAllowedOrigin = typeof origin === 'string' && corsOrigins.has(origin);
+    const isAllowedOrigin = typeof origin === "string" && isAllowedCorsOrigin(origin, corsOrigins);
 
     if (isAllowedOrigin) {
       res.setHeader('Access-Control-Allow-Origin', origin);

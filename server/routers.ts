@@ -34,6 +34,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
+import { createStreamToken } from "./_core/streamToken";
 import { sendUserNotification } from "./_core/userNotifications";
 import { getVapidPublicKey, sendWebPushNotification } from "./_core/webPush";
 
@@ -415,6 +416,9 @@ export const appRouter = router({
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    createStreamToken: protectedProcedure.mutation(({ ctx }) => ({
+      token: createStreamToken(ctx.user.id, ENV.cookieSecret),
+    })),
     logout: publicProcedure.mutation(async ({ ctx }) => {
       if (ctx.user) {
         // Clearing the browser session must not wait on a sleeping database.
