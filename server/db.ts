@@ -938,11 +938,12 @@ export async function getFriendStatus(userId: number, targetId: number): Promise
 
 export async function createFriendRequest(senderId: number, receiverId: number) {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error('Database unavailable while saving friend request');
   try {
     await db.insert(friendRequests).values({ senderId, receiverId, status: 'pending' });
   } catch (err) {
     console.error('[Database] createFriendRequest failed:', err);
+    throw err;
   }
 }
 
