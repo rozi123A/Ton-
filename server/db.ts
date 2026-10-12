@@ -450,7 +450,9 @@ export async function getRecentUsers(limit = 20) {
   const db = await getDb();
   if (!db) {
     console.warn('[Database] Cannot get recent users: database not available');
-    throw new Error('Database unavailable while loading recent users');
+    // The landing page must remain usable while a free-tier database wakes up.
+    // The next polling request will retry through getDb().
+    return [];
   }
 
   try {
@@ -499,7 +501,7 @@ export async function getRecentUsers(limit = 20) {
       return legacyRows.map((row) => ({ ...row, profileViews: 0 }));
     } catch (fallbackError) {
       console.error('[Database] Failed to load recent users using legacy schema:', fallbackError);
-      throw error;
+      return [];
     }
   }
 }
