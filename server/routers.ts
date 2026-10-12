@@ -134,7 +134,9 @@ function verifyAdminHmac(token: string, secret: string): boolean {
 const adminSessionProcedure = publicProcedure.use(async ({ ctx, next }) => {
   const cookies = (ctx.req.headers.cookie ?? '').split(';').map(part => part.trim());
   const cookie = cookies.find(part => part.startsWith('connectlive_admin='));
-  const token = cookie?.slice('connectlive_admin='.length);
+  const headerToken = ctx.req.headers['x-admin-session'];
+  const token = cookie?.slice('connectlive_admin='.length)
+    ?? (typeof headerToken === 'string' ? headerToken : undefined);
   if (!verifyAdminHmac(token ?? '', ENV.adminSecret)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'جلسة الإدارة منتهية أو غير صالحة' });
   }
@@ -1251,7 +1253,7 @@ export const appRouter = router({
           ...getSessionCookieOptions(ctx.req),
           maxAge: 15 * 60 * 1000,
         });
-        return { verified: true };
+        return { verified: true, adminToken: token };
       }),
 
     /** If the caller is logged in, also promote them to admin in the DB */
