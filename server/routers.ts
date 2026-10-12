@@ -724,7 +724,7 @@ export const appRouter = router({
 
     getPublicProfile: publicProcedure
       .input(z.number().min(1))
-      .query(async ({ input }) => withTimeout(getUserPublicProfile(input), 12_000)),
+      .query(async ({ input }) => withTimeout(getUserPublicProfile(input), 3_000)),
 
 			    getBonusStatus: protectedProcedure
 			      .query(async ({ ctx }) => {
