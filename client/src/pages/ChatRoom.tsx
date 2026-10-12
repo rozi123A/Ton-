@@ -169,7 +169,7 @@ export default function ChatRoom() {
   const sendFriendRequestMutation = trpc.social.sendRequest.useMutation({
     onSuccess: (result, variables) => {
       toast.success('تم إرسال طلب الصداقة بنجاح');
-      utils.social.getFriendStatus.setData(variables.receiverId, { status: result.status });
+      utils.social.getFriendStatus.setData(variables.receiverId, { status: result.status, authenticated: true });
     },
     onError: (err) => toast.error(err.message),
   });
