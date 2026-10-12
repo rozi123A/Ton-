@@ -29,10 +29,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
   const {
-    data: profile,
-    isLoading,
-    isError,
-    refetch,
+    data: profileData,
   } = trpc.users.getPublicProfile.useQuery(userId, {
     enabled: userId > 0,
     // Draw the card data immediately and refresh missing fields in the
@@ -48,14 +45,12 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
   const {
     data: friendStatus,
     refetch: refetchStatus,
-    isLoading: isFriendStatusLoading,
   } = trpc.social.getFriendStatus.useQuery(userId, {
     enabled: userId > 0 && isAuthenticated,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
-    retry: 4,
-    retryDelay: 1_000,
+    retry: 0,
     // The other user may accept the request while this profile is open.
     // Poll frequently so the UI reflects the database without a page reload.
     refetchInterval: 5_000,
@@ -90,49 +85,19 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
     },
   });
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center">
-        <div className="bg-gray-900 rounded-3xl p-8 flex items-center gap-3 text-white">
-          <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-          {t('profile.loading')}
-        </div>
-      </div>
-    );
-  }
-
-  if (isError && !profile) {
-    return (
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
-        onClick={onClose}
-      >
-        <div
-          className="bg-gray-900 rounded-3xl p-8 text-white text-center max-w-sm w-full"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <p className="text-white/70 mb-5">{t('profile.load_error')}</p>
-          <button
-            type="button"
-            onClick={() => void refetch()}
-            className="rounded-full bg-blue-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-blue-600"
-          >
-            {t('profile.retry')}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={onClose}>
-        <div className="bg-gray-900 rounded-3xl p-8 text-white text-center">
-          <p className="text-white/60">{t('profile.not_found')}</p>
-        </div>
-      </div>
-    );
-  }
+  // Show the card shell immediately while profile details and friend status load in parallel.
+  const profile = profileData ?? {
+    id: userId,
+    name: null,
+    age: null,
+    gender: null,
+    avatar: null,
+    bio: null,
+    isPremium: false,
+    isVerified: false,
+    isOnline: false,
+    lastSeen: null,
+  };
 
   const status = friendStatus?.status ?? 'none';
   return (
@@ -263,10 +228,6 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
             </button>
           ) : currentUser?.id === userId ? (
             <div className="py-3 text-center text-sm text-white/60">{t('profile.self_request')}</div>
-          ) : isFriendStatusLoading ? (
-            <div className="py-3 text-center text-sm text-white/60" aria-live="polite">
-              {t('common.loading')}
-            </div>
           ) : status === 'friends' ? (
             <div className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-500/15 border border-green-500/30 text-green-400 font-bold text-sm">
               <Check className="w-4 h-4" /> {t('profile.is_friend')}
