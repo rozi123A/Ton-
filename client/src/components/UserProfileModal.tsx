@@ -49,7 +49,6 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
     data: friendStatus,
     refetch: refetchStatus,
     isLoading: isFriendStatusLoading,
-    isError: isFriendStatusError,
   } = trpc.social.getFriendStatus.useQuery(userId, {
     enabled: userId > 0 && isAuthenticated,
     staleTime: 0,
@@ -71,7 +70,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
     onSuccess: (result) => {
       toast.success('تم إرسال طلب الصداقة ✅');
       const status: 'friends' | 'pending' = result.status === 'friends' ? 'friends' : 'pending';
-      utils.social.getFriendStatus.setData(userId, { status });
+      utils.social.getFriendStatus.setData(userId, { status, authenticated: true });
       void Promise.allSettled([
         refetchStatus(),
         utils.social.getIncomingRequests.invalidate(),
@@ -267,17 +266,6 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
           ) : isFriendStatusLoading ? (
             <div className="py-3 text-center text-sm text-white/60" aria-live="polite">
               {t('common.loading')}
-            </div>
-          ) : isFriendStatusError ? (
-            <div className="space-y-2 text-center" role="alert">
-              <p className="text-sm text-amber-200">{t('profile.friend_status_error')}</p>
-              <button
-                type="button"
-                onClick={() => void refetchStatus()}
-                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
-              >
-                {t('profile.retry')}
-              </button>
             </div>
           ) : status === 'friends' ? (
             <div className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-500/15 border border-green-500/30 text-green-400 font-bold text-sm">

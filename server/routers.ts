@@ -724,10 +724,7 @@ export const appRouter = router({
 
     getPublicProfile: publicProcedure
       .input(z.number().min(1))
-      .query(async ({ input }) => {
-        const profile = await getUserPublicProfile(input);
-        return profile;
-      }),
+      .query(async ({ input }) => withTimeout(getUserPublicProfile(input), 12_000)),
 
 			    getBonusStatus: protectedProcedure
 			      .query(async ({ ctx }) => {
@@ -1370,11 +1367,20 @@ export const appRouter = router({
     getIncomingRequests: protectedProcedure
       .query(async ({ ctx }) => getIncomingFriendRequests(ctx.user.id)),
 
-    getFriendStatus: protectedProcedure
+    getFriendStatus: publicProcedure
       .input(z.number().min(1))
       .query(async ({ ctx, input }) => {
-        const status = await getFriendStatus(ctx.user.id, input);
-        return { status };
+        // The profile card is public and must not hang or show a generic
+        // friend-status error when an admin session or a cross-site cookie is
+        // not available. Authenticated callers still receive the real state.
+        if (!ctx.user) return { status: 'none' as const, authenticated: false };
+        try {
+          const status = await getFriendStatus(ctx.user.id, input);
+          return { status, authenticated: true };
+        } catch (error) {
+          console.warn('[Social] Friend status temporarily unavailable:', error);
+          return { status: 'none' as const, authenticated: true, unavailable: true };
+        }
       }),
   }),
 
