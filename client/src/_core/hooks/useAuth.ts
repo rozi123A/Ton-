@@ -66,7 +66,6 @@ export function useAuth(options?: UseAuthOptions) {
   }, [meQuery.data, rememberGuest]);
 
   const logout = useCallback(async () => {
-    const wasGuest = meQuery.data?.loginMethod === "guest";
     try {
       await logoutMutation.mutateAsync();
     } catch (error: unknown) {
@@ -78,12 +77,12 @@ export function useAuth(options?: UseAuthOptions) {
       }
       throw error;
     } finally {
-      // End the active session, but keep a guest's signed device token so the
-      // same guest account can be restored after returning to the site.
+      // Restore the account automatically while its token exists, but make an
+      // explicit logout remove that token and end the restoration path.
       try {
         sessionStorage.removeItem("manus-cookie");
         localStorage.removeItem(GUEST_SESSION_ACTIVE_KEY);
-        if (!wasGuest) localStorage.removeItem(GUEST_TOKEN_KEY);
+        localStorage.removeItem(GUEST_TOKEN_KEY);
         localStorage.removeItem("manus-cookie");
         localStorage.removeItem("manus-runtime-user-info"); // 🔒 FIX: clear any stale user data
       } catch {}
