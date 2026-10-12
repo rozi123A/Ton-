@@ -18,10 +18,13 @@ export function useAuth(options?: UseAuthOptions) {
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
-    retry: false,
-    retryOnMount: false,
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes — avoid refetching on every render
+    // A sleeping Render instance must not make a saved guest account look lost.
+    retry: 3,
+    retryDelay: attempt => Math.min(500 * 2 ** attempt, 2_000),
+    retryOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,  // keep cached for 10 min
   });
 

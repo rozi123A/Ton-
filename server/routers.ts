@@ -883,8 +883,10 @@ export const appRouter = router({
     /** Return the authenticated user's credit balance */
     getBalance: protectedProcedure.query(async ({ ctx }) => {
       if ((ctx.user as any).role === 'admin') return { credits: 99_999_999 };
-      const credits = await getUserCredits(ctx.user.id);
-      return { credits };
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: 'تعذر تحميل رصيد النقاط مؤقتًا' });
+      const result = await db.select({ credits: users.credits }).from(users).where(eq(users.id, ctx.user.id)).limit(1);
+      return { credits: result[0]?.credits ?? 0 };
     }),
 
     /** Submit manual payment request  admin approves from dashboard */
@@ -1016,7 +1018,7 @@ export const appRouter = router({
     getWallet: protectedProcedure.query(async ({ ctx }) => {
       if ((ctx.user as any).role === 'admin') return { wallet: 99_999_999 };
       const db = await getDb();
-      if (!db) return { wallet: 0 };
+      if (!db) throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: 'تعذر تحميل رصيد النجوم مؤقتًا' });
       const result = await db.select({ wallet: users.wallet }).from(users).where(eq(users.id, ctx.user.id)).limit(1);
       return { wallet: result[0]?.wallet ?? 0 };
     }),
