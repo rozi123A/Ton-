@@ -133,8 +133,11 @@ const adminSessionProcedure = publicProcedure.use(async ({ ctx, next }) => {
   const cookies = (ctx.req.headers.cookie ?? '').split(';').map(part => part.trim());
   const cookie = cookies.find(part => part.startsWith('connectlive_admin='));
   const headerToken = ctx.req.headers['x-admin-session'];
-  const token = cookie?.slice('connectlive_admin='.length)
-    ?? (typeof headerToken === 'string' ? headerToken : undefined);
+  // Netlify/mobile browsers may retain an expired admin cookie. The explicit
+  // session header is the token issued by the current login and must win.
+  const token = typeof headerToken === 'string'
+    ? headerToken
+    : cookie?.slice('connectlive_admin='.length);
   if (!verifyAdminHmac(token ?? '', ENV.adminSecret)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'جلسة الإدارة منتهية أو غير صالحة' });
   }
