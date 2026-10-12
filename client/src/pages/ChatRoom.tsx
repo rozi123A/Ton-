@@ -1102,7 +1102,7 @@ export default function ChatRoom() {
                   <span className="w-1 h-1 bg-white/20 rounded-full" />
                   <p className="text-yellow-400 text-xs font-bold flex items-center gap-0.5">
                     <Zap className="w-3 h-3" />
-                    {isAdminUser ? '∞' : credits === null ? '...' : credits.toLocaleString('ar')} نقطة
+                    {isAdminUser ? '99,999,999' : credits === null ? '...' : credits.toLocaleString('ar')} نقطة
                   </p>
                 </div>
               </div>
@@ -1278,7 +1278,7 @@ export default function ChatRoom() {
                 className="flex items-center gap-1 rounded-full border border-amber-300/35 bg-amber-500/15 px-2 py-1 shadow-sm transition-colors hover:bg-amber-500/25"
               >
                 <Star className="w-3 h-3 text-purple-400 fill-purple-400" />
-                <span className="text-purple-300 text-[11px] font-black">{walletQuery.data?.wallet || 0}</span>
+                <span className="text-purple-300 text-[11px] font-black">{isAdminUser ? '99,999,999' : walletQuery.data?.wallet || 0}</span>
                 <span className="text-purple-500 text-[9px]">⭐</span>
               </button>
 
@@ -1288,7 +1288,7 @@ export default function ChatRoom() {
                 className="flex items-center gap-1 rounded-full border border-orange-300/35 bg-orange-500/15 px-2 py-1 shadow-sm transition-colors hover:bg-orange-500/25"
               >
                 <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                <span className="text-yellow-300 text-[11px] font-black">{isAdminUser ? '∞' : credits === null ? '...' : credits.toLocaleString('ar')}</span>
+                <span className="text-yellow-300 text-[11px] font-black">{isAdminUser ? '99,999,999' : credits === null ? '...' : credits.toLocaleString('ar')}</span>
               </button>
             </div>
 
