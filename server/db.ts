@@ -18,9 +18,9 @@ function cleanDbUrl(url: string): string {
   }
 }
 
-/** Retry DB connection with exponential backoff */
+/** Connect quickly; a later request can retry if a sleeping database is unavailable. */
 let connectionAttempts = 0;
-const MAX_CONNECTION_ATTEMPTS = 5;
+const MAX_CONNECTION_ATTEMPTS = 2;
 
 async function connectWithRetry(url: string): Promise<ReturnType<typeof postgres>> {
   let lastError: Error | null = null;
@@ -30,11 +30,9 @@ async function connectWithRetry(url: string): Promise<ReturnType<typeof postgres
       const client = postgres(url, {
         ssl: { rejectUnauthorized: false },
         max: 5,
-        // Fail fast and let the client retry its short status poll instead of
-        // holding a profile request for up to 90 seconds while a sleeping DB
-        // wakes up or becomes reachable again.
-        connect_timeout: 15,
-        idle_timeout: 60,
+        // Never keep the landing page or admin screen blocked while the DB wakes up.
+        connect_timeout: 5,
+        idle_timeout: 30,
         max_lifetime: 60 * 30,
         onnotice: () => {},
       });
@@ -47,7 +45,7 @@ async function connectWithRetry(url: string): Promise<ReturnType<typeof postgres
       lastError = err;
       console.warn(`[Database] Connection attempt ${attempt}/${MAX_CONNECTION_ATTEMPTS} failed:`, err.message);
       if (attempt < MAX_CONNECTION_ATTEMPTS) {
-        await new Promise(r => setTimeout(r, Math.min(2000 * attempt, 10000)));
+        await new Promise(r => setTimeout(r, 1000 * attempt));
       }
     }
   }
