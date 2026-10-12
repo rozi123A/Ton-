@@ -474,7 +474,33 @@ export async function getRecentUsers(limit = 20) {
       .limit(limit);
   } catch (error) {
     console.error('[Database] Failed to get recent users:', error);
-    throw error;
+    // Older production databases may not have received the profileViews
+    // migration yet. Keep the public users list usable while the migration
+    // is applied, and expose the same response shape with a safe fallback.
+    try {
+      const legacyRows = await db
+        .select({
+          id: users.id,
+          name: users.name,
+          age: users.age,
+          gender: users.gender,
+          avatar: users.avatar,
+          lastSignedIn: users.lastSignedIn,
+          country: users.country,
+          isOnline: users.isOnline,
+          isVerified: users.isVerified,
+          lastSeen: users.lastSeen,
+        })
+        .from(users)
+        .where(and(isNotNull(users.name), ne(users.role, 'admin')))
+        .orderBy(desc(users.lastSignedIn))
+        .limit(limit);
+
+      return legacyRows.map((row) => ({ ...row, profileViews: 0 }));
+    } catch (fallbackError) {
+      console.error('[Database] Failed to load recent users using legacy schema:', fallbackError);
+      throw error;
+    }
   }
 }
 
