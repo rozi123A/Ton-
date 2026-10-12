@@ -101,6 +101,7 @@ export default function ChatRoom() {
 
   const myName    = (user as any)?.name    || (isRTL ? 'أنت' : 'You');
   const myAvatar  = (user as any)?.avatar  || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(myName)}`;
+  const isAdminUser = (user as any)?.role === 'admin';
   const myGender  = (user as any)?.gender  || 'other';
   const myCountry = (user as any)?.country || null;
   const myId      = useRef(makePeerId()).current;
@@ -133,7 +134,8 @@ export default function ChatRoom() {
   // ── gifts ──────────────────────────────────────────────────────────────────
   const [showGifts, setShowGifts] = useState(false);
   const [giftAnims, setGiftAnims] = useState<GiftAnim[]>([]);
-  const [credits,   setCredits]   = useState(100);
+  // لا تعرض 100 مؤقتًا قبل وصول الرصيد الحقيقي من قاعدة البيانات.
+  const [credits,   setCredits]   = useState<number | null>(null);
 
   // ── new features ────────────────────────────────────────────────────────────
   const [showTranslation, setShowTranslation] = useState(false);
@@ -1100,7 +1102,7 @@ export default function ChatRoom() {
                   <span className="w-1 h-1 bg-white/20 rounded-full" />
                   <p className="text-yellow-400 text-xs font-bold flex items-center gap-0.5">
                     <Zap className="w-3 h-3" />
-                    {credits} نقطة
+                    {isAdminUser ? '∞' : credits === null ? '...' : credits.toLocaleString('ar')} نقطة
                   </p>
                 </div>
               </div>
@@ -1286,7 +1288,7 @@ export default function ChatRoom() {
                 className="flex items-center gap-1 rounded-full border border-orange-300/35 bg-orange-500/15 px-2 py-1 shadow-sm transition-colors hover:bg-orange-500/25"
               >
                 <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                <span className="text-yellow-300 text-[11px] font-black">{credits}</span>
+                <span className="text-yellow-300 text-[11px] font-black">{isAdminUser ? '∞' : credits === null ? '...' : credits.toLocaleString('ar')}</span>
               </button>
             </div>
 
@@ -1669,7 +1671,7 @@ export default function ChatRoom() {
       </div>
 
       {showGifts && (
-        <GiftPanel credits={credits} onSend={sendGift} onClose={() => setShowGifts(false)} disabled={spendGift.isPending} />
+        <GiftPanel credits={credits ?? 0} onSend={sendGift} onClose={() => setShowGifts(false)} disabled={spendGift.isPending} />
       )}
 
       {showAIStudio && <AIStudio onClose={() => setShowAIStudio(false)} />}
