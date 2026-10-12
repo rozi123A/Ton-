@@ -99,15 +99,17 @@ function UserCard({ user, onViewProfile, onOpenStory }: {
           title={user.hasStory ? "شاهد القصة" : (user.id > 0 ? t('profile.view_profile') || "View Profile" : undefined)}
         >
           <div className={`rounded-full p-1 ${user.hasStory ? 'bg-gradient-to-tr from-purple-600 via-pink-500 to-yellow-400 animate-gradient-xy' : ''}`}>
-            <img
-              src={user.avatar}
-              alt={user.name}
-              className={`w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover bg-white transition-transform duration-500 ${user.hasStory ? 'group-hover:scale-105' : 'group-hover:scale-110'}`}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src =
-                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name)}`;
-              }}
-            />
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                className={`w-24 h-24 rounded-full border-4 border-white shadow-xl object-cover bg-white transition-transform duration-500 ${user.hasStory ? 'group-hover:scale-105' : 'group-hover:scale-110'}`}
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center text-4xl font-bold transition-transform duration-500 group-hover:scale-110" aria-label={user.name}>
+                {user.name.trim().charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
           </div>
           {user.hasStory && (
             <div className="absolute -top-1 -right-1 bg-pink-500 text-white p-1.5 rounded-full shadow-lg animate-bounce">
@@ -218,7 +220,7 @@ export default function TrendingUsers() {
         online: Boolean(u.isOnline && u.lastSeen && new Date(u.lastSeen).getTime() > Date.now() - 2 * 60 * 1000),
         isVerified: Boolean(u.isVerified),
         profileViews: u.profileViews ?? 0,
-        avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || String(u.id))}`,
+        avatar: u.avatar && !u.avatar.includes('api.dicebear.com') ? u.avatar : '',
         country: u.country ?? null,
         hasStory: activeStories?.some(s => s.userId === u.id),
       }))
