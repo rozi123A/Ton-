@@ -1256,26 +1256,6 @@ export const appRouter = router({
         return { verified: true, adminToken: token };
       }),
 
-    /** If the caller is logged in, also promote them to admin in the DB */
-    activate: protectedProcedure
-      .input(z.object({ secret: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        const { ENV } = await import('./_core/env');
-        if (!secureStringEqual(input.secret, ENV.adminSecret)) {
-          throw new Error("الكود غير صحيح");
-        }
-        const db = await getDb();
-        if (!db) throw new Error("قاعدة البيانات غير متاحة");
-        await db.update(users)
-          .set({
-            role: 'admin',
-            isPremium: true,
-            credits: 999999,
-            wallet: 999999,
-          })
-          .where(eq(users.id, ctx.user.id));
-        return { success: true };
-      }),
   }),
 
   social: router({
