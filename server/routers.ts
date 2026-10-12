@@ -1288,7 +1288,16 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكنك إرسال طلب صداقة إلى نفسك" });
         }
 
-        const existingStatus = await getFriendStatus(ctx.user.id, input.receiverId);
+        let existingStatus: 'none' | 'pending' | 'friends';
+        try {
+          existingStatus = await getFriendStatus(ctx.user.id, input.receiverId);
+        } catch (error) {
+          console.warn('[Social] Failed to verify friend status before sending request:', error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'تعذر التحقق من حالة الصداقة. حاول مجددًا.',
+          });
+        }
         if (existingStatus === "friends") return { success: true, status: "friends" as const };
         if (existingStatus === "pending") return { success: true, status: "pending" as const };
 
@@ -1365,8 +1374,16 @@ export const appRouter = router({
     getFriendStatus: protectedProcedure
       .input(z.number().min(1))
       .query(async ({ ctx, input }) => {
-        const status = await getFriendStatus(ctx.user.id, input);
-        return { status };
+        try {
+          const status = await getFriendStatus(ctx.user.id, input);
+          return { status };
+        } catch (error) {
+          console.warn('[Social] Failed to load friend status:', error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'تعذر التحقق من حالة الصداقة. حاول مجددًا.',
+          });
+        }
       }),
   }),
 

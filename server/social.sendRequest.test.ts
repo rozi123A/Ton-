@@ -127,6 +127,22 @@ describe("social.sendRequest", () => {
     expect(socialMocks.createNotification).not.toHaveBeenCalled();
   });
 
+  it("does not create a request when the existing relationship cannot be checked", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    socialMocks.getFriendStatus.mockRejectedValue(new Error("database unavailable"));
+
+    try {
+      await expect(createCaller().social.sendRequest({ receiverId: 202 })).rejects.toMatchObject({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "تعذر التحقق من حالة الصداقة. حاول مجددًا.",
+      });
+      expect(socialMocks.createFriendRequest).not.toHaveBeenCalled();
+      expect(socialMocks.createNotification).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("returns a useful error when the database cannot persist the request", async () => {
     socialMocks.createFriendRequest.mockRejectedValue(new Error("database unavailable"));
 
@@ -137,5 +153,28 @@ describe("social.sendRequest", () => {
     expect(socialMocks.createNotification).not.toHaveBeenCalled();
     expect(socialMocks.sendUserNotification).not.toHaveBeenCalled();
     expect(socialMocks.sendWebPushNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe("social.getFriendStatus", () => {
+  it("returns the relationship status for the authenticated user", async () => {
+    socialMocks.getFriendStatus.mockResolvedValue("friends");
+
+    await expect(createCaller().social.getFriendStatus(202)).resolves.toEqual({ status: "friends" });
+    expect(socialMocks.getFriendStatus).toHaveBeenCalledWith(101, 202);
+  });
+
+  it("returns a retryable error instead of a false none state when the lookup fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    socialMocks.getFriendStatus.mockRejectedValue(new Error("database unavailable"));
+
+    try {
+      await expect(createCaller().social.getFriendStatus(202)).rejects.toMatchObject({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "تعذر التحقق من حالة الصداقة. حاول مجددًا.",
+      });
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

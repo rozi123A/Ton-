@@ -20,7 +20,7 @@ function cleanDbUrl(url: string): string {
 
 /** Retry DB connection with exponential backoff */
 let connectionAttempts = 0;
-const MAX_CONNECTION_ATTEMPTS = 5;
+const MAX_CONNECTION_ATTEMPTS = 2;
 
 async function connectWithRetry(url: string): Promise<ReturnType<typeof postgres>> {
   let lastError: Error | null = null;
@@ -30,7 +30,7 @@ async function connectWithRetry(url: string): Promise<ReturnType<typeof postgres
       const client = postgres(url, {
         ssl: { rejectUnauthorized: false },
         max: 5,
-        connect_timeout: 90,
+        connect_timeout: 10,
         idle_timeout: 60,
         max_lifetime: 60 * 30,
         onnotice: () => {},
@@ -917,9 +917,10 @@ export async function getUserPublicProfile(userId: number) {
 }
 
 export async function getFriendStatus(userId: number, targetId: number): Promise<'none' | 'pending' | 'friends'> {
-  const dbConn = await getDb();
-  if (!dbConn || userId <= 0 || targetId <= 0) return 'none';
+  if (userId <= 0 || targetId <= 0) return 'none';
   try {
+    const dbConn = await getDb();
+    if (!dbConn) throw new Error('Database unavailable while checking friend status');
     // check friends table
     const fr = await dbConn.select().from(friends)
       .where(sql`("userId1" = ${userId} AND "userId2" = ${targetId}) OR ("userId1" = ${targetId} AND "userId2" = ${userId})`)
@@ -931,8 +932,9 @@ export async function getFriendStatus(userId: number, targetId: number): Promise
       .limit(1);
     if (req.length > 0) return 'pending';
     return 'none';
-  } catch {
-    return 'none';
+  } catch (error) {
+    console.error('[Database] getFriendStatus failed:', error);
+    throw new Error('Unable to verify friend status');
   }
 }
 
