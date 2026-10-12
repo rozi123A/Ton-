@@ -413,10 +413,12 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
     { adminToken },
     { 
       enabled: !!adminToken, 
-      retry: 3, 
+      retry: 5, 
       retryDelay: 2_000, 
       staleTime: 15_000, 
-      refetchInterval: 30_000 
+      refetchInterval: 30_000,
+      refetchOnMount: 'always',
+      refetchOnReconnect: true,
     },
   );
 
@@ -429,9 +431,12 @@ function StatsTab({ adminToken, onSelectUser }: { adminToken: string; onSelectUs
     { adminToken, limit: 100 },
     {
       enabled: statsEnabled,
-      retry: 2,
+      retry: 5,
+      retryDelay: 2_000,
       staleTime: 15_000,
       refetchInterval: 15_000,
+      refetchOnMount: 'always',
+      refetchOnReconnect: true,
     },
   );
 
@@ -834,7 +839,7 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', width: '100%', boxSizing: 'border-box' }}>
             <div style={{ backgroundColor: '#1f2937', padding: '14px', borderRadius: '16px' }}>
               <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>الجنس • العمر</p>
               <p style={{ color: 'white', fontSize: '14px', fontWeight: 800, margin: 0 }}>
@@ -848,9 +853,15 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
               </p>
             </div>
             <div style={{ backgroundColor: '#1f2937', padding: '14px', borderRadius: '16px' }}>
-              <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>الرصيد</p>
-              <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 800, margin: 0 }}>
-                {user.credits} نقطة
+                <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>النقاط</p>
+                <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 800, margin: 0 }}>
+                {user.role === 'admin' ? '∞' : (user.credits ?? 0).toLocaleString('ar')} نقطة
+                </p>
+            </div>
+            <div style={{ backgroundColor: '#1f2937', padding: '14px', borderRadius: '16px' }}>
+              <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>النجوم</p>
+              <p style={{ color: '#fbbf24', fontSize: '14px', fontWeight: 800, margin: 0 }}>
+                {(user.wallet ?? 0).toLocaleString('ar')} نجمة
               </p>
             </div>
           </div>
