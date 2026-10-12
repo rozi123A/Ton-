@@ -882,6 +882,7 @@ export const appRouter = router({
   gifts: router({
     /** Return the authenticated user's credit balance */
     getBalance: protectedProcedure.query(async ({ ctx }) => {
+      if ((ctx.user as any).role === 'admin') return { credits: 99_999_999 };
       const credits = await getUserCredits(ctx.user.id);
       return { credits };
     }),
@@ -995,7 +996,7 @@ export const appRouter = router({
         }
         
         const receiverId = input.receiverId || 0;
-        const saved = await saveGift(ctx.user.id, receiverId, input.giftType, input.cost);
+        const saved = await saveGift(ctx.user.id, receiverId, input.giftType, input.cost, isAdmin);
         if (!saved) throw new Error('تعذر إرسال الهدية أو رصيد النقاط غير كافٍ');
         
         if (receiverId > 0) {
@@ -1013,6 +1014,7 @@ export const appRouter = router({
       }),
 
     getWallet: protectedProcedure.query(async ({ ctx }) => {
+      if ((ctx.user as any).role === 'admin') return { wallet: 99_999_999 };
       const db = await getDb();
       if (!db) return { wallet: 0 };
       const result = await db.select({ wallet: users.wallet }).from(users).where(eq(users.id, ctx.user.id)).limit(1);

@@ -855,13 +855,13 @@ function UserProfileView({ userId, adminToken, onBack }: { userId: number; admin
             <div style={{ backgroundColor: '#1f2937', padding: '14px', borderRadius: '16px' }}>
                 <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>النقاط</p>
                 <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 800, margin: 0 }}>
-                {user.role === 'admin' ? '∞' : (user.credits ?? 0).toLocaleString('ar')} نقطة
+                {user.role === 'admin' ? '99,999,999' : (user.credits ?? 0).toLocaleString('ar')} نقطة
                 </p>
             </div>
             <div style={{ backgroundColor: '#1f2937', padding: '14px', borderRadius: '16px' }}>
               <p style={{ color: '#9ca3af', fontSize: '11px', margin: '0 0 4px', fontWeight: 700 }}>النجوم</p>
               <p style={{ color: '#fbbf24', fontSize: '14px', fontWeight: 800, margin: 0 }}>
-                {(user.wallet ?? 0).toLocaleString('ar')} نجمة
+                {user.role === 'admin' ? '99,999,999' : (user.wallet ?? 0).toLocaleString('ar')} نجمة
               </p>
             </div>
           </div>

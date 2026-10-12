@@ -768,17 +768,19 @@ export async function addCredits(userId: number, amount: number): Promise<void> 
   }
 }
 
-export async function saveGift(senderId: number, receiverId: number, giftType: string, cost: number): Promise<boolean> {
+export async function saveGift(senderId: number, receiverId: number, giftType: string, cost: number, skipDebit = false): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
   try {
     await db.transaction(async (tx) => {
-      // Deduct from sender
-      const debited = await tx.update(users)
-        .set({ credits: sql`${users.credits} - ${cost}` })
-        .where(and(eq(users.id, senderId), gte(users.credits, cost)))
-        .returning({ id: users.id });
-      if (debited.length !== 1) throw new Error('رصيد نقاط غير كافٍ لإرسال الهدية');
+      // Admin test accounts have an effectively unlimited balance.
+      if (!skipDebit) {
+        const debited = await tx.update(users)
+          .set({ credits: sql`${users.credits} - ${cost}` })
+          .where(and(eq(users.id, senderId), gte(users.credits, cost)))
+          .returning({ id: users.id });
+        if (debited.length !== 1) throw new Error('رصيد نقاط غير كافٍ لإرسال الهدية');
+      }
       // Add to receiver's credit balance so their balance actually increases
       if (receiverId > 0) {
         await tx.update(users).set({ credits: sql`${users.credits} + ${cost}` }).where(eq(users.id, receiverId));
