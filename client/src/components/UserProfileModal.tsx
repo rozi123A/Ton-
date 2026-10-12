@@ -49,13 +49,16 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
     data: friendStatus,
     refetch: refetchStatus,
     isLoading: isFriendStatusLoading,
-    isFetching: isFriendStatusFetching,
     isError: isFriendStatusError,
   } = trpc.social.getFriendStatus.useQuery(userId, {
     enabled: userId > 0 && isAuthenticated,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    // The other user may accept the request while this profile is open.
+    // Poll frequently so the UI reflects the database without a page reload.
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
   });
 
   const sendRequestMutation = trpc.social.sendRequest.useMutation({
@@ -259,7 +262,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
             </button>
           ) : currentUser?.id === userId ? (
             <div className="py-3 text-center text-sm text-white/60">{t('profile.self_request')}</div>
-          ) : isFriendStatusLoading || isFriendStatusFetching ? (
+          ) : isFriendStatusLoading ? (
             <div className="py-3 text-center text-sm text-white/60" aria-live="polite">
               {t('common.loading')}
             </div>

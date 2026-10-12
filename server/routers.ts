@@ -1330,7 +1330,15 @@ export const appRouter = router({
       .input(z.object({ senderId: z.number() }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.id <= 0) throw new Error("يجب تسجيل الدخول لقبول الصداقة");
-        await acceptFriendRequest(input.senderId, ctx.user.id);
+        try {
+          await acceptFriendRequest(input.senderId, ctx.user.id);
+        } catch (error) {
+          console.error("[Social] Failed to accept friend request:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "تعذر حفظ قبول طلب الصداقة. يرجى المحاولة مرة أخرى.",
+          });
+        }
         const notification = {
           type: 'friend-accepted',
           fromName: ctx.user.name || 'مستخدم',
