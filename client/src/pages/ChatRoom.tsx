@@ -91,6 +91,14 @@ interface PendingMatch { name: string; avatar: string; userId?: number; role: 'c
 
 function makePeerId() { return `p_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
 
+function formatCompactBalance(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return '...';
+  if (value < 1_000) return value.toLocaleString('en-US');
+  if (value < 1_000_000) return `${(value / 1_000).toFixed(value >= 100_000 ? 0 : 1).replace(/\.0$/, '')}K`;
+  if (value < 1_000_000_000) return `${(value / 1_000_000).toFixed(value >= 100_000_000 ? 0 : 1).replace(/\.0$/, '')}M`;
+  return `${(value / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+}
+
 export default function ChatRoom() {
   const { t: translate, isRTL } = useTranslation();
   const t = (key: string) => translate(key);
@@ -1277,7 +1285,7 @@ export default function ChatRoom() {
           {/* Right: Wallet & Credits */}
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
             {/* Row 1: Star wallet + Credits */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-1.5">
               {/* Star Wallet */}
               <button
                 onClick={() => {
@@ -1291,20 +1299,21 @@ export default function ChatRoom() {
                   }
                   setShowConvertModal(true);
                 }}
-                className="flex items-center gap-1 rounded-full border border-amber-300/35 bg-amber-500/15 px-2 py-1 shadow-sm transition-colors hover:bg-amber-500/25"
+                title={`${isAdminUser ? '99,999,999' : walletQuery.data?.wallet ?? 0} نجمة`}
+                className="inline-flex h-7 min-w-[58px] items-center justify-center gap-1 rounded-full border border-amber-300/35 bg-amber-500/15 px-1.5 shadow-sm transition-colors hover:bg-amber-500/25 sm:min-w-[64px]"
               >
-                <Star className="w-3 h-3 text-purple-400 fill-purple-400" />
-                <span className="text-purple-300 text-[11px] font-black">{isAdminUser ? '99,999,999' : walletQuery.data?.wallet || 0}</span>
-                <span className="text-purple-500 text-[9px]">⭐</span>
+                <Star className="h-3.5 w-3.5 shrink-0 fill-purple-400 text-purple-400" />
+                <span className="max-w-[42px] truncate text-purple-200 text-[10px] font-black leading-none sm:text-[11px]">{formatCompactBalance(isAdminUser ? 99_999_999 : walletQuery.data?.wallet)}</span>
               </button>
 
               {/* Credits */}
               <button
                 onClick={() => setLocation('/store')}
-                className="flex items-center gap-1 rounded-full border border-orange-300/35 bg-orange-500/15 px-2 py-1 shadow-sm transition-colors hover:bg-orange-500/25"
+                title={`${isAdminUser ? '99,999,999' : credits ?? 0} نقطة`}
+                className="inline-flex h-7 min-w-[58px] items-center justify-center gap-1 rounded-full border border-orange-300/35 bg-orange-500/15 px-1.5 shadow-sm transition-colors hover:bg-orange-500/25 sm:min-w-[64px]"
               >
-                <Zap className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                <span className="text-yellow-300 text-[11px] font-black">{isAdminUser ? '99,999,999' : credits === null ? '...' : credits.toLocaleString('ar')}</span>
+                <Zap className="h-3.5 w-3.5 shrink-0 fill-yellow-400 text-yellow-400" />
+                <span className="max-w-[42px] truncate text-yellow-200 text-[10px] font-black leading-none sm:text-[11px]">{formatCompactBalance(isAdminUser ? 99_999_999 : credits)}</span>
               </button>
             </div>
 
