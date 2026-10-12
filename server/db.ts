@@ -30,7 +30,10 @@ async function connectWithRetry(url: string): Promise<ReturnType<typeof postgres
       const client = postgres(url, {
         ssl: { rejectUnauthorized: false },
         max: 5,
-        connect_timeout: 90,
+        // Fail fast and let the client retry its short status poll instead of
+        // holding a profile request for up to 90 seconds while a sleeping DB
+        // wakes up or becomes reachable again.
+        connect_timeout: 15,
         idle_timeout: 60,
         max_lifetime: 60 * 30,
         onnotice: () => {},
@@ -949,16 +952,21 @@ export async function createFriendRequest(senderId: number, receiverId: number) 
 
 export async function acceptFriendRequest(senderId: number, receiverId: number) {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error('Database unavailable while accepting friend request');
   try {
     await db.transaction(async (tx) => {
-      await tx.update(friendRequests)
+      const updatedRequests = await tx.update(friendRequests)
         .set({ status: 'accepted', updatedAt: new Date() })
-        .where(sql`"senderId" = ${senderId} AND "receiverId" = ${receiverId}`);
+        .where(sql`"senderId" = ${senderId} AND "receiverId" = ${receiverId} AND status = 'pending'`)
+        .returning({ id: friendRequests.id });
+      if (updatedRequests.length === 0) {
+        throw new Error('Friend request is no longer pending');
+      }
       await tx.insert(friends).values({ userId1: senderId, userId2: receiverId });
     });
   } catch (err) {
     console.error('[Database] acceptFriendRequest failed:', err);
+    throw err;
   }
 }
 

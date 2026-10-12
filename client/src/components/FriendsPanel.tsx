@@ -64,9 +64,13 @@ export default function FriendsPanel({
   }, []);
 
   const acceptRequestMutation = trpc.social.acceptRequest.useMutation({
-    onSuccess: (_data, _variables) => {
+    onSuccess: (_data, variables) => {
       toast.success('تم قبول طلب الصداقة! يمكنك الآن مراسلته من قائمة الأصدقاء');
       refetchRequests();
+      // A profile modal for the sender can remain mounted while the request
+      // is accepted. Invalidate its status immediately instead of waiting
+      // for a long refetch cycle or a page reload.
+      void utils.social.getFriendStatus.invalidate(variables.senderId);
       onFriendAccepted?.();   // refresh friends list in ChatRoom
       setActiveTab('friends'); // switch to friends tab so they see the new friend
     },

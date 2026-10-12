@@ -177,6 +177,7 @@ export default function ChatRoom() {
     onSuccess: () => {
       toast.success('تم قبول الصداقة!');
       refetchFriends();
+      void utils.social.getFriendStatus.invalidate();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -634,6 +635,7 @@ export default function ChatRoom() {
         toast.success(`${msg.fromName || 'مستخدم'} قبل طلب صداقتك! 🎉`);
         playFriendSound();
         refetchFriends();
+        void utils.social.getFriendStatus.invalidate();
         if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
           try { new Notification('تم قبول طلب الصداقة', { body: `${msg.fromName || 'مستخدم'} قبل طلب صداقتك`, icon: '/favicon.ico' }); } catch {}
         }
