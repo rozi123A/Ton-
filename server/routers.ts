@@ -1323,7 +1323,7 @@ export const appRouter = router({
         void sendWebPushNotification(input.receiverId, notification).catch((error) => {
           console.warn("[Social] Web Push delivery failed:", error);
         });
-        return { success: true, status: "pending" };
+        return { success: true, status: "pending" as const };
       }),
 
     acceptRequest: protectedProcedure

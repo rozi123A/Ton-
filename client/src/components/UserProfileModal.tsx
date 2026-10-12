@@ -45,8 +45,17 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
     { userId },
     { enabled: userId > 0 },
   );
-  const { data: friendStatus, refetch: refetchStatus } = trpc.social.getFriendStatus.useQuery(userId, {
+  const {
+    data: friendStatus,
+    refetch: refetchStatus,
+    isLoading: isFriendStatusLoading,
+    isFetching: isFriendStatusFetching,
+    isError: isFriendStatusError,
+  } = trpc.social.getFriendStatus.useQuery(userId, {
     enabled: userId > 0 && isAuthenticated,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const sendRequestMutation = trpc.social.sendRequest.useMutation({
@@ -250,6 +259,21 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
             </button>
           ) : currentUser?.id === userId ? (
             <div className="py-3 text-center text-sm text-white/60">{t('profile.self_request')}</div>
+          ) : isFriendStatusLoading || isFriendStatusFetching ? (
+            <div className="py-3 text-center text-sm text-white/60" aria-live="polite">
+              {t('common.loading')}
+            </div>
+          ) : isFriendStatusError ? (
+            <div className="space-y-2 text-center" role="alert">
+              <p className="text-sm text-amber-200">{t('profile.friend_status_error')}</p>
+              <button
+                type="button"
+                onClick={() => void refetchStatus()}
+                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500"
+              >
+                {t('profile.retry')}
+              </button>
+            </div>
           ) : status === 'friends' ? (
             <div className="flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-500/15 border border-green-500/30 text-green-400 font-bold text-sm">
               <Check className="w-4 h-4" /> {t('profile.is_friend')}

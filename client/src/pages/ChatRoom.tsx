@@ -96,6 +96,7 @@ export default function ChatRoom() {
   const t = (key: string) => translate(key);
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
+  const utils = trpc.useUtils();
   const { mutateAsync: createStreamToken } = trpc.auth.createStreamToken.useMutation();
 
   const myName    = (user as any)?.name    || (isRTL ? 'أنت' : 'You');
@@ -166,7 +167,10 @@ export default function ChatRoom() {
   const unreadDmCount = unreadDmData?.count ?? 0;
   const incomingFriendRequestCount = incomingFriendRequests?.length ?? 0;
   const sendFriendRequestMutation = trpc.social.sendRequest.useMutation({
-    onSuccess: () => toast.success('تم إرسال طلب الصداقة بنجاح'),
+    onSuccess: (result, variables) => {
+      toast.success('تم إرسال طلب الصداقة بنجاح');
+      utils.social.getFriendStatus.setData(variables.receiverId, { status: result.status });
+    },
     onError: (err) => toast.error(err.message),
   });
   const acceptFriendRequestMutation = trpc.social.acceptRequest.useMutation({
