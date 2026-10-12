@@ -3,4 +3,5 @@
   publish = "dist/public"
 
 [build.environment]
+  VITE_API_URL = "https://connectlive-jce9.onrender.com"
   VITE_REALTIME_API_URL = "https://connectlive-jce9.onrender.com"

@@ -50,6 +50,14 @@ const queryClient = new QueryClient({
   },
 });
 
+// Netlify hosts the static UI while Render hosts the authenticated API.
+// Keep a runtime fallback so protected queries do not target Netlify's
+// relative /api/trpc path when the build variable is missing.
+const apiOrigin = import.meta.env.VITE_API_URL ||
+  (window.location.hostname.endsWith("netlify.app")
+    ? "https://connectlive-jce9.onrender.com"
+    : "");
+
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
@@ -80,7 +88,7 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: (import.meta.env.VITE_API_URL || "") + "/api/trpc",
+    url: apiOrigin + "/api/trpc",
       transformer: superjson,
       headers() {
         // 1. Persistent guest session for restoring the same device account.
