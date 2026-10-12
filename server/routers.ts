@@ -1375,7 +1375,7 @@ export const appRouter = router({
         // not available. Authenticated callers still receive the real state.
         if (!ctx.user) return { status: 'none' as const, authenticated: false };
         try {
-          const status = await getFriendStatus(ctx.user.id, input);
+          const status = await withTimeout(getFriendStatus(ctx.user.id, input), 1_000);
           return { status, authenticated: true };
         } catch (error) {
           console.warn('[Social] Friend status temporarily unavailable:', error);
