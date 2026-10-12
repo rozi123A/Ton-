@@ -1,7 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import {
   COOKIE_NAME,
-  GUEST_SESSION_ACTIVE_KEY,
   GUEST_TOKEN_KEY,
   UNAUTHED_ERR_MSG,
 } from '@shared/const';
@@ -99,9 +98,10 @@ const trpcClient = trpc.createClient({
         // 1. Persistent guest session for restoring the same device account.
         try {
           const guestToken = localStorage.getItem(GUEST_TOKEN_KEY);
-          const sessionActive =
-            localStorage.getItem(GUEST_SESSION_ACTIVE_KEY) === "1";
-          if (guestToken && sessionActive) {
+          // The signed guest token is the persistent browser session. Send it
+          // directly so a returning user is restored even if the short-lived
+          // active flag was cleared by an older build.
+          if (guestToken) {
             headers.Authorization = `Bearer ${guestToken}`;
           }
         } catch { /* storage unavailable */ }

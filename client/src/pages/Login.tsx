@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocation } from 'wouter';
-import { Heart, Video, Camera, Shield } from 'lucide-react';
+import { Heart, Video, Camera } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { TRPCClientError } from '@trpc/client';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -88,12 +88,9 @@ export default function Login() {
   const [photo, setPhoto] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [accessMode, setAccessMode] = useState<'user' | 'admin'>('user');
-  const [adminSecret, setAdminSecret] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const guestLoginMutation = trpc.users.guestLogin.useMutation();
-  const adminLoginMutation = trpc.admin.verifySecret.useMutation();
 
   useEffect(() => {
     // Redirect to chat if already authenticated.
@@ -111,22 +108,6 @@ export default function Login() {
     e.target.value = '';
   };
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminSecret.trim() || adminLoginMutation.isPending) return;
-    setError('');
-    try {
-      const result = await adminLoginMutation.mutateAsync({ secret: adminSecret.trim() });
-      if (!result.adminToken) throw new Error('تعذر إنشاء جلسة الإدارة');
-      safeStorageSet('session', 'connectlive_admin_token', result.adminToken);
-      setLocation('/admin');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '';
-      setError(message.includes('Too many') || message.includes('Unexpected token')
-        ? 'تم تجاوز عدد المحاولات مؤقتًا، أعد المحاولة بعد قليل.'
-        : message || 'كلمة مرور المدير غير صحيحة');
-    }
-  };
 
   const handleStartChat = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,42 +199,6 @@ export default function Login() {
         </div>
 
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 shadow-2xl">
-          <div className="mb-5 grid grid-cols-2 gap-2 rounded-2xl bg-black/15 p-1">
-            <button
-              type="button"
-              onClick={() => { setAccessMode('user'); setError(''); }}
-              className={`rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${accessMode === 'user' ? 'bg-white text-violet-700 shadow' : 'text-white/80 hover:bg-white/10'}`}
-            >
-              مستخدم عادي
-            </button>
-            <button
-              type="button"
-              onClick={() => { setAccessMode('admin'); setError(''); }}
-              className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${accessMode === 'admin' ? 'bg-white text-violet-700 shadow' : 'text-white/80 hover:bg-white/10'}`}
-            >
-              <Shield className="h-4 w-4" /> المدير
-            </button>
-          </div>
-
-          {accessMode === 'admin' ? (
-            <form onSubmit={handleAdminLogin} className="space-y-4">
-              {error && <div className="bg-red-500/20 border border-red-500/50 text-white text-sm p-3 rounded-xl">{error}</div>}
-              <div>
-                <label className="block text-white text-sm font-medium mb-2">كلمة مرور المدير</label>
-                <Input
-                  type="password"
-                  value={adminSecret}
-                  onChange={(e) => setAdminSecret(e.target.value)}
-                  placeholder="أدخل كلمة المرور"
-                  className="bg-white/20 border-white/30 text-white placeholder:text-white/50 rounded-xl"
-                  autoFocus
-                />
-              </div>
-              <Button type="submit" disabled={adminLoginMutation.isPending} className="w-full py-3 font-bold text-white disabled:opacity-50">
-                {adminLoginMutation.isPending ? 'جاري التحقق...' : 'دخول لوحة الإدارة'}
-              </Button>
-            </form>
-          ) : (
           <form onSubmit={handleStartChat} className="space-y-4">
             {error && (
               <div className="bg-red-500/20 border border-red-500/50 text-white text-sm p-3 rounded-xl">{error}</div>
@@ -351,12 +296,11 @@ export default function Login() {
               )}
             </Button>
           </form>
-          )}
 
-          {accessMode === 'user' && <p className="text-white/60 text-xs text-center mt-4">
+          <p className="text-white/60 text-xs text-center mt-4">
             بالضغط على "ابدا الدردشة" فانك توافق على{' '}
             <a href="#" className="text-white/80 hover:text-white underline">شروط الاستخدام</a>
-          </p>}
+          </p>
         </div>
 
         <div className="mt-6 text-center">
