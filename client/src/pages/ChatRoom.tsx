@@ -242,8 +242,24 @@ export default function ChatRoom() {
   const destroyedRef   = useRef(false);
 
   // ── tRPC ───────────────────────────────────────────────────────────────────
-  const balanceQuery    = trpc.gifts.getBalance.useQuery(undefined, { staleTime: 30_000 });
-  const walletQuery     = trpc.gifts.getWallet.useQuery(undefined, { staleTime: 30_000 });
+  const balanceQuery    = trpc.gifts.getBalance.useQuery(undefined, {
+    enabled: !!user && !authLoading,
+    staleTime: 0,
+    refetchInterval: 15_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 2,
+  });
+  const walletQuery     = trpc.gifts.getWallet.useQuery(undefined, {
+    enabled: !!user && !authLoading,
+    staleTime: 0,
+    refetchInterval: 15_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: 2,
+  });
   const { data: countryStats } = trpc.users.countryStats.useQuery(undefined, { staleTime: 60_000 });
   const spendGift    = trpc.gifts.spend.useMutation({
     onSuccess: (data) => setCredits(data.newBalance),
@@ -252,8 +268,8 @@ export default function ChatRoom() {
   const convertStars = trpc.gifts.convertStars.useMutation({
     onSuccess: (data) => {
       toast.success(`تم تحويل النجوم! حصلت على ${data.creditsGained} نقاط`);
-      walletQuery.refetch();
-      balanceQuery.refetch();
+      void walletQuery.refetch();
+      void balanceQuery.refetch();
     },
     onError: (err) => toast.error(err.message)
   });
@@ -277,9 +293,9 @@ export default function ChatRoom() {
         },
       );
       window.setTimeout(() => toast.dismiss(rewardToastId), 4000);
-      bonusStatusQuery.refetch();
-      walletQuery.refetch();
-      balanceQuery.refetch();
+      void bonusStatusQuery.refetch();
+      void walletQuery.refetch();
+      void balanceQuery.refetch();
     },
     onError: (err) => {
       toast.error(err.message);
