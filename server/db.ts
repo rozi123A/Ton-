@@ -56,21 +56,32 @@ async function connectWithRetry(url: string): Promise<ReturnType<typeof postgres
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _rawClient: ReturnType<typeof postgres> | null = null;
+let dbConnectionPromise: Promise<ReturnType<typeof drizzle> | null> | null = null;
 
 export async function getDb() {
   const dbUrl = process.env.DATABASE_URL;
-  
-  if (!_db && dbUrl) {
-    try {
-      const url = cleanDbUrl(dbUrl);
-      _rawClient = await connectWithRetry(url);
-      _db = drizzle(_rawClient);
-    } catch (error) {
-      console.warn('[Database] Failed to connect after all retries:', error);
-      _db = null;
-    }
+
+  if (_db || !dbUrl) return _db;
+
+  // Several admin cards and social queries can start together. Share one
+  // connection attempt so they do not each wait/retry against a sleeping DB.
+  if (!dbConnectionPromise) {
+    dbConnectionPromise = (async () => {
+      try {
+        const url = cleanDbUrl(dbUrl);
+        _rawClient = await connectWithRetry(url);
+        _db = drizzle(_rawClient);
+        return _db;
+      } catch (error) {
+        console.warn('[Database] Failed to connect after all retries:', error);
+        _db = null;
+        return null;
+      } finally {
+        dbConnectionPromise = null;
+      }
+    })();
   }
-  return _db;
+  return dbConnectionPromise;
 }
 
 /**
@@ -934,8 +945,9 @@ export async function getFriendStatus(userId: number, targetId: number): Promise
       .limit(1);
     if (req.length > 0) return 'pending';
     return 'none';
-  } catch {
-    return 'none';
+  } catch (error) {
+    console.warn('[Database] getFriendStatus failed; client will retry:', error);
+    throw error;
   }
 }
 

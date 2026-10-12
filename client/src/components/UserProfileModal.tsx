@@ -55,6 +55,8 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
+    retry: 4,
+    retryDelay: 1_000,
     // The other user may accept the request while this profile is open.
     // Poll frequently so the UI reflects the database without a page reload.
     refetchInterval: 5_000,
