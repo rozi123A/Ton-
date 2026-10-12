@@ -91,13 +91,18 @@ const trpcClient = trpc.createClient({
     url: apiOrigin + "/api/trpc",
       transformer: superjson,
       headers() {
+        const headers: Record<string, string> = {};
+        try {
+          const adminToken = sessionStorage.getItem("connectlive_admin_token");
+          if (adminToken) headers["x-admin-session"] = adminToken;
+        } catch { /* sessionStorage unavailable */ }
         // 1. Persistent guest session for restoring the same device account.
         try {
           const guestToken = localStorage.getItem(GUEST_TOKEN_KEY);
           const sessionActive =
             localStorage.getItem(GUEST_SESSION_ACTIVE_KEY) === "1";
           if (guestToken && sessionActive) {
-            return { Authorization: `Bearer ${guestToken}` };
+            headers.Authorization = `Bearer ${guestToken}`;
           }
         } catch { /* storage unavailable */ }
 
@@ -108,11 +113,11 @@ const trpcClient = trpc.createClient({
             const prefix = `${COOKIE_NAME}=`;
             const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
             const token = pair?.trim().slice(prefix.length);
-            if (token) return { Authorization: `Bearer ${token}` };
+            if (token) headers.Authorization = `Bearer ${token}`;
           }
         } catch { /* sessionStorage unavailable */ }
 
-        return {};
+        return headers;
       },
       fetch(input, init) {
         return globalThis.fetch(input, {

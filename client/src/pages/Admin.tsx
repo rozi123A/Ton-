@@ -95,15 +95,16 @@ function timeAgo(date: Date): string {
    Password Gate — independent of user role
    (أبقيته كما هو لضمان الوصول للوحة)
 ══════════════════════════════════════════════════════════ */
-function PasswordGate({ onVerified }: { onVerified: () => void }) {
+function PasswordGate({ onVerified }: { onVerified: (adminToken: string) => void }) {
   const [secret, setSecret] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
 
   const verifyMutation = trpc.admin.verifySecret.useMutation({
     onSuccess: (data) => {
-      if (data.verified) {
-        onVerified();
+      if (data.verified && data.adminToken) {
+        try { sessionStorage.setItem('connectlive_admin_token', data.adminToken); } catch {}
+        onVerified(data.adminToken);
       }
     },
     onError: (e) => setError(e.message),
@@ -309,12 +310,12 @@ export default function Admin() {
   const [location, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'stats'|'calls'|'recordings'|'payments'|'search'|'broadcast'>('stats');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [isVerified, setIsVerified] = useState(false);
-  // The server stores the short-lived admin session in an HttpOnly cookie.
-  // This placeholder is only kept for existing child component prop shapes.
-  const token = 'cookie';
+  const [adminToken, setAdminToken] = useState(() => {
+    try { return sessionStorage.getItem('connectlive_admin_token') ?? ''; } catch { return ''; }
+  });
+  const token = adminToken || 'cookie';
 
-  if (!isVerified) return <PasswordGate onVerified={() => setIsVerified(true)} />;
+  if (!adminToken) return <PasswordGate onVerified={setAdminToken} />;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#030712', color: 'white', paddingBottom: '40px' }} dir="rtl">
