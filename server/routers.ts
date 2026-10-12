@@ -57,7 +57,7 @@ async function saveGuestRegistrationWithRetry(input: {
   name: string;
   age: number;
   gender: 'male' | 'female' | 'other';
-  avatar: string | null;
+  avatar: string;
   country?: string;
 }) {
   let lastError: unknown;
@@ -82,7 +82,7 @@ async function saveGuestRegistrationWithRetry(input: {
         name: input.name,
         age: input.age,
         gender: input.gender,
-        ...(input.avatar ? { avatar: input.avatar } : {}),
+        avatar: input.avatar,
       });
       console.log(`[GuestLogin] Registration saved on attempt ${attempt + 1}:`, user.id);
       return;
@@ -95,10 +95,12 @@ async function saveGuestRegistrationWithRetry(input: {
   console.error('[GuestLogin] Could not save registration after all retries:', lastError);
 }
 
-// Never hold the UI for tens of seconds when the Render database is down.
-// A later request can retry after the database wakes up.
-const ADMIN_STATS_TIMEOUT_MS = 3_000;
-const DB_CONNECT_TIMEOUT_MS = 3_000;
+// Render free DB can take 30-60 s to wake from sleep — keep timeout above that.
+// General queries use ADMIN_STATS_TIMEOUT_MS; first-connection uses DB_CONNECT_TIMEOUT_MS.
+const ADMIN_STATS_TIMEOUT_MS = 28_000; // Render free tier drops HTTP after ~30 s — stay under that
+// postgres.js keeps the TCP connection alive in background after we return, so the DB wakes up
+// between retries. DB_CONNECT_TIMEOUT_MS is kept shorter than Render HTTP limit too.
+const DB_CONNECT_TIMEOUT_MS  = 28_000;
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs = ADMIN_STATS_TIMEOUT_MS): Promise<T> {
   return Promise.race([
@@ -133,11 +135,8 @@ const adminSessionProcedure = publicProcedure.use(async ({ ctx, next }) => {
   const cookies = (ctx.req.headers.cookie ?? '').split(';').map(part => part.trim());
   const cookie = cookies.find(part => part.startsWith('connectlive_admin='));
   const headerToken = ctx.req.headers['x-admin-session'];
-  // Netlify/mobile browsers may retain an expired admin cookie. The explicit
-  // session header is the token issued by the current login and must win.
-  const token = typeof headerToken === 'string'
-    ? headerToken
-    : cookie?.slice('connectlive_admin='.length);
+  const token = cookie?.slice('connectlive_admin='.length)
+    ?? (typeof headerToken === 'string' ? headerToken : undefined);
   if (!verifyAdminHmac(token ?? '', ENV.adminSecret)) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'جلسة الإدارة منتهية أو غير صالحة' });
   }
@@ -642,8 +641,9 @@ export const appRouter = router({
             : null;
         const guestOpenId = existingGuestOpenId ?? `guest_${nanoid()}`;
         // 🔒 FIX: Validate avatar URL — block SSRF via private/internal addresses
+        const _defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(input.name)}`;
         const avatarUrl = (() => {
-          if (!input.avatar) return null;
+          if (!input.avatar) return _defaultAvatar;
           // Mobile profile photos arrive as compressed data URLs from the
           // registration picker. Keep the selected image instead of falling
           // back to DiceBear; the schema already limits its size and format.
@@ -652,10 +652,10 @@ export const appRouter = router({
           }
           try {
             const u = new URL(input.avatar);
-            if (u.protocol !== 'https:') return null;
-            if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.0\.0\.0|::1)/i.test(u.hostname)) return null;
+            if (u.protocol !== 'https:') return _defaultAvatar;
+            if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.0\.0\.0|::1)/i.test(u.hostname)) return _defaultAvatar;
             return input.avatar;
-          } catch { return null; }
+          } catch { return _defaultAvatar; }
         })();
 
         // Country from client (no server IP lookup — too slow)
@@ -1191,9 +1191,8 @@ export const appRouter = router({
           };
         };
 
-        // The UI must fail fast; the next poll will retry without blocking the
-        // rest of the admin page.
-        const MAX_RETRIES = 1;
+        // Try up to 3 times with delays for sleeping DB
+        const MAX_RETRIES = 3;
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
           actualPgError = null;
           try {

@@ -921,7 +921,7 @@ async function startServer() {
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Vary', 'Origin');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-admin-session');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
     }
 
     if (req.method === 'OPTIONS') {
