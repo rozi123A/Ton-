@@ -891,6 +891,7 @@ async function startServer() {
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 100, // Increased from 20 — users need multiple attempts on cold-start servers
+    skip: (req) => req.path.includes('admin.verifySecret'),
     message: { error: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
@@ -898,6 +899,7 @@ async function startServer() {
   const generalLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
     max: 120,
+    skip: (req) => req.path.includes('admin.verifySecret'),
     standardHeaders: true,
     legacyHeaders: false,
   });
