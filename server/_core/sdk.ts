@@ -294,25 +294,20 @@ class SDKServer {
       const guestLookup = db.getUserByOpenId(sessionUserId).catch(() => undefined);
       user = await Promise.race([
         guestLookup,
-        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 2000)),
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 1000)),
       ]);
 
       if (!user) {
-        // Persist guest user synchronously so they get a real database ID and appear in stats/online count
-        try {
-          await db.upsertUser({
-            openId: sessionUserId,
-            name: (session as any).name || "زائر",
-            loginMethod: 'guest',
-            lastSignedIn: signedInAt,
-          });
-          user = await db.getUserByOpenId(sessionUserId);
-        } catch (err) {
-          console.warn('[Auth] Failed to persist guest user:', err);
-        }
-        if (!user) {
-          return buildVirtualGuestUser(sessionUserId, (session as any).name || "زائر");
-        }
+        // Never block the first paint on a sleeping database. Return a
+        // lightweight session user immediately and persist it in the
+        // background; the next request will use the real DB row.
+        void db.upsertUser({
+          openId: sessionUserId,
+          name: (session as any).name || "زائر",
+          loginMethod: 'guest',
+          lastSignedIn: signedInAt,
+        }).catch((err) => console.warn('[Auth] Background guest sync failed:', err));
+        return buildVirtualGuestUser(sessionUserId, (session as any).name || "زائر");
       }
     } else {
       user = await db.getUserByOpenId(sessionUserId);
