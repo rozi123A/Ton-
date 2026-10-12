@@ -254,19 +254,16 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<AuthenticatedUser> {
-    // 1. Prefer the session cookie (regular OAuth login).
+    // Prefer an explicit Authorization token. A stale cross-site Cookie can
+    // belong to another session, while the saved browser token identifies the
+    // account the user selected on this device.
     const cookies = this.parseCookies(req.headers.cookie);
-    let sessionToken = cookies.get(COOKIE_NAME);
-
-    // 2. Fallback to the Authorization header (Preview auto-login via
-    //    sessionStorage), used when the browser blocks iframe cookies such as
-    //    Safari ITP, private browsing, or iOS/Android WebView.
-    if (!sessionToken) {
-      const authHeader = req.headers.authorization;
-      if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
-        sessionToken = authHeader.slice(7);
-      }
+    let sessionToken: string | undefined;
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      sessionToken = authHeader.slice(7);
     }
+    if (!sessionToken) sessionToken = cookies.get(COOKIE_NAME);
 
     const session = await this.verifySession(sessionToken);
 

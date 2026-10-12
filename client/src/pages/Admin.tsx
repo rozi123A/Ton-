@@ -110,19 +110,12 @@ function PasswordGate({ onVerified }: { onVerified: (adminToken: string) => void
     onError: (e) => setError(e.message),
   });
 
-  const activateMutation = trpc.admin.activate.useMutation();
-
   const handleSubmit = () => {
     setError('');
     if (!secret.trim()) return;
-    verifyMutation.mutate(
-      { secret: secret.trim() },
-      {
-        onSuccess: () => {
-          activateMutation.mutate({ secret: secret.trim() });
-        },
-      }
-    );
+    // Admin access uses an independent signed session and must never modify
+    // the currently logged-in user's database record.
+    verifyMutation.mutate({ secret: secret.trim() });
   };
 
   return (
