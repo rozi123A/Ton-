@@ -107,9 +107,31 @@ const trpcClient = trpc.createClient({
         return {};
       },
       fetch(input, init) {
+        const requestUrl = typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+        if (!requestUrl.includes("/api/trpc/social.getFriendStatus")) {
+          return globalThis.fetch(input, {
+            ...(init ?? {}),
+            credentials: "include",
+          });
+        }
+
+        const controller = new AbortController();
+        const requestSignal = init?.signal;
+        const abortFromRequest = () => controller.abort();
+        if (requestSignal?.aborted) controller.abort();
+        else requestSignal?.addEventListener("abort", abortFromRequest, { once: true });
+        const timeoutId = setTimeout(() => controller.abort(), 25_000);
         return globalThis.fetch(input, {
           ...(init ?? {}),
+          signal: controller.signal,
           credentials: "include",
+        }).finally(() => {
+          clearTimeout(timeoutId);
+          requestSignal?.removeEventListener("abort", abortFromRequest);
         });
       },
     }),

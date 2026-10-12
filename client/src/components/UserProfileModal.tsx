@@ -54,6 +54,7 @@ export default function UserProfileModal({ userId, onClose, initialProfile }: Us
   } = trpc.social.getFriendStatus.useQuery(userId, {
     enabled: userId > 0 && isAuthenticated,
     staleTime: 0,
+    retry: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
