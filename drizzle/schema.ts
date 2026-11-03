@@ -1,4 +1,4 @@
-import { integer, pgEnum, pgTable, text, timestamp, varchar, boolean, serial, uniqueIndex } from "drizzle-orm/pg-core";
+import { integer, pgEnum, pgTable, text, timestamp, varchar, boolean, serial, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 export const genderEnum = pgEnum("gender", ["male", "female", "other"]);
 export const roleEnum = pgEnum("role", ["user", "admin"]);
@@ -160,7 +160,9 @@ export const stories = pgTable("stories", {
   caption: text("caption"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
-});
+}, (table) => ({
+  userCreatedIdx: index("stories_user_created_idx").on(table.userId, table.createdAt),
+}));
 
 export type Story = typeof stories.$inferSelect;
 export type InsertStory = typeof stories.$inferInsert;
@@ -171,7 +173,7 @@ export const storyComments = pgTable("story_comments", {
   userId: integer("userId").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({ storyIdIdx: index("story_comments_story_id_idx").on(table.storyId) }));
 
 export type StoryComment = typeof storyComments.$inferSelect;
 export type InsertStoryComment = typeof storyComments.$inferInsert;
@@ -181,7 +183,7 @@ export const storyViews = pgTable("story_views", {
   storyId: integer("storyId").notNull(),
   userId: integer("userId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({ storyIdIdx: index("story_views_story_id_idx").on(table.storyId) }));
 
 export type StoryView = typeof storyViews.$inferSelect;
 export type InsertStoryView = typeof storyViews.$inferInsert;

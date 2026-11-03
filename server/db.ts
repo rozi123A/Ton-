@@ -274,6 +274,20 @@ export async function ensureSchema(): Promise<void> {
     }
   }
 
+  // Index story lookups and per-story statistics on existing databases.
+  const storyIndexes = [
+    `CREATE INDEX IF NOT EXISTS stories_user_created_idx ON stories ("userId", "createdAt" DESC)`,
+    `CREATE INDEX IF NOT EXISTS story_views_story_id_idx ON story_views ("storyId")`,
+    `CREATE INDEX IF NOT EXISTS story_comments_story_id_idx ON story_comments ("storyId")`,
+  ];
+  for (const stmt of storyIndexes) {
+    try {
+      await _rawClient.unsafe(stmt);
+    } catch (err) {
+      console.error('[Database] Failed to create story index:', err);
+    }
+  }
+
   // Add missing columns to existing tables that predate these migrations.
   // Each ALTER TABLE runs separately so one failure does not block the others.
   const migrations = [
@@ -1444,6 +1458,23 @@ export async function saveStory(story: InsertStory) {
   }
 }
 
+async function addStoryStats<T extends { id: number }>(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, storyRows: T[]) {
+  if (storyRows.length === 0) return storyRows.map(story => ({ ...story, viewCount: 0, commentCount: 0 }));
+  const storyIds = storyRows.map(story => story.id);
+  const [viewRows, commentRows] = await Promise.all([
+    db.select({ storyId: storyViews.storyId, count: sql<number>`count(*)::int` })
+      .from(storyViews).where(inArray(storyViews.storyId, storyIds)).groupBy(storyViews.storyId),
+    db.select({ storyId: storyComments.storyId, count: sql<number>`count(*)::int` })
+      .from(storyComments).where(inArray(storyComments.storyId, storyIds)).groupBy(storyComments.storyId),
+  ]);
+  const viewCounts = new Map(viewRows.map(row => [row.storyId, Number(row.count)]));
+  const commentCounts = new Map(commentRows.map(row => [row.storyId, Number(row.count)]));
+  return storyRows.map(story => ({
+    ...story,
+    viewCount: viewCounts.get(story.id) ?? 0,
+    commentCount: commentCounts.get(story.id) ?? 0,
+  }));
+}
 export async function getActiveStories() {
   const db = await getDb();
   if (!db) return [];
@@ -1466,19 +1497,7 @@ export async function getActiveStories() {
       .innerJoin(users, eq(stories.userId, users.id))
       .orderBy(desc(stories.createdAt));
 
-    // For each story, get view count and comment count
-    const storiesWithStats = await Promise.all(activeStories.map(async (story) => {
-      const views = await db.select({ count: sql`count(*)` }).from(storyViews).where(eq(storyViews.storyId, story.id));
-      const comments = await db.select({ count: sql`count(*)` }).from(storyComments).where(eq(storyComments.storyId, story.id));
-      
-      return {
-        ...story,
-        viewCount: Number(views[0]?.count || 0),
-        commentCount: Number(comments[0]?.count || 0),
-      };
-    }));
-
-    return storiesWithStats;
+    return await addStoryStats(db, activeStories);
   } catch (err) {
     console.error('[Database] getActiveStories failed:', err);
     return [];
@@ -1495,19 +1514,7 @@ export async function getUserStories(userId: number) {
       .where(eq(stories.userId, userId))
       .orderBy(desc(stories.createdAt));
 
-    // Add stats to user stories too
-    const storiesWithStats = await Promise.all(userStories.map(async (story) => {
-      const views = await db.select({ count: sql`count(*)` }).from(storyViews).where(eq(storyViews.storyId, story.id));
-      const comments = await db.select({ count: sql`count(*)` }).from(storyComments).where(eq(storyComments.storyId, story.id));
-      
-      return {
-        ...story,
-        viewCount: Number(views[0]?.count || 0),
-        commentCount: Number(comments[0]?.count || 0),
-      };
-    }));
-
-    return storiesWithStats;
+    return await addStoryStats(db, userStories);
   } catch (err) {
     console.error('[Database] getUserStories failed:', err);
     return [];
