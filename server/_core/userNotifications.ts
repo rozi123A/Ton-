@@ -11,7 +11,7 @@ export interface NotifPayload {
   [key: string]: unknown;
 }
 
-const notifyClients = new Map<string, Response>();
+const notifyClients = new Map<string, Set<Response>>();
 const pendingNotifs = new Map<string, NotifPayload[]>();
 const MAX_PENDING = 30;
 
@@ -28,10 +28,15 @@ function sseEvent(res: Response, data: object): boolean {
 }
 
 export function sendUserNotification(userId: string, notif: NotifPayload) {
-  const client = notifyClients.get(userId);
-  if (client) {
-    if (sseEvent(client, notif)) return;
-    if (notifyClients.get(userId) === client) notifyClients.delete(userId);
+  const clients = notifyClients.get(userId);
+  let delivered = false;
+  if (clients) {
+    for (const client of Array.from(clients)) {
+      if (sseEvent(client, notif)) delivered = true;
+      else clients.delete(client);
+    }
+    if (clients.size === 0) notifyClients.delete(userId);
+    if (delivered) return;
   }
 
   const queue = pendingNotifs.get(userId) || [];
@@ -40,19 +45,37 @@ export function sendUserNotification(userId: string, notif: NotifPayload) {
   pendingNotifs.set(userId, queue);
 }
 
+export function broadcastPresence(userId: number, online: boolean) {
+  const event = { type: "presence", userId, online, ts: Date.now() };
+  for (const [clientId, clients] of Array.from(notifyClients.entries())) {
+    for (const client of Array.from(clients)) {
+      if (!sseEvent(client, event)) clients.delete(client);
+    }
+    if (clients.size === 0) notifyClients.delete(clientId);
+  }
+}
+
 export function registerUserNotificationClient(userId: string, res: Response) {
-  notifyClients.set(userId, res);
+  let clients = notifyClients.get(userId);
+  if (!clients) {
+    clients = new Set<Response>();
+    notifyClients.set(userId, clients);
+  }
+  clients.add(res);
 
   const pending = pendingNotifs.get(userId) || [];
   const undelivered = pending.filter((notification) => !sseEvent(res, notification));
   if (undelivered.length > 0) pendingNotifs.set(userId, undelivered);
   else pendingNotifs.delete(userId);
 
-  if (!sseEvent(res, { type: "connected", ts: Date.now() }) && notifyClients.get(userId) === res) {
-    notifyClients.delete(userId);
+  if (!sseEvent(res, { type: "connected", ts: Date.now() })) {
+    clients.delete(res);
+    if (clients.size === 0) notifyClients.delete(userId);
   }
 
   return () => {
-    if (notifyClients.get(userId) === res) notifyClients.delete(userId);
+    const activeClients = notifyClients.get(userId);
+    activeClients?.delete(res);
+    if (activeClients?.size === 0) notifyClients.delete(userId);
   };
 }

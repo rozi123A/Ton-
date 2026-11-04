@@ -1675,7 +1675,7 @@ export async function updateUserPresence(
     // A user who has not pinged for 90 seconds is treated as offline even if
     // the browser did not get a chance to call the logout endpoint.
     const wasActive = Boolean(
-      previous[0]?.isOnline && previousLastSeen > now.getTime() - 90_000,
+      previous[0]?.isOnline && previousLastSeen > now.getTime() - 45_000,
     );
 
     const updated = await db.update(users)
@@ -1701,6 +1701,20 @@ export async function updateUserPresence(
   }
 }
 
+export async function markStaleUsersOffline(cutoff = new Date(Date.now() - 45_000)): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const rows = await db.update(users)
+      .set({ isOnline: false })
+      .where(and(eq(users.isOnline, true), lte(users.lastSeen, cutoff)))
+      .returning({ id: users.id });
+    return rows.map(row => row.id);
+  } catch (err) {
+    console.error('[Database] markStaleUsersOffline failed:', err);
+    return [];
+  }
+}
 export async function updateUserOffline(
   userId: number,
   openId: string,
