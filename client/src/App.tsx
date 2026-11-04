@@ -215,7 +215,7 @@ function App() {
     return () => clearInterval(id);
   }, [ready]);
 
-  // Presence ping — refresh the user's lastSeen every minute so the admin
+  // Presence ping — refresh the user's lastSeen frequently so other clients
   // online count reflects separate browsers/devices without waiting for a
   // later navigation or login request.
   // IMPORTANT: only fire when authenticated. users.ping is a protectedProcedure;
@@ -249,7 +249,7 @@ function App() {
       if (document.visibilityState === "visible") {
         ping();
       }
-    }, 30 * 1000); // 30s ping for high accuracy
+    }, 20 * 1000); // Refresh presence every 20 seconds
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {

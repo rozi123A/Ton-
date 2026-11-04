@@ -180,8 +180,8 @@ export default function TrendingUsers() {
   });
 
   const { data: realUsers, isPending } = trpc.users.getRecent.useQuery(20, {
-    staleTime: 30_000,
-    refetchInterval: 30_000,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
     retry: false,
@@ -215,7 +215,7 @@ export default function TrendingUsers() {
         id: u.id,
         name: u.name || 'مستخدم',
         age: u.age ?? 0,
-        online: Boolean(u.isOnline && u.lastSeen && new Date(u.lastSeen).getTime() > Date.now() - 2 * 60 * 1000),
+        online: Boolean(u.isOnline && u.lastSeen && new Date(u.lastSeen).getTime() > Date.now() - 60_000),
         isVerified: Boolean(u.isVerified),
         profileViews: u.profileViews ?? 0,
         avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.name || String(u.id))}`,
