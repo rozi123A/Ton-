@@ -221,8 +221,13 @@ function App() {
   // IMPORTANT: only fire when authenticated. users.ping is a protectedProcedure;
   // firing it while unauthenticated returns UNAUTHORIZED which the global error
   // handler treats as a redirect signal — sending the user away from /login.
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const utils = trpc.useUtils();
+  const utilsRef = useRef(utils);
+  utilsRef.current = utils;
+  const streamTokenMutation = trpc.auth.createStreamToken.useMutation();
+  const streamTokenMutationRef = useRef(streamTokenMutation);
+  streamTokenMutationRef.current = streamTokenMutation;
   const presencePing = trpc.users.ping.useMutation({
     onSuccess: () => {
       // A user's presence can be recorded just after the friends query starts.
@@ -235,6 +240,68 @@ function App() {
   });
   const presencePingRef = useRef(presencePing);
   presencePingRef.current = presencePing;
+  useEffect(() => {
+    if (!isAuthenticated || !user || user.id <= 0) return;
+    let stopped = false;
+    let source: EventSource | null = null;
+    let reconnectTimer: number | undefined;
+    let renewTimer: number | undefined;
+
+    const scheduleReconnect = () => {
+      if (stopped || reconnectTimer !== undefined) return;
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = undefined;
+        void connect();
+      }, 3_000);
+    };
+    const connect = async () => {
+      try {
+        const { token } = await streamTokenMutationRef.current.mutateAsync();
+        if (stopped) return;
+        const apiOrigin = import.meta.env.VITE_API_URL ||
+          (window.location.hostname.endsWith("netlify.app")
+            ? "https://connectlive-jce9.onrender.com"
+            : "");
+        const url = `${apiOrigin}/api/notify/stream?streamToken=${encodeURIComponent(token)}`;
+        source = new EventSource(url);
+        source.onmessage = (message) => {
+          try {
+            const event = JSON.parse(message.data);
+            if (event.type !== 'presence') return;
+            void utilsRef.current.users.getRecent.invalidate();
+            void utilsRef.current.social.getFriends.invalidate();
+            void utilsRef.current.users.getPublicProfile.invalidate();
+          } catch {
+            // Ignore malformed stream events without interrupting presence updates.
+          }
+        };
+        source.onerror = () => {
+          source?.close();
+          source = null;
+          if (renewTimer !== undefined) window.clearTimeout(renewTimer);
+          renewTimer = undefined;
+          scheduleReconnect();
+        };
+        // Stream tokens expire after one minute. Rotate before expiry so
+        // network reconnects can always open a fresh authenticated stream.
+        renewTimer = window.setTimeout(() => {
+          source?.close();
+          source = null;
+          renewTimer = undefined;
+          void connect();
+        }, 45_000);
+      } catch {
+        scheduleReconnect();
+      }
+    };
+    void connect();
+    return () => {
+      stopped = true;
+      source?.close();
+      if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
+      if (renewTimer !== undefined) window.clearTimeout(renewTimer);
+    };
+  }, [isAuthenticated, user?.id]);
   useEffect(() => {
     if (!isAuthenticated) return;
     const ping = () => {

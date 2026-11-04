@@ -12,7 +12,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { ensureSchema } from "../db";
+import { ensureSchema, markStaleUsersOffline } from "../db";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { ENV, validateEnv } from "./env";
@@ -25,6 +25,7 @@ import {
   registerUserNotificationClient,
   type NotifPayload,
   sendUserNotification,
+  broadcastPresence,
 } from "./userNotifications";
 
 // ── Signaling via Server-Sent Events (SSE) ────────────────────────────────────
@@ -1089,6 +1090,20 @@ async function startServer() {
       }
     }
   }
+  let presenceSweepRunning = false;
+  const sweepStalePresence = async () => {
+    if (presenceSweepRunning) return;
+    presenceSweepRunning = true;
+    try {
+      const staleUserIds = await markStaleUsersOffline(new Date(Date.now() - 45_000));
+      for (const userId of staleUserIds) broadcastPresence(userId, false);
+    } finally {
+      presenceSweepRunning = false;
+    }
+  };
+  setTimeout(() => void sweepStalePresence(), 5_000);
+  setInterval(() => void sweepStalePresence(), 10_000);
+  console.log('[Presence] stale sessions expire after 45s; status changes are pushed over SSE');
 }
 
 startServer().catch((error) => {

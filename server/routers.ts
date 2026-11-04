@@ -35,7 +35,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./_core/env";
 import { createStreamToken } from "./_core/streamToken";
-import { sendUserNotification } from "./_core/userNotifications";
+import { broadcastPresence, sendUserNotification } from "./_core/userNotifications";
 import { getVapidPublicKey, sendWebPushNotification } from "./_core/webPush";
 
 const avatarSchema = z.union([
@@ -430,6 +430,7 @@ export const appRouter = router({
           updateUserOffline(ctx.user.id, ctx.user.openId),
           new Promise<void>(resolve => setTimeout(resolve, 1_000)),
         ]).catch(() => undefined);
+        if (ctx.user.id > 0 && ctx.user.role !== 'admin') broadcastPresence(ctx.user.id, false);
       }
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -801,6 +802,7 @@ export const appRouter = router({
     ping: protectedProcedure
       .mutation(async ({ ctx }) => {
         const presence = await updateUserPresence(ctx.user.id, ctx.user.openId, ctx.user.name);
+        if (presence.becameActive && ctx.user.role !== 'admin') broadcastPresence(ctx.user.id, true);
 
         // Only notify on the transition to active. This prevents the 30-second
         // heartbeat from repeatedly notifying every friend.

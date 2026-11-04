@@ -456,6 +456,7 @@ export default function NotificationBell() {
             try {
               const data = JSON.parse(dataLine.slice(5).trim());
               if (data.type === 'connected' || data.type === 'new-message') continue;
+              if (data.type === 'presence') continue;
               addNotif({
                 type: data.type,
                 title: data.title,
