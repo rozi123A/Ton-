@@ -898,8 +898,11 @@ async function startServer() {
   });
   const generalLimiter = rateLimit({
     windowMs: 1 * 60 * 1000,
-    max: 120,
+    // Presence, stories, friends, and notifications use lightweight polling.
+    // A higher per-IP ceiling avoids blocking users behind shared mobile NATs.
+    max: 600,
     skip: (req) => req.path.includes('admin.verifySecret'),
+    message: { error: 'Too many requests, please try again later.' },
     standardHeaders: true,
     legacyHeaders: false,
   });

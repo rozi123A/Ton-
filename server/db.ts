@@ -486,7 +486,11 @@ export async function getRecentUsers(limit = 20) {
       })
       .from(users)
       .where(and(isNotNull(users.name), ne(users.role, 'admin')))
-      .orderBy(desc(users.lastSignedIn))
+      .orderBy(
+        desc(sql`CASE WHEN ${users.isOnline} = true AND ${users.lastSeen} > ${new Date(Date.now() - 60_000)} THEN 1 ELSE 0 END`),
+        desc(users.lastSeen),
+        desc(users.lastSignedIn),
+      )
       .limit(limit);
   } catch (error) {
     console.error('[Database] Failed to get recent users:', error);
@@ -509,7 +513,11 @@ export async function getRecentUsers(limit = 20) {
         })
         .from(users)
         .where(and(isNotNull(users.name), ne(users.role, 'admin')))
-        .orderBy(desc(users.lastSignedIn))
+        .orderBy(
+          desc(sql`CASE WHEN ${users.isOnline} = true AND ${users.lastSeen} > ${new Date(Date.now() - 60_000)} THEN 1 ELSE 0 END`),
+          desc(users.lastSeen),
+          desc(users.lastSignedIn),
+        )
         .limit(limit);
 
       return legacyRows.map((row) => ({ ...row, profileViews: 0 }));
@@ -920,7 +928,7 @@ type PublicProfile = {
 // Public profiles change infrequently. Keep a short per-process cache so
 // repeated opens do not require another database round trip.
 const publicProfileCache = new Map<number, { value: PublicProfile; expiresAt: number }>();
-const PUBLIC_PROFILE_CACHE_TTL_MS = 30_000;
+const PUBLIC_PROFILE_CACHE_TTL_MS = 5_000;
 
 export async function getUserPublicProfile(userId: number) {
   const cached = publicProfileCache.get(userId);
@@ -961,7 +969,7 @@ export async function getUserPublicProfile(userId: number) {
       bio: profile.bio,
       isPremium,
       isVerified: profile.isVerified,
-      isOnline: profile.isOnline && profile.lastSeen.getTime() > Date.now() - 2 * 60 * 1000,
+      isOnline: profile.isOnline && profile.lastSeen.getTime() > Date.now() - 60_000,
       lastSeen: profile.lastSeen,
     };
     publicProfileCache.set(userId, { value: result, expiresAt: Date.now() + PUBLIC_PROFILE_CACHE_TTL_MS });

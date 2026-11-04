@@ -1793,7 +1793,7 @@ export default function ChatRoom() {
             id: String(f.id),
             name: f.name || 'مستخدم',
             avatar: f.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.id}`,
-             status: f.isOnline && f.lastSeen && new Date(f.lastSeen).getTime() > Date.now() - 2 * 60 * 1000 ? 'online' : 'offline',
+             status: f.isOnline && f.lastSeen && new Date(f.lastSeen).getTime() > Date.now() - 60_000 ? 'online' : 'offline',
             lastSeen: f.lastSeen ? new Date(f.lastSeen).toLocaleString('ar') : '',
              isVerified: Boolean(f.isVerified),
             userId: f.id,
